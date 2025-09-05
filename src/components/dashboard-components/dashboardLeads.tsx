@@ -103,7 +103,7 @@ export default function DashboardLeads() {
         selectedDateRange={"06/08/2025 - 04/09/2025"}
         daysCount={30}
       />
-      <div className="grid grid-cols-1 md:grid-cols-2 mt-6 gap-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 mt-6 gap-10 overflow-y-scroll max-h-[430px]">
         <ChartBarMixed
           title="Study Leads Overview"
           chartData={leadsOverviewData}

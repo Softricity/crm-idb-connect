@@ -50,7 +50,7 @@ export default function DashboardPayments() {
                 selectedDateRange={"06/08/2025 - 04/09/2025"}
                 daysCount={30}
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-6 overflow-y-scroll max-h-[430px]">
                 <div className="bg-white rounded-xl shadow-sm border p-6 flex flex-col items-center justify-center">
                     <h3 className="text-lg font-semibold text-center mb-2">
                         Total Pending Amount

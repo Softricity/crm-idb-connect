@@ -67,7 +67,7 @@ export default function DashboardFollowUps() {
                 selectedDateRange={"06/08/2025 - 04/09/2025"}
                 daysCount={30}
             />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-6 overflow-y-scroll max-h-[430px]">
                 <ChartPieDonut
                     title="Lead Source Distribution"
                     description="QR vs Walk In"

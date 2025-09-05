@@ -50,7 +50,7 @@ export default function DashboardTeamPerformance() {
                 daysCount={30}
             />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-6 overflow-y-scroll max-h-[430px]">
                 <ChartBarMixed
                     title="Study Leads by Lead Manager"
                     chartData={testBarData}
