@@ -7,6 +7,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
+import Link from "next/link"
 import { usePathname } from "next/navigation"
 // import lucide icons type
 export function NavMain({
@@ -29,8 +30,10 @@ export function NavMain({
               tooltip={item.title}
               className={item.url === currentRoute ? "bg-primary text-primary-foreground" : ""}
               >
-              {item.icon && <item.icon />}
-              <span>{item.title}</span>
+              <Link href={item.url} className="flex w-full items-center gap-3">
+                      {item.icon && <item.icon />}
+                      <span>{item.title}</span>
+                    </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             ))}

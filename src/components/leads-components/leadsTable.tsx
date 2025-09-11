@@ -10,9 +10,10 @@ interface LeadsTableProps {
 export default function LeadsTable({ leads }: LeadsTableProps) {
     return (
         <div className="w-full">
-            <Table>
-                <TableHeader className="bg-muted/50">
-                    <TableRow>
+            <div className="max-h-[67vh] overflow-y-auto">
+                <Table className="relative">
+                    <TableHeader className="bg-muted/50 sticky top-0 z-10">
+                    <TableRow >
                         <TableHead className="w-[50px]">
                             <Checkbox />
                         </TableHead>
@@ -22,14 +23,10 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                         <TableHead>Lead Manager</TableHead>
                         <TableHead>Lead Source</TableHead>
                         <TableHead>Preferred Country</TableHead>
-                        <TableHead>Status</TableHead>
+                        <TableHead className="text-start">Status</TableHead>
                         <TableHead className="text-center">Action</TableHead>
                     </TableRow>
                 </TableHeader>
-            </Table>
-
-            <div className="max-h-[61vh] overflow-y-auto">
-                <Table>
                     <TableBody>
                         {leads.map((lead) => (
                             <LeadsTableRow key={lead.id} lead={lead} />

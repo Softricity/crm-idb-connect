@@ -1,6 +1,8 @@
 "use client"
 
 import { AppSidebar } from "@/components/app-sidebar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
@@ -19,7 +21,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             orientation="vertical"
             className="mr-2 data-[orientation=vertical]:h-4"
           />
+          <div className="flex justify-between items-center w-full">
+
             <h1 className="text-lg font-medium">Courses Wiz</h1>
+            <div className="flex items-center gap-3">
+              <Input
+                type="text"
+                placeholder="Search Course..."
+                className="border-primary focus-visible:ring-primary"
+              />
+
+y              <Button className="bg-primary hover:bg-primary text-white font-semibold"
+                variant={"outline"}>
+                Add Course
+              </Button>
+            </div>
+          </div>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4 m-3">
           {children}
