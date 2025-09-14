@@ -12,7 +12,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <SidebarProvider>
       <AppSidebar className="border-l-4 border-l-blue-500 min-w-13" />
-      <SidebarInset className="rounded-t-xl border m-3 mb-0">
+      <SidebarInset className="sm:rounded-t-[40px] sm:px-4 sm:border sm:m-3 sm:mb-0">
         <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
           <SidebarTrigger className="-ml-1" />
           <Separator
@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           />
             <h1 className="text-lg font-medium">Dashboard</h1>
         </header>
-        <div className="flex flex-1 flex-col gap-4 p-4 m-3">
+        <div className="flex flex-1 flex-col gap-4 p-4">
           {children}
         </div>
       </SidebarInset>

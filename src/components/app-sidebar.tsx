@@ -27,13 +27,8 @@ const data = {
   },
   navMain: [
     {
-      title: "Home",
-      url: "/dashboard",
-      icon: Home,
-    },
-    {
       title: "Dashboard",
-      url: "#",
+      url: "/dashboard",
       icon: LayoutDashboard,
     },
     {
@@ -61,11 +56,6 @@ const data = {
     {
       title: "Leads",
       icon: Users,
-      url: "#",
-    },
-    {
-      title: "Counsellings",
-      icon: MessageCircle,
       url: "#",
     },
     {
@@ -148,9 +138,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="#">
-                <span className="text-base font-semibold">EduGlobal CRM</span>
-              </a>
+              <div className="w-full h-14 flex items-center justify-center">
+
+              <img src="/logo.gif" alt="" className="w-3/4 h-auto rounded-lg" />
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -160,7 +151,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* dotted line */}
         {/* Main Navigation */}
         <NavMain items={data.navMain} />
-        <hr className="border-t-2 border-border mx-4 border-dotted my-1" />
+        <hr className="border-t-2 border-border mx-4 border-dotted my-0.5" />
         {/* Study Abroad Section */}
         <SidebarGroup>
           <SidebarGroupLabel >Study Abroad</SidebarGroupLabel>
@@ -168,15 +159,15 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             <SidebarMenu>
               {data.navStudentManagement.map((item) => (
                 <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton
-              tooltip={item.title}
-              className={item.url === currentRoute ? "bg-primary text-primary-foreground" : ""}
-              >
-              {item.icon && <item.icon />}
-              <span>{item.title}</span>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-            ))}
+                  <SidebarMenuButton
+                  tooltip={item.title}
+                  className={item.url === currentRoute ? "bg-primary text-primary-foreground" : ""}
+                  >
+                  {item.icon && <item.icon />}
+                  <span>{item.title}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
