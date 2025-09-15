@@ -26,6 +26,7 @@ const data = {
     avatar: "/avatars/ishwor.jpg",
   },
   navMain: [
+
     {
       title: "Dashboard",
       url: "/dashboard",
@@ -46,7 +47,7 @@ const data = {
     {
       title: "Course Wiz",
       icon: GraduationCap,
-      url: "#",
+      url: "/courses",
     },
     {
       title: "Announcements",
@@ -56,7 +57,12 @@ const data = {
     {
       title: "Leads",
       icon: Users,
-      url: "#",
+      url: "/leads",
+    },
+    {
+      title: "Counsellings",
+      icon: MessageCircle,
+      url: "/counsellings",
     },
     {
       title: "Admissions",
@@ -126,6 +132,7 @@ import {
   SidebarGroupContent,
 } from "@/components/ui/sidebar"
 import { usePathname } from "next/navigation";
+import Link from "next/link";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentRoute = usePathname();
@@ -146,7 +153,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarHeader>
-      
+
       <SidebarContent>
         {/* dotted line */}
         {/* Main Navigation */}
@@ -160,18 +167,20 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {data.navStudentManagement.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                  tooltip={item.title}
-                  className={item.url === currentRoute ? "bg-primary text-primary-foreground" : ""}
+                    tooltip={item.title}
+                    className={item.url === currentRoute ? "bg-primary text-primary-foreground" : ""}
                   >
-                  {item.icon && <item.icon />}
-                  <span>{item.title}</span>
+                    <Link href={item.url} className="flex w-full items-center gap-3">
+                      <item.icon className="h-4 w-4"/>
+                      <span>{item.title}</span>
+                    </Link>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
         <hr className="border-t-2 border-border mx-4 border-dotted my-1" />
         {/* Business Section */}
         <SidebarGroup>
@@ -185,7 +194,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     className={item.url === currentRoute ? "bg-primary text-primary-foreground" : ""}
                   >
                     <a href={item.url}>
-                      <item.icon />
+                      <item.icon className="h-4 w-4"/>
                       <span>{item.title}</span>
                       {item.badge && (
                         <span className="ml-auto bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs">
@@ -199,7 +208,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
         <hr className="border-t-2 border-border mx-4 border-dotted my-1" />
         {/* Task Management Section */}
         <SidebarGroup>
@@ -208,12 +217,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               {data.navTaskManagement.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    asChild 
+                    asChild
                     tooltip={item.title}
                     className={item.url === currentRoute ? "bg-primary text-primary-foreground" : ""}
-                    >
+                  >
                     <a href={item.url}>
-                      <item.icon />
+                      <item.icon className="h-4 w-4"/>
                       <span>{item.title}</span>
                       {item.badge && (
                         <span className="ml-auto bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs">
@@ -227,11 +236,11 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-        
+
         {/* Support Section */}
         <NavSecondary items={data.navSupport} className="mt-auto" />
       </SidebarContent>
-      
+
       <SidebarFooter>
         <NavUser user={data.user} />
       </SidebarFooter>
