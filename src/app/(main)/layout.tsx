@@ -19,7 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             orientation="vertical"
             className="mr-2 data-[orientation=vertical]:h-4"
           />
-            <h1 className="text-lg font-medium">Dashboard</h1>
+            <h1 className="text-lg font-black sm:hidden">IDB Connect</h1>
         </header>
         <div className="flex flex-1 flex-col gap-4 p-4">
           {children}
