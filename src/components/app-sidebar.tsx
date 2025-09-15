@@ -26,11 +26,7 @@ const data = {
     avatar: "/avatars/ishwor.jpg",
   },
   navMain: [
-    {
-      title: "Home",
-      url: "/",
-      icon: Home,
-    },
+
     {
       title: "Dashboard",
       url: "/dashboard",
@@ -149,9 +145,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:!p-1.5"
             >
-              <a href="#">
-                <span className="text-base font-semibold">EduGlobal CRM</span>
-              </a>
+              <div className="w-full h-14 flex items-center justify-center">
+
+              <img src="/logo.gif" alt="" className="w-3/4 h-auto rounded-lg" />
+              </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -161,7 +158,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         {/* dotted line */}
         {/* Main Navigation */}
         <NavMain items={data.navMain} />
-        <hr className="border-t-2 border-border mx-4 border-dotted my-1" />
+        <hr className="border-t-2 border-border mx-4 border-dotted my-0.5" />
         {/* Study Abroad Section */}
         <SidebarGroup>
           <SidebarGroupLabel >Study Abroad</SidebarGroupLabel>
