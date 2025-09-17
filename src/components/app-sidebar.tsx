@@ -1,7 +1,6 @@
 "use client"
 import * as React from "react"
 import {
-  Home,
   LayoutDashboard,
   FileText,
   Activity,
@@ -16,7 +15,8 @@ import {
   CheckSquare,
   Clock,
   HelpCircle,
-  Settings
+  Settings,
+  Plus
 } from "lucide-react";
 
 const data = {
@@ -133,6 +133,8 @@ import {
 } from "@/components/ui/sidebar"
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import { Button } from "./ui/button";
+import {CreateLeadSheet} from "./leads-components/createLeadButton";
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const currentRoute = usePathname();
@@ -147,7 +149,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
             >
               <div className="w-full h-14 flex items-center justify-center">
 
-              <img src="/logo.gif" alt="" className="w-3/4 h-auto rounded-lg" />
+                <img src="/logo.gif" alt="" className="w-3/4 h-auto rounded-lg" />
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -155,8 +157,21 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
 
       <SidebarContent>
-        {/* dotted line */}
-        {/* Main Navigation */}
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  tooltip="Add Lead"
+                >
+                  <CreateLeadSheet/>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <NavMain items={data.navMain} />
         <hr className="border-t-2 border-border mx-4 border-dotted my-0.5" />
         {/* Study Abroad Section */}
@@ -168,7 +183,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild tooltip={item.title} className={item.url === currentRoute ? "bg-primary text-primary-foreground" : ""}>
                     <Link href={item.url} className="flex w-full items-center gap-3">
-                      <item.icon className="h-4 w-4"/>
+                      <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                     </Link>
                   </SidebarMenuButton>
@@ -192,7 +207,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     className={item.url === currentRoute ? "bg-primary text-primary-foreground" : ""}
                   >
                     <a href={item.url}>
-                      <item.icon className="h-4 w-4"/>
+                      <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                       {item.badge && (
                         <span className="ml-auto bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs">
@@ -220,7 +235,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                     className={item.url === currentRoute ? "bg-primary text-primary-foreground" : ""}
                   >
                     <a href={item.url}>
-                      <item.icon className="h-4 w-4"/>
+                      <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                       {item.badge && (
                         <span className="ml-auto bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs">

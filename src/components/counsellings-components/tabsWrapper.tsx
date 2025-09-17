@@ -1,8 +1,8 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Lead } from "@/lib/mocktypes";
-import LeadsTable from "../leads-components/leadsTable";
 import CounsellingTableToolbar from "./tableToolbar";
+import LeadsTable from "./leadsTableCounselling";
 
 type TabName = "All" | "New" | "Lead In Process" | "Assigned" | "Cold" | "Rejected" | "Counselling In Process" | "Converted";
 
