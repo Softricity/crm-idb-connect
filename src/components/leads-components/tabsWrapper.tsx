@@ -1,8 +1,8 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { Lead } from "@/lib/mocktypes";
-import LeadsTable from "./leadsTable";
 import LeadsTableToolbar from "./leadsTableToolbar";
+import LeadsDisplay from "./displayLeads";
+import { Lead } from "@/stores/useLeadStore";
 
 type TabName = "All" | "New" | "Lead In Process" | "Assigned" | "Cold" | "Rejected";
 
@@ -20,9 +20,29 @@ type TabsWrapperProps = {
 };
 
 export default function TabsWrapper({ leads }: TabsWrapperProps) {
+  const filterLeads = (tab: TabName) => {
+    if (tab === "All") return leads;
+    return leads.filter((lead) => {
+      const status = lead.status?.toLowerCase();
+      switch (tab) {
+        case "New":
+          return status === "new";
+        case "Lead In Process":
+          return status === "interested" || status === "inprocess" || status === "contacted";
+        case "Assigned":
+          return !!lead.assignedto;
+        case "Cold":
+          return status === "cold";
+        case "Rejected":
+          return status === "rejected";
+        default:
+          return true;
+      }
+    });
+  };
+
   return (
     <Tabs defaultValue="All" className="w-full">
-      {/* Tab Buttons */}
       <TabsList className="rounded-md w-full py-5 px-0 mx-auto flex gap-2 bg-muted/40 shadow overflow-x-auto overflow-y-hidden">
         {TAB_LABELS.map((tab) => (
           <TabsTrigger
@@ -32,18 +52,16 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
           >
             {tab}
             <Badge variant="outline" className="ml-2 bg-white">
-              {/* Static count placeholder */}
-              {leads.length}
+              {filterLeads(tab).length}
             </Badge>
           </TabsTrigger>
         ))}
       </TabsList>
 
-      {/* Tab Content */}
       {TAB_LABELS.map((tab) => (
         <TabsContent key={tab} value={tab} className="gap-5 flex flex-col">
-            <LeadsTableToolbar />
-          <LeadsTable leads={leads} />
+          <LeadsTableToolbar />
+          <LeadsDisplay leads={filterLeads(tab)} />
         </TabsContent>
       ))}
     </Tabs>

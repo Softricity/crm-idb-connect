@@ -1,63 +1,33 @@
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Star, Download, FileText, Trash2, ArrowRight } from "lucide-react";
 import { TableCell, TableRow } from "@/components/ui/table";
-import { format } from "date-fns";
-
-interface Lead {
-    id: string;
-    name: string;
-    mobile: string;
-    email: string;
-    qualifications: string;
-    address: string;
-    doneexam: boolean;
-    examscores: any;
-    preferredcountry: string;
-    status: string;
-    type: string;
-    utmsource: string;
-    utmmedium: string | null;
-    utmcampaign: string | null;
-    assignedto?: string | null;
-    createdat?: string;
-    updatedat?: string;
-}
+import { Lead } from "@/lib/mocktypes";
 
 export default function LeadsTableRow({ lead }: { lead: Lead }) {
     return (
         <TableRow>
-
             <TableCell>
-                <div className="font-medium">{lead.id.slice(0, 6).toUpperCase()}</div>
-                <div className="text-xs text-gray-500">
-                    {lead.createdat ? format(new Date(lead.createdat), "dd MMM yyyy, HH:mm") : "-"}
-                </div>
+                <Checkbox /> 
             </TableCell>
-
+            <TableCell>
+                <div className="font-medium">{lead.serial}</div>
+                <div className="text-xs text-gray-500">{lead.date} {lead.time}</div>
+            </TableCell>
             <TableCell>
                 <div className="font-medium">{lead.name}</div>
-                <div className="text-xs text-gray-500">{lead.mobile}</div>
+                <div className="text-xs text-gray-500">{lead.phone}</div>
             </TableCell>
-
-            <TableCell>-</TableCell>
-
-            <TableCell>{lead.assignedto ?? "Unassigned"}</TableCell>
-
-            <TableCell>
-                <Badge variant="destructive">{lead.utmsource ?? "-"}</Badge>
-            </TableCell>
-
+            <TableCell>{lead.branch}</TableCell>
+            <TableCell>{lead.leadManager}</TableCell>
+            <TableCell><Badge variant="destructive">{lead.leadSource}</Badge></TableCell>
             <TableCell>
                 <div className="flex items-center gap-2">
-                    <span>{lead.preferredcountry}</span>
+                    <span>{lead.country}</span>
                 </div>
             </TableCell>
-
-            <TableCell>
-                <Badge>{lead.status}</Badge>
-            </TableCell>
-
+            <TableCell><Badge>{lead.status}</Badge></TableCell>
             <TableCell className="text-right">
                 <div className="flex justify-end gap-1">
                     <Button variant="ghost" size="icon">

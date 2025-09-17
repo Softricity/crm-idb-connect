@@ -1,15 +1,16 @@
-import CourseCard from "@/components/courses-components/courseCards"
-import FilterSidebar from "@/components/courses-components/filterSidebar"
-import LeadsTableToolbar from "@/components/leads-components/leadsTableToolbar";
+"use client";
 import TabsWrapper from "@/components/leads-components/tabsWrapper";
-import { leadsData } from "@/lib/mockdata";
-
-
+import { useLeadStore } from "@/stores/useLeadStore";
+import { useEffect } from "react";
 
 export default function Page() {
+    const { leads, fetchLeads } = useLeadStore();
+    useEffect(() => {
+        fetchLeads();
+    }, [fetchLeads]);
     return (
         <>
-            <TabsWrapper leads={leadsData} />
+            <TabsWrapper leads={leads} />
         </>
     )
 }
