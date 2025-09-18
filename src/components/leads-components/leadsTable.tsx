@@ -14,13 +14,12 @@ export default function LeadsTable({ leads }: LeadsTableProps) {
                     <TableHeader className="bg-muted/50 sticky top-0 z-10">
                         <TableRow >
                             
-                            <TableHead>Serial/Date</TableHead>
+                            <TableHead>Date</TableHead>
                             <TableHead>Name/Phone</TableHead>
-                            <TableHead>Branch</TableHead>
-                            <TableHead>Lead Manager</TableHead>
-                            <TableHead>Lead Source</TableHead>
+                            <TableHead>Lead Owner</TableHead>
+                            <TableHead>Lead Address</TableHead>
                             <TableHead>Preferred Country</TableHead>
-                            <TableHead className="text-start">Status</TableHead>
+                            <TableHead className="text-start">Lead Status</TableHead>
                             <TableHead className="text-center">Action</TableHead>
                         </TableRow>
                     </TableHeader>

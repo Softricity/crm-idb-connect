@@ -2,11 +2,12 @@
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Star, Download, FileText, Trash2, ArrowRight } from "lucide-react";
+import { Download, FileText, Trash2, ArrowRight, FlagIcon, EllipsisVertical } from "lucide-react";
 import { TableCell, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { Lead } from "@/stores/useLeadStore";
+import LeadActionsMenu from "./tableActionCell";
 
 export default function LeadsTableRow({ lead }: { lead: Lead }) {
     const router = useRouter();
@@ -18,7 +19,6 @@ export default function LeadsTableRow({ lead }: { lead: Lead }) {
         <TableRow>
 
             <TableCell>
-                <div className="font-medium">{lead.id ? lead.id.slice(0, 6).toUpperCase() : "-"}</div>
                 <div className="text-xs text-gray-500">
                     {lead.createdat ? format(new Date(lead.createdat), "dd MMM yyyy, HH:mm") : "-"}
                 </div>
@@ -29,7 +29,6 @@ export default function LeadsTableRow({ lead }: { lead: Lead }) {
                 <div className="text-xs text-gray-500">{lead.mobile}</div>
             </TableCell>
 
-            <TableCell>-</TableCell>
 
             <TableCell>{lead.assignedto ?? "Unassigned"}</TableCell>
 
@@ -50,17 +49,12 @@ export default function LeadsTableRow({ lead }: { lead: Lead }) {
             <TableCell className="text-right">
                 <div className="flex justify-end gap-1">
                     <Button variant="ghost" size="icon">
-                        <Star className="h-4 w-4 text-gray-400" />
+                        <FlagIcon className="h-4 w-4 text-gray-500" />
                     </Button>
                     <Button variant="ghost" size="icon">
                         <Download className="h-4 w-4 text-gray-500" />
                     </Button>
-                    <Button variant="ghost" size="icon">
-                        <FileText className="h-4 w-4 text-gray-500" />
-                    </Button>
-                    <Button variant="ghost" size="icon">
-                        <Trash2 className="h-4 w-4 text-gray-500" />
-                    </Button>
+                    <LeadActionsMenu/>
                     <Button variant="ghost" size="icon" onClick={handleRedirect}>
                         <ArrowRight className="h-4 w-4 text-gray-500" />
                     </Button>
