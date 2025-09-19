@@ -9,26 +9,25 @@ export interface Lead {
   name: string;
   mobile: string;
   email: string;
-  qualifications: string;
-  address: string;
-  doneexam: boolean;
-  examscores: any; // jsonb
-  preferredcountry: string;
-  status: string;
+  alternate_mobile?: string | null;
   type: string;
-  utmsource: string;
-  utmmedium: string;
-  utmcampaign: string;
-  assignedto?: string | null;
-  createdat?: string;
-  updatedat?: string;
+  city: string;
+  purpose: string;
+  preferred_country?: string | null;
+  status: string;
+  utm_source?: string | null;
+  utm_medium?: string | null;
+  utm_campaign?: string | null;
+  assigned_to?: string | null;
+  created_at?: string;
 }
 
 interface LeadState {
   leads: Lead[];
   loading: boolean;
   fetchLeads: () => Promise<void>;
-  addLead: (lead: Omit<Lead, "id" | "createdAt" | "updatedAt">) => Promise<void>;
+  fetchLeadById: (id: string) => Promise<Lead | null>;
+  addLead: (lead: Omit<Lead, "id" | "created_at">) => Promise<void>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
   deleteLead: (id: string) => Promise<void>;
 }
@@ -48,17 +47,26 @@ export const useLeadStore = create<LeadState>((set) => ({
     set({ loading: false });
   },
 
-    addLead: async (lead) => {
-        const sanitizedLead = Object.fromEntries(
-            Object.entries(lead).map(([key, value]) => [key, value === "" ? null : value])
-        );
-        const { data, error } = await supabase.from("leads").insert([sanitizedLead]).select();
-        if (error) {
-            console.error("Error adding lead:", error.message);
-            return;
-        }
-        set((state) => ({ leads: [...state.leads, ...(data as Lead[])] }));
-    },
+  fetchLeadById: async (id) => {
+    const { data, error } = await supabase.from("leads").select("*").eq("id", id).single();
+    if (error) {
+      console.error("Error fetching lead by id:", error.message);
+      return null;
+    }
+    return data as Lead;
+  },
+
+  addLead: async (lead) => {
+    const sanitizedLead = Object.fromEntries(
+      Object.entries(lead).map(([key, value]) => [key, value === "" ? null : value])
+    );
+    const { data, error } = await supabase.from("leads").insert([sanitizedLead]).select();
+    if (error) {
+      console.error("Error adding lead:", error.message);
+      return;
+    }
+    set((state) => ({ leads: [...state.leads, ...(data as Lead[])] }));
+  },
 
   updateLead: async (id, updates) => {
     const { data, error } = await supabase

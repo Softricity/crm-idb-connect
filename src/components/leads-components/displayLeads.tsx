@@ -1,5 +1,5 @@
 "use client";
-
+import { Dispatch, SetStateAction } from "react";
 import { Lead, useLeadStore } from "@/stores/useLeadStore"; 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
@@ -7,9 +7,11 @@ import LeadsTable from "./leadsTable";
 
 type LeadsDisplayProps = {
   leads: Lead[];
+  selectedLeadIds: string[];
+  setSelectedLeadIds: Dispatch<SetStateAction<string[]>>;
 };
 
-export default function LeadsDisplay({ leads }: LeadsDisplayProps) {
+export default function LeadsDisplay({ leads, selectedLeadIds, setSelectedLeadIds }: LeadsDisplayProps) {
   
   const { loading } = useLeadStore();
   
@@ -25,7 +27,7 @@ export default function LeadsDisplay({ leads }: LeadsDisplayProps) {
     );
   }
 
-  return <LeadsTable leads={leads} />;
+  return <LeadsTable leads={leads} selectedLeadIds={selectedLeadIds} setSelectedLeadIds={setSelectedLeadIds} />;
 }
 
 

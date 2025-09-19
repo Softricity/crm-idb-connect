@@ -2,7 +2,7 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { validateEmail, validateMobile } from "@/lib/validation";
+import { validateEmail, validateMobile, validateName } from "@/lib/validation";
 import PhoneInput, { Value } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { Dispatch, SetStateAction } from "react";
@@ -11,19 +11,20 @@ import { Lead } from "@/stores/useLeadStore";
 export interface ContactFormErrors {
   name?: string;
   mobile?: string;
+  alternate_mobile?: string;
   email?: string;
-  address?: string;
+  city?: string;
 }
 
-// ✅ Props type
 interface ContactInformationProps {
-  formData: Omit<Lead, "id" | "createdat" | "updatedat">;
-  setFormData: Dispatch<
-    SetStateAction<Omit<Lead, "id" | "createdat" | "updatedat">>
-  >;
+  formData: Omit<Lead, "id" | "created_at">;
+  setFormData: Dispatch<SetStateAction<Omit<Lead, "id" | "created_at">>>;
   errors: ContactFormErrors;
   setErrors: Dispatch<SetStateAction<ContactFormErrors>>;
 }
+
+const ErrorText = ({ message }: { message?: string }) =>
+  message ? <span className="text-xs text-red-500 mt-1">{message}</span> : null;
 
 export default function ContactInformation({
   formData,
@@ -36,21 +37,24 @@ export default function ContactInformation({
       <h3 className="text-lg font-semibold">Contact Information</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 border p-4 rounded-lg">
         {/* Full Name */}
-        <div className="grid gap-2">
-          <Label htmlFor="name">Full Name*</Label>
+        <div className="flex flex-col gap-1">
+          <Label>Full Name*</Label>
           <Input
             id="name"
             name="name"
             value={formData.name}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, name: e.target.value }))
-            }
+            onChange={(e) => {
+              const val = e.target.value;
+              setFormData((prev) => ({ ...prev, name: val }));
+              const errorMsg = validateName(val);
+              setErrors((prev) => ({ ...prev, name: errorMsg }));
+            }}
           />
-          {errors.name && <p className="text-red-500 text-sm">{errors.name}</p>}
+          <ErrorText message={errors.name} />
         </div>
 
         {/* Mobile */}
-        <div className="grid gap-2">
+        <div className="flex flex-col gap-1">
           <Label>Mobile Number*</Label>
           <PhoneInput
             international
@@ -59,24 +63,41 @@ export default function ContactInformation({
             onChange={(value) => {
               const newValue = value || "";
               setFormData((prev) => ({ ...prev, mobile: newValue }));
-              if (!validateMobile(newValue)) {
-                setErrors((prev) => ({
-                  ...prev,
-                  mobile: "Invalid mobile number",
-                }));
-              } else {
-                setErrors((prev) => ({ ...prev, mobile: "" }));
-              }
+              setErrors((prev) => ({
+                ...prev,
+                mobile: validateMobile(newValue) ? "" : "Invalid mobile number",
+              }));
             }}
             className="border rounded-md p-2"
           />
-          {errors.mobile && (
-            <p className="text-red-500 text-sm">{errors.mobile}</p>
-          )}
+          <ErrorText message={errors.mobile} />
+        </div>
+
+        {/* Alternate Mobile */}
+        <div className="flex flex-col gap-1">
+          <Label>Alternate Mobile (Optional)</Label>
+          <PhoneInput
+            international
+            defaultCountry="IN"
+            value={formData.alternate_mobile as Value}
+            onChange={(value) => {
+              const newValue = value || "";
+              setFormData((prev) => ({ ...prev, alternate_mobile: newValue }));
+              setErrors((prev) => ({
+                ...prev,
+                alternate_mobile:
+                  newValue && !validateMobile(newValue)
+                    ? "Invalid alternate mobile number"
+                    : "",
+              }));
+            }}
+            className="border rounded-md p-2"
+          />
+          <ErrorText message={errors.alternate_mobile} />
         </div>
 
         {/* Email */}
-        <div className="col-span-2 grid gap-2">
+        <div className="flex flex-col gap-1">
           <Label>Email Address*</Label>
           <Input
             id="email"
@@ -86,32 +107,27 @@ export default function ContactInformation({
             onChange={(e) => {
               const val = e.target.value;
               setFormData((prev) => ({ ...prev, email: val }));
-              if (!validateEmail(val)) {
-                setErrors((prev) => ({
-                  ...prev,
-                  email: "Invalid email format",
-                }));
-              } else {
-                setErrors((prev) => ({ ...prev, email: "" }));
-              }
+              setErrors((prev) => ({
+                ...prev,
+                email: validateEmail(val) ? "" : "Invalid email format",
+              }));
             }}
           />
-          {errors.email && (
-            <p className="text-red-500 text-sm">{errors.email}</p>
-          )}
+          <ErrorText message={errors.email} />
         </div>
 
         {/* City */}
-        <div className="sm:col-span-2 grid gap-2">
+        <div className="sm:col-span-2 flex flex-col gap-1">
           <Label>City</Label>
           <Input
-            id="address"
-            name="address"
-            value={formData.address}
+            id="city"
+            name="city"
+            value={formData.city || ""}
             onChange={(e) =>
-              setFormData((prev) => ({ ...prev, address: e.target.value }))
+              setFormData((prev) => ({ ...prev, city: e.target.value }))
             }
           />
+          <ErrorText message={errors.city} />
         </div>
       </div>
     </div>

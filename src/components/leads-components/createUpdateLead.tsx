@@ -18,21 +18,22 @@ import { validateEmail, validateMobile } from "@/lib/validation";
 import ContactInformation, { ContactFormErrors } from "./contactInformation";
 import ApplicationPreferences from "./applicationPreferences";
 
-const initialState: Omit<Lead, "id" | "createdat" | "updatedat"> = {
+// FIX: This state now matches the Lead type from useLeadStore.ts exactly.
+// Fields like 'address', 'qualifications', etc., have been removed or renamed.
+const initialState: Omit<Lead, "id" | "created_at"> = {
   name: "",
   mobile: "",
   email: "",
-  qualifications: "",
-  address: "",
-  doneexam: false,
-  examscores: {},
-  preferredcountry: "",
+  alternate_mobile: "",
+  city: "",
+  purpose: "", // Added 'purpose' field
+  preferred_country: "", // Renamed from 'preferredcountry'
   status: "new",
   type: "student",
-  utmsource: "walkin",
-  utmmedium: "",
-  utmcampaign: "",
-  assignedto: null,
+  utm_source: "walkin", // Renamed from 'utmsource'
+  utm_medium: "", // Renamed from 'utmmedium'
+  utm_campaign: "", // Renamed from 'utmcampaign'
+  assigned_to: null, // Renamed from 'assignedto'
 };
 
 interface LeadFormSheetProps {
@@ -45,15 +46,30 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
   const isEditMode = !!lead;
   const { addLead, updateLead } = useLeadStore();
 
-  const [formData, setFormData] = useState(initialState);
+  // FIX: Unified state for all form data.
+  const [formData, setFormData] = useState<Omit<Lead, "id" | "created_at">>(initialState);
   const [errors, setErrors] = useState<ContactFormErrors>({});
-  const [applicationPreferences, setApplicationPreferences] = useState<string>("");
-  const [visaCountry, setVisaCountry] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isEditMode && lead) {
-      setFormData({ ...lead });
+      // FIX: Ensure all fields from the lead object are mapped correctly to the form state.
+      // Added || "" to prevent React uncontrolled component warnings for null values.
+      setFormData({
+        name: lead.name || "",
+        mobile: lead.mobile || "",
+        email: lead.email || "",
+        alternate_mobile: lead.alternate_mobile || "",
+        city: lead.city || "",
+        purpose: lead.purpose || "",
+        preferred_country: lead.preferred_country || "",
+        status: lead.status || "new",
+        type: lead.type || "student",
+        utm_source: lead.utm_source || "walkin",
+        utm_medium: lead.utm_medium || "",
+        utm_campaign: lead.utm_campaign || "",
+        assigned_to: lead.assigned_to || null,
+      });
     } else {
       setFormData(initialState);
     }
@@ -61,34 +77,28 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
 
   const handleSubmit = async () => {
     setLoading(true);
+    const newErrors: ContactFormErrors = {};
+    if (!formData.name) newErrors.name = "Name is required";
+    if (!formData.email) newErrors.email = "Email is required";
+    else if (!validateEmail(formData.email)) newErrors.email = "Invalid email format";
+    if (!formData.mobile) newErrors.mobile = "Mobile is required";
+    else if (!validateMobile(formData.mobile)) newErrors.mobile = "Invalid mobile number";
+
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      setLoading(false);
+      return;
+    }
+
     try {
-      const newErrors: { [key: string]: string } = {};
-      if (!formData.name) newErrors.name = "Name is required";
-      if (!formData.email) newErrors.email = "Email is required";
-      if (!formData.mobile) newErrors.mobile = "Mobile is required";
-      if (!validateEmail(formData.email)) newErrors.email = "Invalid email format";
-      if (!validateMobile(formData.mobile)) newErrors.mobile = "Invalid mobile number";
-
-      setErrors(newErrors);
-      if (Object.keys(newErrors).length > 0) {
-        setLoading(false);
-        return;
-      }
-
-      const leadData = {
-        ...formData,
-        applicationPreferences,
-        visaCountry,
-      };
-
+      // FIX: The formData object now correctly matches the type expected by the store functions.
       if (isEditMode && lead?.id) {
-        await updateLead(lead.id, leadData);
+        await updateLead(lead.id, formData);
         toast.success("Lead updated successfully!");
       } else {
-        await addLead(leadData);
+        await addLead(formData);
         toast.success("Lead created successfully!");
       }
-
       onOpenChange(false);
     } catch {
       toast.error(`Failed to ${isEditMode ? "update" : "create"} lead.`);
@@ -116,23 +126,32 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
             errors={errors}
             setErrors={setErrors}
           />
-
           <ApplicationPreferences
-            applicationPreference={applicationPreferences}
-            setApplicationPreference={setApplicationPreferences}
-            visaCountry={visaCountry}
-            setVisaCountry={setVisaCountry}
+            formData={formData}
+            setFormData={setFormData}
           />
         </div>
 
         <SheetFooter className="p-6 border-t bg-background mt-auto">
           <div className="flex w-full items-center gap-3">
             <SheetClose asChild>
-              <Button variant="outline" disabled={loading}>Cancel</Button>
+              <Button variant="outline" disabled={loading}>
+                Cancel
+              </Button>
             </SheetClose>
-            <Button onClick={handleSubmit} disabled={loading}>
+            <Button
+              onClick={handleSubmit}
+              disabled={loading || Object.values(errors).some((err) => err && err.length > 0)}
+              className="disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               {loading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              {loading ? (isEditMode ? "Saving..." : "Creating...") : (isEditMode ? "Save Changes" : "Create Lead")}
+              {loading
+                ? isEditMode
+                  ? "Saving..."
+                  : "Creating..."
+                : isEditMode
+                  ? "Save Changes"
+                  : "Create Lead"}
             </Button>
           </div>
         </SheetFooter>

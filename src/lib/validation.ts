@@ -5,3 +5,9 @@ export const validateEmail = (email: string) =>
 
 export const validateMobile = (mobile: string) =>
   mobile ? isValidPhoneNumber(mobile) : false;
+
+export const validateName = (name: string) => {
+  if (!name.trim()) return "Name is required";
+  if (/\d/.test(name)) return "Name cannot contain numbers";
+  return "";
+};

@@ -60,7 +60,7 @@ export default function LeadActionsMenu() {
 
                 {/* Add Lead */}
                 <DropdownMenuItem className="hover:bg-gray-50 dark:hover:bg-gray-800 rounded-lg gap-2">
-                    <Plus className="h-4 w-4 text-blue-500" /> Add Lead to Application
+                    <Plus className="h-4 w-4 text-blue-500" />  Lead to Application
                 </DropdownMenuItem>
 
                 {/* Communicate with Submenu */}
