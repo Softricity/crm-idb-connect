@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import LeadsTableToolbar from "./leadsTableToolbar";
 import LeadsDisplay from "./displayLeads";
 import { Lead } from "@/stores/useLeadStore";
+import { useState } from "react";
 
 type TabName = "All" | "New" | "Lead In Process" | "Assigned" | "Cold" | "Rejected";
 
@@ -20,6 +21,7 @@ type TabsWrapperProps = {
 };
 
 export default function TabsWrapper({ leads }: TabsWrapperProps) {
+  const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const filterLeads = (tab: TabName) => {
     if (tab === "All") return leads;
     return leads.filter((lead) => {
@@ -28,9 +30,9 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
         case "New":
           return status === "new";
         case "Lead In Process":
-          return status === "interested" || status === "inprocess" || status === "contacted";
+          return status === "interested" || status === "inprocess" || status === "contacted" || status === "hot" || status === "engaged";
         case "Assigned":
-          return !!lead.assignedto;
+          return status === "assigned";
         case "Cold":
           return status === "cold";
         case "Rejected":
@@ -60,8 +62,12 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
 
       {TAB_LABELS.map((tab) => (
         <TabsContent key={tab} value={tab} className="gap-5 flex flex-col">
-          <LeadsTableToolbar />
-          <LeadsDisplay leads={filterLeads(tab)} />
+          <LeadsTableToolbar allLeads={leads} selectedLeadIds={selectedLeadIds} />
+          <LeadsDisplay
+            leads={leads}
+            selectedLeadIds={selectedLeadIds}
+            setSelectedLeadIds={setSelectedLeadIds}
+          />
         </TabsContent>
       ))}
     </Tabs>
