@@ -20,8 +20,7 @@ export interface Lead {
   utm_campaign?: string | null;
   assigned_to?: string | null;
   created_at?: string;
-  created_by_agent?: string | null;
-  created_by_counsellor?: string | null;
+  created_by?: string | null;
 }
 
 interface LeadState {
