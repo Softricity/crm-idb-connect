@@ -16,7 +16,8 @@ import {
   Clock,
   HelpCircle,
   Settings,
-  Plus
+  Plus,
+  ShieldUser
 } from "lucide-react";
 
 const data = {
@@ -63,6 +64,11 @@ const data = {
       title: "Counsellings",
       icon: MessageCircle,
       url: "/counsellings",
+    },
+    {
+      title: "Agents",
+      icon: ShieldUser ,
+      url: "/agents",
     },
     {
       title: "Admissions",

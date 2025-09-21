@@ -18,22 +18,20 @@ import { validateEmail, validateMobile } from "@/lib/validation";
 import ContactInformation, { ContactFormErrors } from "./contactInformation";
 import ApplicationPreferences from "./applicationPreferences";
 
-// FIX: This state now matches the Lead type from useLeadStore.ts exactly.
-// Fields like 'address', 'qualifications', etc., have been removed or renamed.
 const initialState: Omit<Lead, "id" | "created_at"> = {
   name: "",
   mobile: "",
   email: "",
   alternate_mobile: "",
   city: "",
-  purpose: "", // Added 'purpose' field
-  preferred_country: "", // Renamed from 'preferredcountry'
+  purpose: "", 
+  preferred_country: "", 
   status: "new",
   type: "student",
-  utm_source: "walkin", // Renamed from 'utmsource'
-  utm_medium: "", // Renamed from 'utmmedium'
-  utm_campaign: "", // Renamed from 'utmcampaign'
-  assigned_to: null, // Renamed from 'assignedto'
+  utm_source: "walkin", 
+  utm_medium: "", 
+  utm_campaign: "", 
+  assigned_to: null, 
 };
 
 interface LeadFormSheetProps {
@@ -45,16 +43,12 @@ interface LeadFormSheetProps {
 export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSheetProps) {
   const isEditMode = !!lead;
   const { addLead, updateLead } = useLeadStore();
-
-  // FIX: Unified state for all form data.
   const [formData, setFormData] = useState<Omit<Lead, "id" | "created_at">>(initialState);
   const [errors, setErrors] = useState<ContactFormErrors>({});
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (isEditMode && lead) {
-      // FIX: Ensure all fields from the lead object are mapped correctly to the form state.
-      // Added || "" to prevent React uncontrolled component warnings for null values.
+    if (isEditMode && lead) {      
       setFormData({
         name: lead.name || "",
         mobile: lead.mobile || "",
@@ -90,8 +84,7 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
       return;
     }
 
-    try {
-      // FIX: The formData object now correctly matches the type expected by the store functions.
+    try {   
       if (isEditMode && lead?.id) {
         await updateLead(lead.id, formData);
         toast.success("Lead updated successfully!");
