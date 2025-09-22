@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Lead } from "@/stores/useLeadStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 // UPDATED: Props now accept all leads and the IDs of selected leads
 interface LeadsTableToolbarProps {
@@ -17,6 +18,7 @@ interface LeadsTableToolbarProps {
 
 export default function LeadsTableToolbar({ allLeads, selectedLeadIds }: LeadsTableToolbarProps) {
 
+  const { user } = useAuthStore();
   const handleDownloadCSV = () => {
     // UPDATED: Filter leads to get only the selected ones
     const leadsToExport = allLeads.filter(lead => selectedLeadIds.includes(lead.id!));
@@ -56,14 +58,14 @@ export default function LeadsTableToolbar({ allLeads, selectedLeadIds }: LeadsTa
 
   return (
     <div className="mt-5 flex flex-col sm:flex-row justify-between items-center gap-3 ">
-      <div className="flex items-center gap-2">
+      {user?.role==="admin" && (<div className="flex items-center gap-2">
         <Button variant="secondary" size="sm" disabled>
           <Flag className="h-4 w-4 mr-2" /> Flagged
         </Button>
         <Button variant="secondary" size="sm" disabled>
           <Filter className="h-4 w-4 mr-2" /> Apply Filters
         </Button>
-      </div>
+      </div>)}
       <div className="flex items-center gap-2">
         <Button variant="outline" size="sm" onClick={handleDownloadCSV}>
           <Download className="h-4 w-4 mr-2" />

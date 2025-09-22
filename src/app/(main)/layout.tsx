@@ -8,8 +8,15 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { Toaster } from "@/components/ui/sonner"
+import { useAuthStore } from "@/stores/useAuthStore"
+import { useEffect } from "react"
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+    const initAuth = useAuthStore((state) => state.initAuth);
+
+  useEffect(() => {
+    initAuth();
+  }, [initAuth]);
   return (
     <SidebarProvider>
       <AppSidebar className="border-l-4 border-l-blue-500 min-w-13" />

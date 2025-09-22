@@ -30,11 +30,13 @@ export interface Partner {
 interface PartnerState {
   partners: Partner[];
   loading: boolean;
+  currentPartner?: Partner;
   fetchPartners: () => Promise<void>;
   fetchPartnerById: (id: string) => Promise<Partner | null>;
   addPartner: (partner: Omit<Partner, "id" | "created_at">) => Promise<void>;
   updatePartner: (id: string, updates: Partial<Partner>) => Promise<void>;
   deletePartner: (id: string) => Promise<void>;
+  loadCurrentPartner: (id: string) => Promise<void>;
 }
 
 export const usePartnerStore = create<PartnerState>((set) => ({
@@ -110,5 +112,20 @@ export const usePartnerStore = create<PartnerState>((set) => ({
     set((state) => ({
       partners: state.partners.filter((partner) => partner.id !== id),
     }));
+  },
+
+  loadCurrentPartner: async (id) => {
+    const { data, error } = await supabase
+      .from("partners")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error) {
+      console.error("Failed to load partner:", error.message);
+      return;
+    }
+
+    set({ currentPartner: data });
   },
 }));

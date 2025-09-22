@@ -5,6 +5,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead } from "@/components
 import { Checkbox } from "@/components/ui/checkbox"; // Make sure to import your Checkbox component
 import LeadsTableRow from "./leadsTableRow";
 import { Lead } from "@/stores/useLeadStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 interface LeadsTableProps {
     leads: Lead[];
@@ -13,6 +14,7 @@ interface LeadsTableProps {
 }
 
 export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds }: LeadsTableProps) {
+    const { user } = useAuthStore()
 
     const handleSelectAll = (checked: boolean) => {
         if (checked) {
@@ -53,7 +55,7 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds 
                             <TableHead>Lead Source</TableHead>
                             <TableHead>Preferred Country</TableHead>
                             <TableHead>Lead Status</TableHead>
-                            <TableHead className="text-center">Action</TableHead>
+                            {user?.role === "admin" && (<TableHead className="text-center">Action</TableHead>)}
                         </TableRow>
                     </TableHeader>
                     <TableBody>

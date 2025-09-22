@@ -45,6 +45,12 @@ export async function middleware(request: NextRequest) {
     if (currentPath.startsWith('/admin') && userRole !== 'admin') {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
+    // Restrict agent routes
+    // if (userRole === "agent") {
+    //   if (!(currentPath === "/b2b" || currentPath.startsWith("/b2b/"))) {
+    //     return NextResponse.redirect(new URL("/b2b", request.url));
+    //   }
+    // }
     
     // Add more role-based restrictions as needed
     // if (currentPath.startsWith('/counsellor-only') && userRole !== 'counsellor') {

@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { useRouter } from "next/navigation";
 import { Lead } from "@/stores/useLeadStore";
 import LeadActionsMenu from "./tableActionCell";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 interface LeadsTableRowProps {
     lead: Lead;
@@ -19,6 +20,7 @@ interface LeadsTableRowProps {
 
 export default function LeadsTableRow({ lead, isSelected, onSelect }: LeadsTableRowProps) {
     const router = useRouter();
+    const { user } = useAuthStore()
 
     const handleRedirect = () => {
         router.push(`/leads/${lead.id}`);
@@ -51,7 +53,7 @@ export default function LeadsTableRow({ lead, isSelected, onSelect }: LeadsTable
                 </Badge>
             </TableCell>
             <TableCell>
-                <span className="capitalize">{lead.utm_source ?? "-"} / {lead.utm_medium ?? "-"} / {lead.utm_campaign ?? "-"}</span>
+                <span className="capitalize">{lead?.utm_source || "-"} / {lead?.utm_medium || "-"} / {lead?.utm_campaign || "-"}</span>
             </TableCell>
             <TableCell>
                 <div className="flex items-center gap-2">
@@ -61,41 +63,45 @@ export default function LeadsTableRow({ lead, isSelected, onSelect }: LeadsTable
             <TableCell>
                 <Badge className="capitalize" variant={"outline"}>{lead.status}</Badge>
             </TableCell>
-            <TableCell className="text-right">
-                <div className="flex justify-end gap-1">
-                    <TooltipProvider>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <FlagIcon className="h-4 w-4 text-gray-500" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <span>Flag</span>
-                            </TooltipContent>
-                        </Tooltip>
+            <TableCell>
+                {user?.role === "admin" && (
+                    <div className="flex justify-end gap-1">
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <FlagIcon className="h-4 w-4 text-gray-500" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <span>Flag</span>
+                                </TooltipContent>
+                            </Tooltip>
 
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <LeadActionsMenu />
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <span>Actions</span>
-                            </TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                            <TooltipTrigger asChild>
-                                <Button variant="ghost" size="icon" onClick={handleRedirect}>
-                                    <ArrowRight className="h-4 w-4 text-gray-500" />
-                                </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                                <span>Go to Lead</span>
-                            </TooltipContent>
-                        </Tooltip>
-                    </TooltipProvider>
-                </div>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <LeadActionsMenu />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <span>Actions</span>
+                                </TooltipContent>
+                            </Tooltip>
+
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button variant="ghost" size="icon" onClick={handleRedirect}>
+                                        <ArrowRight className="h-4 w-4 text-gray-500" />
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <span>Go to Lead</span>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    </div>
+                )}
             </TableCell>
+
         </TableRow>
     );
 }

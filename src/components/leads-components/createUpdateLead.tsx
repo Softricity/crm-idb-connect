@@ -17,6 +17,8 @@ import { Loader2 } from "lucide-react";
 import { validateEmail, validateMobile } from "@/lib/validation";
 import ContactInformation, { ContactFormErrors } from "./contactInformation";
 import ApplicationPreferences from "./applicationPreferences";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { usePartnerStore } from "@/stores/usePartnerStore";
 
 const initialState: Omit<Lead, "id" | "created_at"> = {
   name: "",
@@ -24,14 +26,15 @@ const initialState: Omit<Lead, "id" | "created_at"> = {
   email: "",
   alternate_mobile: "",
   city: "",
-  purpose: "", 
-  preferred_country: "", 
+  purpose: "",
+  preferred_country: "",
   status: "new",
   type: "student",
-  utm_source: "walkin", 
-  utm_medium: "", 
-  utm_campaign: "", 
-  assigned_to: null, 
+  utm_source: "walkin",
+  utm_medium: "",
+  utm_campaign: "",
+  assigned_to: null,
+  created_by: null
 };
 
 interface LeadFormSheetProps {
@@ -46,9 +49,11 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
   const [formData, setFormData] = useState<Omit<Lead, "id" | "created_at">>(initialState);
   const [errors, setErrors] = useState<ContactFormErrors>({});
   const [loading, setLoading] = useState(false);
+  const partnerDetails = usePartnerStore((s) => s.currentPartner);
 
+  const { user } = useAuthStore();
   useEffect(() => {
-    if (isEditMode && lead) {      
+    if (isEditMode && lead) {
       setFormData({
         name: lead.name || "",
         mobile: lead.mobile || "",
@@ -60,9 +65,10 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
         status: lead.status || "new",
         type: lead.type || "student",
         utm_source: lead.utm_source || "walkin",
-        utm_medium: lead.utm_medium || "",
+        utm_medium: user?.role !== "agent" ? "walkin" : partnerDetails?.agency_name,
         utm_campaign: lead.utm_campaign || "",
         assigned_to: lead.assigned_to || null,
+        created_by: user?.role === "admin" ? null : user?.id,
       });
     } else {
       setFormData(initialState);
@@ -84,12 +90,15 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
       return;
     }
 
-    try {   
+    try {
       if (isEditMode && lead?.id) {
         await updateLead(lead.id, formData);
         toast.success("Lead updated successfully!");
       } else {
-        await addLead(formData);
+        await addLead({
+          ...formData,
+          created_by: user?.role === "admin" ? null : user?.id,
+        });
         toast.success("Lead created successfully!");
       }
       onOpenChange(false);
