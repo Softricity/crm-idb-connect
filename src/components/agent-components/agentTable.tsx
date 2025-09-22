@@ -1,4 +1,4 @@
-// components/agent-table.tsx
+
 "use client";
 
 import * as React from "react";
@@ -27,24 +27,27 @@ import { Input } from "@/components/ui/input";
 
 import { PlusCircle } from "lucide-react";
 
-import { useAgentStore, Agent } from "@/stores/useAgentStore";
+import { usePartnerStore, Partner } from "@/stores/usePartnerStore"; 
 import { getColumns } from "./tableDataRow";
 import { AgentForm } from "./agentCreateUpdate";
 
 export function AgentTable() {
-    const { agents, fetchAgents, loading } = useAgentStore();
+    const { partners, fetchPartners, loading } = usePartnerStore(); 
     const [sorting, setSorting] = React.useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
     const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
     const [rowSelection, setRowSelection] = React.useState({});
     const [isSheetOpen, setIsSheetOpen] = React.useState(false);
-    const [selectedAgent, setSelectedAgent] = React.useState<Agent | undefined>(undefined);
+    const [selectedAgent, setSelectedAgent] = React.useState<Partner | undefined>(undefined); 
 
     React.useEffect(() => {
-        fetchAgents();
-    }, [fetchAgents]);
+        fetchPartners(); 
+    }, [fetchPartners]);
 
-    const handleEdit = (agent: Agent) => {
+    
+    const agents = React.useMemo(() => partners.filter(p => p.role === 'agent'), [partners]);
+
+    const handleEdit = (agent: Partner) => { 
         setSelectedAgent(agent);
         setIsSheetOpen(true);
     };
@@ -52,7 +55,7 @@ export function AgentTable() {
     const columns = React.useMemo(() => getColumns(handleEdit), []);
 
     const table = useReactTable({
-        data: agents,
+        data: agents, 
         columns,
         onSortingChange: setSorting,
         onColumnFiltersChange: setColumnFilters,

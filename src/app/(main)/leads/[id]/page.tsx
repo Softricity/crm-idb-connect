@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useLeadStore, Lead } from "@/stores/useLeadStore";
 import StatusTimeline from "@/components/leads-components/leadStatusTimeline";
-import LeadFormSheet from "@/components/leads-components/createUpdateLead"; 
+import LeadFormSheet from "@/components/leads-components/createUpdateLead";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { FilePen } from "lucide-react";
@@ -29,7 +29,7 @@ export default function LeadDetailPage() {
     const { fetchLeadById, updateLead } = useLeadStore();
     const [lead, setLead] = useState<Lead | null>(null);
     const [loading, setLoading] = useState(true);
-    const [isSheetOpen, setSheetOpen] = useState(false); 
+    const [isSheetOpen, setSheetOpen] = useState(false);
 
     const fetchAndSetLead = useCallback(async () => {
         setLoading(true);
@@ -44,11 +44,24 @@ export default function LeadDetailPage() {
         }
     }, [id, fetchAndSetLead]);
 
-    const handleStatusChange = async (newStatus: string) => {
+    const handleStatusChange = async (newStatus: string, reason?: string) => {
         if (!lead || !lead.id) return;
+
+        const payload: { status: string; reason?: string } = {
+            status: newStatus,
+        };
+
+        if (reason) {
+            payload.reason = reason;
+        }
+
         try {
-            await updateLead(lead.id, { status: newStatus });
-            setLead(prev => prev ? { ...prev, status: newStatus } : null);
+            await updateLead(lead.id, payload);
+            setLead(prev => {
+                if (!prev) return null;
+                const updatedLead = { ...prev, ...payload };
+                return updatedLead;
+            });
             toast.success("Lead status updated successfully!");
         } catch (error) {
             toast.error("Failed to update lead status.");
@@ -114,6 +127,9 @@ export default function LeadDetailPage() {
                         <InfoRow label="Email" value={lead.email} />
                         <InfoRow label="City" value={lead.city} />
                         <InfoRow label="Lead Status" value={lead.status} />
+                        {lead.status === "cold" || lead.status === "rejected" ? (
+                            <InfoRow label="Reason for Status" value={lead.reason} />
+                        ) : null}
                         <InfoRow label="Lead Type" value={lead.type} />
                         <InfoRow label="Lead Purpose" value={lead.purpose} />
 

@@ -21,6 +21,7 @@ export interface Lead {
   assigned_to?: string | null;
   created_at?: string;
   created_by?: string | null;
+  reason?: string | null;
 }
 
 interface LeadState {
@@ -49,22 +50,32 @@ export const useLeadStore = create<LeadState>((set) => ({
   },
 
   fetchLeadById: async (id) => {
-    const { data, error } = await supabase.from("leads").select("*").eq("id", id).single();
+    const { data, error } = await supabase
+      .from("leads")
+      .select("*")
+      .eq("id", id)
+      .single();
     if (error) {
       console.error("Error fetching lead by id:", error.message);
-      return null;
+      throw error;
     }
     return data as Lead;
   },
 
   addLead: async (lead) => {
     const sanitizedLead = Object.fromEntries(
-      Object.entries(lead).map(([key, value]) => [key, value === "" ? null : value])
+      Object.entries(lead).map(([key, value]) => [
+        key,
+        value === "" ? null : value,
+      ])
     );
-    const { data, error } = await supabase.from("leads").insert([sanitizedLead]).select();
+    const { data, error } = await supabase
+      .from("leads")
+      .insert([sanitizedLead])
+      .select();
     if (error) {
       console.error("Error adding lead:", error.message);
-      return;
+      throw error;
     }
     set((state) => ({ leads: [...state.leads, ...(data as Lead[])] }));
   },
@@ -77,7 +88,7 @@ export const useLeadStore = create<LeadState>((set) => ({
       .select();
     if (error) {
       console.error("Error updating lead:", error.message);
-      return;
+      throw error;
     }
     set((state) => ({
       leads: state.leads.map((lead) =>
@@ -90,7 +101,7 @@ export const useLeadStore = create<LeadState>((set) => ({
     const { error } = await supabase.from("leads").delete().eq("id", id);
     if (error) {
       console.error("Error deleting lead:", error.message);
-      return;
+      throw error;
     }
     set((state) => ({
       leads: state.leads.filter((lead) => lead.id !== id),

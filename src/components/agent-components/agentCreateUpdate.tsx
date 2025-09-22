@@ -10,13 +10,13 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet";
-import { useAgentStore, Agent } from "@/stores/useAgentStore";
+import { usePartnerStore, Partner } from "@/stores/usePartnerStore";
 import { validateMobile } from "@/lib/validation";
 import { AgentFormFields } from "./agentForm";
 import { Value } from "react-phone-number-input";
 
-type AgentFormData = Omit<
-    Agent,
+type PartnerFormData = Omit<
+    Partner,
     "association_date" | "agreement_start_date" | "agreement_end_date"
 > & {
     association_date?: Date;
@@ -25,16 +25,16 @@ type AgentFormData = Omit<
 };
 
 interface AgentFormProps {
-    agent?: Agent;
+    agent?: Partner;
     onOpenChange: (open: boolean) => void;
     open: boolean;
 }
 
 export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
-    const { addAgent, updateAgent } = useAgentStore();
+    const { addPartner, updatePartner } = usePartnerStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [formData, setFormData] = useState<AgentFormData>({
+    const [formData, setFormData] = useState<Partial<PartnerFormData>>({
         name: "",
         email: "",
         mobile: "",
@@ -51,9 +51,9 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         agreement_start_date: undefined,
         agreement_end_date: undefined,
     });
-    const [errors, setErrors] = useState<Partial<Record<keyof AgentFormData, string>>>({});
+    const [errors, setErrors] = useState<Partial<Record<keyof PartnerFormData, string>>>({});
 
-    const validateField = (name: keyof AgentFormData, value: any): string => {
+    const validateField = (name: keyof PartnerFormData, value: any): string => {
         switch (name) {
             case "name":
                 return !value.trim() ? "Name is required" : "";
@@ -66,6 +66,8 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
                 if (!validateMobile(value)) return "Invalid mobile number";
                 return "";
             case "password":
+
+                if (agent?.id) return "";
                 if (!value || value.length < 6) return "Password must be at least 6 characters";
                 return "";
             case "agency_name":
@@ -94,9 +96,9 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
     };
 
     function validateAgentForm() {
-        const newErrors: Partial<Record<keyof AgentFormData, string>> = {};
+        const newErrors: Partial<Record<keyof PartnerFormData, string>> = {};
         Object.keys(formData).forEach((key) => {
-            const field = key as keyof AgentFormData;
+            const field = key as keyof PartnerFormData;
             const error = validateField(field, formData[field]);
             if (error) {
                 if (field !== 'remarks') {
@@ -126,21 +128,10 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
                 });
             } else {
                 setFormData({
-                    name: "",
-                    email: "",
-                    mobile: "",
-                    password: "",
-                    agency_name: "",
-                    address: "",
-                    city: "",
-                    state: "",
-                    area: "",
-                    zone: "",
-                    remarks: "",
-                    association_type: "",
-                    association_date: undefined,
-                    agreement_start_date: undefined,
-                    agreement_end_date: undefined,
+                    name: "", email: "", mobile: "", password: "", agency_name: "",
+                    address: "", city: "", state: "", area: "", zone: "",
+                    remarks: "", association_type: "", association_date: undefined,
+                    agreement_start_date: undefined, agreement_end_date: undefined,
                 });
             }
         } else {
@@ -152,7 +143,7 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
         const { name, value } = e.target;
-        const fieldName = name as keyof AgentFormData;
+        const fieldName = name as keyof PartnerFormData;
         setFormData((prev) => ({ ...prev, [fieldName]: value }));
         const error = validateField(fieldName, value);
         setErrors((prev) => ({ ...prev, [fieldName]: error }));
@@ -164,14 +155,14 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         const error = validateField("mobile", newValue);
         setErrors((prev) => ({ ...prev, mobile: error }));
     };
-    
+
     const handleSelectChange = (value: string) => {
         setFormData((prev) => ({ ...prev, association_type: value }));
         const error = validateField("association_type", value);
         setErrors((prev) => ({ ...prev, association_type: error }));
     };
-    
-    const handleDateChange = (name: keyof AgentFormData, date: Date | undefined) => {
+
+    const handleDateChange = (name: keyof PartnerFormData, date: Date | undefined) => {
         setFormData((prev) => ({ ...prev, [name]: date }));
         const error = validateField(name, date);
         setErrors((prev) => ({ ...prev, [name]: error }));
@@ -187,29 +178,24 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
             setIsSubmitting(false);
             return;
         }
-        if (
-            !formData.association_date ||
-            !formData.agreement_start_date ||
-            !formData.agreement_end_date
-        ) {
-            toast.error("Please fill all required fields.");
-            setIsSubmitting(false);
-            return;
-        }
 
         try {
-            const agentData = {
+            const partnerData = {
                 ...formData,
-                association_date: formData.association_date.toISOString(),
-                agreement_start_date: formData.agreement_start_date.toISOString(),
-                agreement_end_date: formData.agreement_end_date.toISOString(),
+                role: "agent" as const,
+                association_date: formData.association_date?.toISOString(),
+                agreement_start_date: formData.agreement_start_date?.toISOString(),
+                agreement_end_date: formData.agreement_end_date?.toISOString(),
             };
 
             if (agent?.id) {
-                await updateAgent(agent.id, agentData);
+                if (!partnerData.password) {
+                    delete partnerData.password;
+                }
+                await updatePartner(agent.id, partnerData);
                 toast.success("Agent updated successfully.");
             } else {
-                await addAgent(agentData as Omit<Agent, "id" | "created_at">);
+                await addPartner(partnerData as Omit<Partner, "id" | "created_at">);
                 toast.success("Agent added successfully.");
             }
 

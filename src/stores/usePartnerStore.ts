@@ -6,7 +6,7 @@ const supabase = createClient();
 
 export interface Partner {
   id?: string;
-  partner_type: "agent" | "counsellor";
+  role: "agent" | "counsellor";
   name: string;
   email: string;
   mobile: string;
@@ -46,6 +46,7 @@ export const usePartnerStore = create<PartnerState>((set) => ({
     const { data, error } = await supabase.from("partners").select("*");
     if (error) {
       console.error("Error fetching partners:", error.message);
+      throw error;
     } else {
       set({ partners: data as Partner[] });
     }
@@ -53,22 +54,32 @@ export const usePartnerStore = create<PartnerState>((set) => ({
   },
 
   fetchPartnerById: async (id) => {
-    const { data, error } = await supabase.from("partners").select("*").eq("id", id).single();
+    const { data, error } = await supabase
+      .from("partners")
+      .select("*")
+      .eq("id", id)
+      .single();
     if (error) {
       console.error("Error fetching partner by id:", error.message);
-      return null;
+      throw error;
     }
     return data as Partner;
   },
 
   addPartner: async (partner) => {
     const sanitizedPartner = Object.fromEntries(
-      Object.entries(partner).map(([key, value]) => [key, value === "" ? null : value])
+      Object.entries(partner).map(([key, value]) => [
+        key,
+        value === "" ? null : value,
+      ])
     );
-    const { data, error } = await supabase.from("partners").insert([sanitizedPartner]).select();
+    const { data, error } = await supabase
+      .from("partners")
+      .insert([sanitizedPartner])
+      .select();
     if (error) {
       console.error("Error adding partner:", error.message);
-      return;
+      throw error;
     }
     set((state) => ({ partners: [...state.partners, ...(data as Partner[])] }));
   },
@@ -81,7 +92,7 @@ export const usePartnerStore = create<PartnerState>((set) => ({
       .select();
     if (error) {
       console.error("Error updating partner:", error.message);
-      return;
+      throw error;
     }
     set((state) => ({
       partners: state.partners.map((partner) =>
@@ -94,7 +105,7 @@ export const usePartnerStore = create<PartnerState>((set) => ({
     const { error } = await supabase.from("partners").delete().eq("id", id);
     if (error) {
       console.error("Error deleting partner:", error.message);
-      return;
+      throw error;
     }
     set((state) => ({
       partners: state.partners.filter((partner) => partner.id !== id),

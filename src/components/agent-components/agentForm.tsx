@@ -11,10 +11,11 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import PhoneInputWithCountrySelect, { Value } from "react-phone-number-input";
-import { Agent } from "@/stores/useAgentStore";
+import { Partner } from "@/stores/usePartnerStore"; 
 
-type AgentFormData = Omit<
-    Agent,
+
+type PartnerFormData = Omit<
+    Partner,
     "association_date" | "agreement_start_date" | "agreement_end_date"
 > & {
     association_date?: Date;
@@ -23,15 +24,15 @@ type AgentFormData = Omit<
 };
 
 interface AgentFormFieldsProps {
-    formData: AgentFormData;
-    errors: Partial<Record<keyof AgentFormData, string>>;
+    formData: Partial<PartnerFormData>; 
+    errors: Partial<Record<keyof PartnerFormData, string>>; 
     isSubmitting: boolean;
     showPassword: boolean;
     setShowPassword: React.Dispatch<React.SetStateAction<boolean>>;
     handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
     handlePhoneChange: (value: Value | undefined) => void;
     handleSelectChange: (value: string) => void;
-    handleDateChange: (name: keyof AgentFormData, date: Date | undefined) => void;
+    handleDateChange: (name: keyof PartnerFormData, date: Date | undefined) => void; 
 }
 
 const FieldWrapper = ({
@@ -41,8 +42,8 @@ const FieldWrapper = ({
     children,
 }: {
     label: string;
-    name: keyof AgentFormData;
-    errors: Partial<Record<keyof AgentFormData, string>>;
+    name: keyof PartnerFormData; 
+    errors: Partial<Record<keyof PartnerFormData, string>>; 
     children: React.ReactNode;
 }) => (
     <div className="flex flex-col gap-1">
@@ -110,9 +111,9 @@ export function AgentFormFields({
                                 type={showPassword ? "text" : "password"}
                                 value={formData.password}
                                 onChange={handleChange}
-                                placeholder="********"
+                                placeholder={!formData.id ? "********" : "Enter new password (optional)"}
                                 className="rounded-lg placeholder:text-gray-400 pr-10 focus:ring-2 focus:ring-primary/70 border-gray-300"
-                                required
+                                required={!formData.id} 
                             />
                             <button
                                 type="button"
@@ -146,7 +147,7 @@ export function AgentFormFields({
                         <FieldWrapper
                             key={field.name}
                             label={field.label}
-                            name={field.name as keyof AgentFormData}
+                            name={field.name as keyof PartnerFormData} 
                             errors={errors}
                         >
                             <Input
@@ -178,7 +179,7 @@ export function AgentFormFields({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FieldWrapper label="Association Type" name="association_type" errors={errors}>
                         <Select
-                            value={formData.association_type}
+                            value={formData.association_type ?? undefined}
                             onValueChange={handleSelectChange}
                         >
                             <SelectTrigger className="rounded-lg focus:ring-2 focus:ring-primary/70 border-gray-300">
@@ -200,7 +201,7 @@ export function AgentFormFields({
                         <FieldWrapper
                             key={field.key}
                             label={field.label}
-                            name={field.key as keyof AgentFormData}
+                            name={field.key as keyof PartnerFormData} 
                             errors={errors}
                         >
                             <Popover>
@@ -223,7 +224,7 @@ export function AgentFormFields({
                                         mode="single"
                                         selected={(formData as any)[field.key]}
                                         onSelect={(date) =>
-                                            handleDateChange(field.key as keyof AgentFormData, date)
+                                            handleDateChange(field.key as keyof PartnerFormData, date) 
                                         }
                                     />
                                 </PopoverContent>

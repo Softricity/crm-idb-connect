@@ -1,6 +1,6 @@
 // store/auth.ts
 import { create } from "zustand";
-import { createClient } from "@/lib/supabase/client"; 
+import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
 
@@ -28,7 +28,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     if (error) {
       console.error("Login failed:", error.message);
       set({ loading: false });
-      return;
+      throw error;
     }
 
     if (data.user) {

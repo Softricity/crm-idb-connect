@@ -1,4 +1,4 @@
-// components/columns.tsx
+
 "use client";
 
 import { ColumnDef } from "@tanstack/react-table";
@@ -23,20 +23,20 @@ import {
     AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-import { Agent, useAgentStore } from "@/stores/useAgentStore";
+import { Partner, usePartnerStore } from "@/stores/usePartnerStore"; 
 
 interface CellActionsProps {
-    agent: Agent;
-    onEdit: (agent: Agent) => void;
+    agent: Partner; 
+    onEdit: (agent: Partner) => void; 
 }
 
 function CellActions({ agent, onEdit }: CellActionsProps) {
-    const { deleteAgent } = useAgentStore();
+    const { deletePartner } = usePartnerStore(); 
 
     const handleDelete = async () => {
         if (!agent.id) return;
         try {
-            await deleteAgent(agent.id);
+            await deletePartner(agent.id); 
             toast.success("Agent deleted successfully.");
         } catch (error) {
             toast.error("Failed to delete agent.");
@@ -87,8 +87,8 @@ function CellActions({ agent, onEdit }: CellActionsProps) {
 }
 
 export const getColumns = (
-    onEdit: (agent: Agent) => void
-): ColumnDef<Agent>[] => [
+    onEdit: (agent: Partner) => void 
+): ColumnDef<Partner>[] => [ 
         {
             accessorKey: "name",
             header: ({ column }) => {
