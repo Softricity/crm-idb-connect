@@ -62,6 +62,21 @@ export const useLeadStore = create<LeadState>((set) => ({
     return data as Lead;
   },
 
+  getAgentLeads: async (agentId: string) => {
+    set({ loading: true });
+    const { data, error } = await supabase
+      .from("leads")
+      .select("*")
+      .eq("created_by", agentId);
+    if (error) {
+      console.error("Error fetching agent leads:", error.message);
+      throw error;
+    } else {
+      set({ leads: data as Lead[] });
+    }
+    set({ loading: false });
+  },
+
   addLead: async (lead) => {
     const sanitizedLead = Object.fromEntries(
       Object.entries(lead).map(([key, value]) => [
