@@ -49,7 +49,7 @@ export default function LeadsTableRow({ lead, isSelected, onSelect }: LeadsTable
             </TableCell>
             <TableCell>
                 <Badge variant="outline" className="capitalize">
-                    {lead?.type ?? "-"}
+                    {lead?.purpose ?? "-"}
                 </Badge>
             </TableCell>
             <TableCell>

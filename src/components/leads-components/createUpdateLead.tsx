@@ -51,6 +51,10 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
   const [loading, setLoading] = useState(false);
   const partnerDetails = usePartnerStore((s) => s.currentPartner);
 
+  function fun() {
+    console.log(partnerDetails)
+  }
+
   const { user } = useAuthStore();
   useEffect(() => {
     if (isEditMode && lead) {
@@ -65,8 +69,8 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
         status: lead.status || "new",
         type: lead.type || "student",
         utm_source: lead.utm_source || "walkin",
-        utm_medium: user?.role !== "agent" ? "walkin" : partnerDetails?.agency_name,
-        utm_campaign: lead.utm_campaign || "",
+        utm_medium: user?.role !== "agent" ? "walkin" : partnerDetails?.name,
+        utm_campaign: user?.role !== "agent" ? "walkin" : partnerDetails?.agency_name,
         assigned_to: lead.assigned_to || null,
         created_by: user?.role === "admin" ? null : user?.id,
       });
@@ -95,10 +99,13 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
         await updateLead(lead.id, formData);
         toast.success("Lead updated successfully!");
       } else {
-        await addLead({
+        const leadData = {
           ...formData,
           created_by: user?.role === "admin" ? null : user?.id,
-        });
+          utm_medium: user?.role !== "agent" ? "walkin" : partnerDetails?.name,
+          utm_campaign: user?.role !== "agent" ? "walkin" : partnerDetails?.agency_name,
+        };
+        await addLead(leadData);
         toast.success("Lead created successfully!");
       }
       onOpenChange(false);
@@ -155,6 +162,7 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
                   ? "Save Changes"
                   : "Create Lead"}
             </Button>
+            <button onClick={fun}>fun</button>
           </div>
         </SheetFooter>
       </SheetContent>

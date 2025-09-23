@@ -11,14 +11,15 @@ import {
 // @ts-ignore
 import countryList from "react-select-country-list";
 import { Lead } from "@/stores/useLeadStore";
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
+
+import { useAuthStore } from "@/stores/useAuthStore";
 
 interface CountryOption {
   label: string;
   value: string;
 }
 
-// FIX: Props are updated to accept the main formData state object
 interface ApplicationPreferencesProps {
   formData: Omit<Lead, "id" | "created_at">;
   setFormData: Dispatch<SetStateAction<Omit<Lead, "id" | "created_at">>>;
@@ -30,6 +31,19 @@ export default function ApplicationPreferences({
   formData,
   setFormData,
 }: ApplicationPreferencesProps) {
+  const { user } = useAuthStore();
+  const [isOther, setIsOther] = useState(false);
+
+  const handleUtmChange = (value: string) => {
+    if (value === "Other") {
+      setIsOther(true);
+      setFormData((prev) => ({ ...prev, utm_source: "" }));
+    } else {
+      setIsOther(false);
+      setFormData((prev) => ({ ...prev, utm_source: value }));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <h3 className="text-lg font-semibold">Application Preferences</h3>
@@ -37,35 +51,30 @@ export default function ApplicationPreferences({
         <div className="space-y-2">
           <Label className="text-sm font-medium">Applying for</Label>
           <Select
-            // FIX: Value is now formData.purpose
             value={formData.purpose || ""}
-            // FIX: Updates the parent's formData state
             onValueChange={(value) => {
               setFormData((prev) => ({
                 ...prev,
                 purpose: value,
-                // Also reset country if purpose is no longer 'Visa'
-                preferred_country: value === "Visa" ? prev.preferred_country : "",
+                preferred_country: value === "Study Abroad" ? prev.preferred_country : "",
               }));
             }}
           >
             <SelectTrigger className="w-full rounded-lg">
-              <SelectValue placeholder="Select IELTS, PTE, or Visa" />
+              <SelectValue placeholder="Select IELTS, PTE, or Study Abroad" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="IELTS">IELTS</SelectItem>
               <SelectItem value="PTE">PTE</SelectItem>
-              <SelectItem value="Visa">Visa</SelectItem>
+              <SelectItem value="Study Abroad">Study Abroad</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
-        {/* FIX: Condition is now based on formData.purpose */}
-        {formData.purpose === "Visa" && (
+        {formData.purpose === "Study Abroad" && (
           <div className="space-y-2">
             <Label className="text-sm font-medium">Preferred Country</Label>
             <Select
-              // FIX: Value is now formData.preferred_country
               value={formData.preferred_country || ""}
               onValueChange={(value) =>
                 setFormData((prev) => ({ ...prev, preferred_country: value }))
@@ -82,6 +91,45 @@ export default function ApplicationPreferences({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+        )}
+
+        {user?.role === "agent" && (
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Source</Label>
+            <Select
+              value={isOther ? "Other" : formData.utm_source || ""}
+              onValueChange={handleUtmChange}
+            >
+              <SelectTrigger className="w-full rounded-lg">
+                <SelectValue placeholder="Select Source" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Instagram">Instagram</SelectItem>
+                <SelectItem value="WhatsApp">WhatsApp</SelectItem>
+                <SelectItem value="Walk-in">Walk-in</SelectItem>
+                <SelectItem value="Facebook">Facebook</SelectItem>
+                <SelectItem value="Referral">Referral</SelectItem>
+                <SelectItem value="Website">Website</SelectItem>
+                <SelectItem value="Google Ads">Google Ads</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {user?.role === "agent" && isOther && (
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Other Source</Label>
+            <input
+              type="text"
+              placeholder="Enter custom source"
+              value={formData.utm_source || ""}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, utm_source: e.target.value }))
+              }
+              className="w-full rounded-lg border p-2"
+            />
           </div>
         )}
       </div>
