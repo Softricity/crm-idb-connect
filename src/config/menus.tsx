@@ -43,7 +43,7 @@ export const menus: MenuItem[] = [
   
   // Business
   { title: "Business", type: "title" },
-  { title: "B2B Hub", icon: <Building size={22} />, type: "link", link: "/b2b-hub", badge: "42" },
+  { title: "B2B Hub", icon: <Building size={22} />, type: "link", link: "/b2b", badge: "42" },
   { title: "Agents", icon: <ShieldUser size={22} />, type: "link", link: "/agents" },
   { title: "Commissions", icon: <DollarSign size={22} />, type: "link", link: "/commissions" },
 

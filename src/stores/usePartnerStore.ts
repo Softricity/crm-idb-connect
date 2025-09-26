@@ -19,10 +19,10 @@ export interface Partner {
   remarks?: string | null;
   // Agent-specific fields
   agency_name?: string | null;
-  association_type?: string | null;
-  association_date?: string | null;
-  agreement_start_date?: string | null;
-  agreement_end_date?: string | null;
+  // association_type?: string | null;
+  // association_date?: string | null;
+  // agreement_start_date?: string | null;
+  // agreement_end_date?: string | null;
 
   created_at?: string;
 }

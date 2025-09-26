@@ -1,4 +1,3 @@
-// components/leads-components/NotesTab.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -19,9 +18,6 @@ import {
 } from "@heroui/react";
 import { MoreVertical } from "lucide-react";
 
-/**
- * Renders a single note card with edit and delete functionality.
- */
 const NoteCard = ({ note }: { note: Note }) => {
   const { deleteNote, updateNote } = useNoteStore();
   const [isEditing, setIsEditing] = useState(false);
@@ -64,7 +60,7 @@ const NoteCard = ({ note }: { note: Note }) => {
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-4">
           <Avatar className="mt-1 flex-shrink-0">
-            {getInitials(note.created_by)}
+            {getInitials(note?.partner?.name ?? "")}
           </Avatar>
           <div className="flex-1">
             {isEditing ? (
@@ -84,7 +80,7 @@ const NoteCard = ({ note }: { note: Note }) => {
               {note.created_at
                 ? format(new Date(note.created_at), "dd MMM yyyy, p")
                 : "..."}{" "}
-              by <span className="font-medium">{note?.partner?.name}</span>
+              by <span className="font-medium">{note.partner?.name ?? ""}</span>
             </p>
             {isEditing && (
               <div className="flex gap-2 mt-3">
@@ -124,14 +120,11 @@ const NoteCard = ({ note }: { note: Note }) => {
   );
 };
 
-/**
- * Main component to display and manage notes for a lead.
- */
-export const NotesTab = ({ leadId }: { leadId: string }) => {
+export default function NotesTab({ leadId }: { leadId: string }) {
   const { notes, loading, fetchNotesByLeadId, addNote } = useNoteStore();
-  const { user } = useAuthStore();
   const [newNote, setNewNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { user } = useAuthStore();
 
   useEffect(() => {
     if (leadId) {
@@ -152,6 +145,7 @@ export const NotesTab = ({ leadId }: { leadId: string }) => {
       });
       setNewNote("");
       toast.success("Note added successfully!");
+      fetchNotesByLeadId(leadId);
     } catch (error) {
       toast.error("Failed to add note.");
     } finally {
@@ -161,7 +155,6 @@ export const NotesTab = ({ leadId }: { leadId: string }) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-4">
-      {/* Column 1: Notes List */}
       <div className="flex flex-col h-full">
         {loading ? (
           <div className="flex justify-center items-center h-48">
@@ -182,33 +175,32 @@ export const NotesTab = ({ leadId }: { leadId: string }) => {
         )}
       </div>
 
-      {/* Column 2: Add Note Form */}
       <div>
         <Card as="form" onSubmit={handleAddNote} className="p-6 bg-white shadow-sm rounded-lg border border-gray-200 sticky top-4">
-            <h3 className="text-base font-semibold text-gray-800 mb-2">
-                Add a new note
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
-                Your note will be saved and visible to other team members.
-            </p>
-            <Textarea
-              placeholder="Save your conversations with your students here..."
-              value={newNote}
-              onChange={(e) => setNewNote(e.target.value)}
-              minRows={6}
-              className="text-sm"
-            />
-            <div className="flex justify-end mt-4 items-center">
-                 <p className="text-xs text-gray-400 mr-4">Press Enter to add a new line</p>
-                <Button
-                    type="submit"
-                    color="primary"
-                    isDisabled={!newNote.trim() || isSubmitting}
-                    isLoading={isSubmitting}
-                >
-                    {isSubmitting ? "Adding Note..." : "Add Note"}
-                </Button>
-            </div>
+          <h3 className="text-base font-semibold text-gray-800 mb-2">
+            Add a new note
+          </h3>
+          <p className="text-sm text-gray-500 mb-4">
+            Your note will be saved and visible to other team members.
+          </p>
+          <Textarea
+            placeholder="Save your conversations with your students here..."
+            value={newNote}
+            onChange={(e) => setNewNote(e.target.value)}
+            minRows={6}
+            className="text-sm"
+          />
+          <div className="flex justify-end mt-4 items-center">
+            <p className="text-xs text-gray-400 mr-4">Press Enter to add a new line</p>
+            <Button
+              type="submit"
+              color="primary"
+              isDisabled={!newNote.trim() || isSubmitting}
+              isLoading={isSubmitting}
+            >
+              {isSubmitting ? "Adding Note..." : "Add Note"}
+            </Button>
+          </div>
         </Card>
       </div>
     </div>

@@ -4,26 +4,18 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import {
-  Drawer,
-  DrawerContent,
-  DrawerHeader,
-  DrawerBody,
-  DrawerFooter,
-  Button,
+    Drawer,
+    DrawerContent,
+    DrawerHeader,
+    DrawerBody,
+    Button,
 } from "@heroui/react";
 import { usePartnerStore, Partner } from "@/stores/usePartnerStore";
 import { validateMobile } from "@/lib/validation";
 import { AgentFormFields } from "./agentForm";
 import { Value } from "react-phone-number-input";
 
-type PartnerFormData = Omit<
-    Partner,
-    "association_date" | "agreement_start_date" | "agreement_end_date"
-> & {
-    association_date?: Date;
-    agreement_start_date?: Date;
-    agreement_end_date?: Date;
-};
+type PartnerFormData = Partial<Partner>;
 
 interface AgentFormProps {
     agent?: Partner;
@@ -35,7 +27,7 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
     const { addPartner, updatePartner } = usePartnerStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-    const [formData, setFormData] = useState<Partial<PartnerFormData>>({
+    const [formData, setFormData] = useState<PartnerFormData>({
         name: "",
         email: "",
         mobile: "",
@@ -47,10 +39,6 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         area: "",
         zone: "",
         remarks: "",
-        association_type: "",
-        association_date: undefined,
-        agreement_start_date: undefined,
-        agreement_end_date: undefined,
     });
     const [errors, setErrors] = useState<Partial<Record<keyof PartnerFormData, string>>>({});
 
@@ -82,14 +70,6 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
                 return !value.trim() ? "Area is required" : "";
             case "zone":
                 return !value.trim() ? "Zone is required" : "";
-            case "association_type":
-                return !value ? "Select association type" : "";
-            case "association_date":
-                return !value ? "Pick association date" : "";
-            case "agreement_start_date":
-                return !value ? "Pick start date" : "";
-            case "agreement_end_date":
-                return !value ? "Pick end date" : "";
             default:
                 return "";
         }
@@ -114,11 +94,6 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
             if (agent) {
                 setFormData({
                     ...agent,
-                    association_date: agent.association_date ? new Date(agent.association_date) : undefined,
-                    agreement_start_date: agent.agreement_start_date
-                        ? new Date(agent.agreement_start_date)
-                        : undefined,
-                    agreement_end_date: agent.agreement_end_date ? new Date(agent.agreement_end_date) : undefined,
                 });
             } else {
                 setFormData({
@@ -133,10 +108,6 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
                     area: "",
                     zone: "",
                     remarks: "",
-                    association_type: "",
-                    association_date: undefined,
-                    agreement_start_date: undefined,
-                    agreement_end_date: undefined,
                 });
             }
         } else {
@@ -159,18 +130,6 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         setErrors((prev) => ({ ...prev, mobile: error }));
     };
 
-    const handleSelectChange = (value: string) => {
-        setFormData((prev) => ({ ...prev, association_type: value }));
-        const error = validateField("association_type", value);
-        setErrors((prev) => ({ ...prev, association_type: error }));
-    };
-
-    const handleDateChange = (name: keyof PartnerFormData, date: Date | undefined) => {
-        setFormData((prev) => ({ ...prev, [name]: date }));
-        const error = validateField(name, date);
-        setErrors((prev) => ({ ...prev, [name]: error }));
-    };
-
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setIsSubmitting(true);
@@ -185,9 +144,6 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
             const partnerData = {
                 ...formData,
                 role: "agent" as const,
-                association_date: formData.association_date?.toISOString(),
-                agreement_start_date: formData.agreement_start_date?.toISOString(),
-                agreement_end_date: formData.agreement_end_date?.toISOString(),
             };
 
             if (agent?.id) {
@@ -228,8 +184,6 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
                                     setShowPassword={setShowPassword}
                                     handleChange={handleChange}
                                     handlePhoneChange={handlePhoneChange}
-                                    handleSelectChange={handleSelectChange}
-                                    handleDateChange={handleDateChange}
                                 />
 
                                 <div className="flex justify-end gap-4 pt-4">

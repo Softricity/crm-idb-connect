@@ -5,26 +5,24 @@ import { NextResponse, type NextRequest } from "next/server";
 export async function middleware(request: NextRequest) {
   const { supabase, response } = createSupabaseClient(request);
 
-  // Check for Supabase session (admin users)
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  // Check for partner session cookie
-  const partnerSession = request.cookies.get('partner-session');
+  // Always check partner session cookie
+  const partnerSession = request.cookies.get("partner-session");
   let partnerUser = null;
 
   if (partnerSession) {
     try {
       partnerUser = JSON.parse(partnerSession.value);
     } catch (error) {
-      // Invalid partner session cookie, remove it
-      const responseWithClearedCookie = NextResponse.next({ request: { headers: request.headers } });
-      responseWithClearedCookie.cookies.delete('partner-session');
+      // Invalid partner session cookie → clear it
+      const responseWithClearedCookie = NextResponse.next({
+        request: { headers: request.headers },
+      });
+      responseWithClearedCookie.cookies.delete("partner-session");
+      return responseWithClearedCookie;
     }
   }
 
-  const isAuthenticated = !!(session || partnerUser);
+  const isAuthenticated = !!partnerUser;
   const currentPath = request.nextUrl.pathname;
 
   // Redirect unauthenticated users to login (except if already on login page)
@@ -37,23 +35,23 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  // Optional: Role-based route protection
   if (isAuthenticated && partnerUser) {
-    // Example: Restrict certain routes based on partner role
     const userRole = partnerUser.role;
-    
-    if (currentPath.startsWith('/admin') && userRole !== 'admin') {
+
+    // Restrict /admin to admin role only
+    if (currentPath.startsWith("/admin") && userRole !== "admin") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
-    // Restrict agent routes
+
+    // Restrict agents → only allow /b2b routes
     if (userRole === "agent") {
       if (!(currentPath === "/b2b" || currentPath.startsWith("/b2b/"))) {
         return NextResponse.redirect(new URL("/b2b", request.url));
       }
     }
-    
-    // Add more role-based restrictions as needed
-    // if (currentPath.startsWith('/counsellor-only') && userRole !== 'counsellor') {
+
+    // Example: Restrict counsellor-only routes
+    // if (currentPath.startsWith("/counsellor-only") && userRole !== "counsellor") {
     //   return NextResponse.redirect(new URL("/dashboard", request.url));
     // }
   }

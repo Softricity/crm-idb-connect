@@ -1,38 +1,22 @@
 "use client";
 
-import { format } from "date-fns";
-import { CalendarIcon, Eye, EyeOff } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import PhoneInputWithCountrySelect, { Value } from "react-phone-number-input";
 import { Partner } from "@/stores/usePartnerStore"; 
 
-
-type PartnerFormData = Omit<
-    Partner,
-    "association_date" | "agreement_start_date" | "agreement_end_date"
-> & {
-    association_date?: Date;
-    agreement_start_date?: Date;
-    agreement_end_date?: Date;
-};
+type PartnerFormData = Partial<Partner>;
 
 interface AgentFormFieldsProps {
-    formData: Partial<PartnerFormData>; 
+    formData: PartnerFormData; 
     errors: Partial<Record<keyof PartnerFormData, string>>; 
     isSubmitting: boolean;
     showPassword: boolean;
     setShowPassword: React.Dispatch<React.SetStateAction<boolean>>;
     handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
     handlePhoneChange: (value: Value | undefined) => void;
-    handleSelectChange: (value: string) => void;
-    handleDateChange: (name: keyof PartnerFormData, date: Date | undefined) => void; 
 }
 
 const FieldWrapper = ({
@@ -61,8 +45,6 @@ export function AgentFormFields({
     setShowPassword,
     handleChange,
     handlePhoneChange,
-    handleSelectChange,
-    handleDateChange,
 }: AgentFormFieldsProps) {
     return (
         <div className="space-y-12 ">
@@ -169,68 +151,6 @@ export function AgentFormFields({
                             className="resize-none rounded-lg placeholder:text-gray-400 focus:ring-2 focus:ring-primary/70 border-gray-300"
                         />
                     </FieldWrapper>
-                </div>
-            </div>
-
-            <div className="space-y-6 rounded-xl border p-6 shadow-sm bg-white hover:shadow-md transition">
-                <h3 className="text-lg font-medium text-gray-800 border-b pb-2">
-                    Agreement Details
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <FieldWrapper label="Association Type" name="association_type" errors={errors}>
-                        <Select
-                            value={formData.association_type ?? undefined}
-                            onValueChange={handleSelectChange}
-                        >
-                            <SelectTrigger className="rounded-lg focus:ring-2 focus:ring-primary/70 border-gray-300">
-                                <SelectValue placeholder="Select a type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="Full-time">Full-time</SelectItem>
-                                <SelectItem value="Part-time">Part-time</SelectItem>
-                                <SelectItem value="Contract">Contract</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </FieldWrapper>
-
-                    {[
-                        { label: "Association Date", key: "association_date" },
-                        { label: "Agreement Start Date", key: "agreement_start_date" },
-                        { label: "Agreement End Date", key: "agreement_end_date" },
-                    ].map((field) => (
-                        <FieldWrapper
-                            key={field.key}
-                            label={field.label}
-                            name={field.key as keyof PartnerFormData} 
-                            errors={errors}
-                        >
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className={cn(
-                                            "w-full justify-between rounded-lg focus:ring-2 focus:ring-primary/70 border-gray-300",
-                                            !(formData as any)[field.key] && "text-gray-400"
-                                        )}
-                                    >
-                                        {(formData as any)[field.key]
-                                            ? format((formData as any)[field.key], "PPP")
-                                            : "Pick a date"}
-                                        <CalendarIcon className="h-4 w-4 opacity-50" />
-                                    </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar
-                                        mode="single"
-                                        selected={(formData as any)[field.key]}
-                                        onSelect={(date) =>
-                                            handleDateChange(field.key as keyof PartnerFormData, date) 
-                                        }
-                                    />
-                                </PopoverContent>
-                            </Popover>
-                        </FieldWrapper>
-                    ))}
                 </div>
             </div>
         </div>

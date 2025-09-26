@@ -8,7 +8,7 @@ import LeadFormSheet from "@/components/leads-components/createUpdateLead";
 import { Button, Tabs, Tab } from "@heroui/react";
 import { toast } from "sonner";
 import { FilePen } from "lucide-react";
-import { NotesTab } from "@/components/leads-components/notesTab";
+import NotesTab from "@/components/leads-components/notesTab";
 import StatusTimeline from "@/components/leads-components/leadStatusTimeline";
 
 const FollowUpsTab = () => <div className="p-4 text-gray-700">📌 Follow Ups Component</div>;
@@ -76,7 +76,30 @@ export default function LeadDetailPage() {
     };
 
     if (loading) {
-        return <div className="p-8 text-center">Loading lead details...</div>;
+        return (
+            <div className="p-8 flex flex-col items-center justify-center space-y-4">
+                <div className="animate-pulse flex items-center space-x-4">
+                    <div className="w-16 h-16 rounded-full bg-gray-300" />
+                    <div className="flex-1 space-y-2 py-1">
+                        <div className="h-4 bg-gray-300 rounded w-3/4" />
+                        <div className="h-4 bg-gray-300 rounded w-1/2" />
+                    </div>
+                </div>
+                <div className="mt-6 w-full grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white rounded-lg shadow p-6 animate-pulse space-y-4">
+                        <div className="h-4 bg-gray-300 rounded w-5/6" />
+                        <div className="h-4 bg-gray-300 rounded w-3/4" />
+                        <div className="h-4 bg-gray-300 rounded w-2/3" />
+                    </div>
+                    <div className="bg-white rounded-lg shadow p-6 animate-pulse space-y-4">
+                        <div className="h-4 bg-gray-300 rounded w-4/5" />
+                        <div className="h-4 bg-gray-300 rounded w-2/3" />
+                        <div className="h-4 bg-gray-300 rounded w-1/2" />
+                    </div>
+                </div>
+                <p className="text-gray-500 text-sm animate-pulse">Fetching lead data...</p>
+            </div>
+        );
     }
 
     if (!lead) {
