@@ -1,26 +1,18 @@
 import { useState } from "react";
 import {
     Select,
-    SelectContent,
     SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Textarea } from "@/components/ui/textarea";
+    Modal,
+    ModalContent,
+    ModalHeader,
+    ModalBody,
+    ModalFooter,
+    Button,
+    Textarea,
+} from "@heroui/react";
 
 const statuses = ["new", "engaged", "hot", "assigned", "cold", "rejected"];
 const timelineStatuses = ["new", "engaged", "hot", "assigned"];
-
 
 const reasonOptions = [
     "Number Invalid",
@@ -45,7 +37,6 @@ export default function StatusTimeline({
     currentStatus: string;
     onChange: (status: string, reason?: string) => void;
 }) {
-
     const [currentStatus, setCurrentStatus] = useState(initialCurrentStatus);
     const currentIndex = statuses.findIndex(
         (status) => status.toLowerCase() === currentStatus.toLowerCase()
@@ -56,6 +47,7 @@ export default function StatusTimeline({
     const [otherReasonText, setOtherReasonText] = useState("");
 
     const handleStatusChange = (newStatus: string) => {
+        if (!newStatus) return;
         if (newStatus === "cold" || newStatus === "rejected") {
             setPendingStatus(newStatus);
             setIsReasonDialogOpen(true);
@@ -66,11 +58,11 @@ export default function StatusTimeline({
     };
 
     const handleConfirmReason = () => {
-        const finalReason =
-            reason === "Others" ? otherReasonText : reason;
+        const finalReason = reason === "Others" ? otherReasonText : reason;
         if (finalReason && pendingStatus) {
             setCurrentStatus(pendingStatus);
             onChange(pendingStatus, finalReason);
+            setIsReasonDialogOpen(false); // Close the modal on confirm
         }
     };
 
@@ -78,6 +70,7 @@ export default function StatusTimeline({
         setPendingStatus("");
         setReason("");
         setOtherReasonText("");
+        setIsReasonDialogOpen(false);
     };
 
     const isConfirmDisabled = !reason || (reason === "Others" && !otherReasonText.trim());
@@ -89,10 +82,10 @@ export default function StatusTimeline({
         displayStatuses[3] = 'cold';
     }
 
-
     return (
         <>
             <div className="flex items-center justify-between w-full p-6 bg-white rounded-lg shadow">
+                {/* The timeline visualization logic remains unchanged */}
                 <div className="flex items-center w-full relative">
                     {displayStatuses.map((status, index) => {
                         const isActive = currentIndex >= index;
@@ -143,63 +136,63 @@ export default function StatusTimeline({
                 </div>
 
                 <div className="ml-8">
-                    <Select value={currentStatus} onValueChange={handleStatusChange}>
-                        <SelectTrigger className="w-[200px] min-h-[3rem] flex items-center py-2 px-3 text-left hover:ring-1 hover:cursor-pointer focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                            <div className="flex flex-col justify-center h-[2rem] gap-2">
-                                <p className="text-xs text-muted-foreground capitalize">Change Status</p>
-                                <SelectValue placeholder="Select a status" className="capitalize" />
-                            </div>
-                        </SelectTrigger>
-                        <SelectContent>
-                            {statuses.map((status) => (
-                                <SelectItem key={status} value={status} className="capitalize">
-                                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
+                    <Select
+                        label="Change Status"
+                        placeholder="Select a status"
+                        selectedKeys={[currentStatus]}
+                        onSelectionChange={(keys) => handleStatusChange(Array.from(keys)[0] as string)}
+                        className="w-[200px]"
+                    >
+                        {statuses.map((status) => (
+                            <SelectItem key={status} className="capitalize">
+                                {status}
+                            </SelectItem>
+                        ))}
                     </Select>
                 </div>
             </div>
 
-            <AlertDialog open={isReasonDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) handleDialogClose(); setIsReasonDialogOpen(isOpen); }}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle className="capitalize">Select Reason for '{pendingStatus}' Status</AlertDialogTitle>
-                        <AlertDialogDescription>
+            <Modal isOpen={isReasonDialogOpen} onOpenChange={handleDialogClose}>
+                <ModalContent>
+                    <ModalHeader className="capitalize">Select Reason for '{pendingStatus}' Status</ModalHeader>
+                    <ModalBody>
+                        <p className="text-sm text-gray-500 mb-4">
                             Please provide a reason for this status change.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <div className="py-4 space-y-4">
-                        <Select value={reason} onValueChange={setReason}>
-                            <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select a reason..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {reasonOptions.map((reason) => (
-                                    <SelectItem key={reason} value={reason}>
-                                        {reason}
+                        </p>
+                        <div className="space-y-4">
+                            <Select
+                                label="Reason"
+                                placeholder="Select a reason..."
+                                selectedKeys={reason ? [reason] : []}
+                                onSelectionChange={(keys) => setReason(Array.from(keys)[0] as string)}
+                            >
+                                {reasonOptions.map((opt) => (
+                                    <SelectItem key={opt}>
+                                        {opt}
                                     </SelectItem>
                                 ))}
-                            </SelectContent>
-                        </Select>
+                            </Select>
 
-                        {reason === "Others" && (
-                            <Textarea
-                                placeholder="Please specify the reason"
-                                value={otherReasonText}
-                                onChange={(e) => setOtherReasonText(e.target.value)}
-                                className="min-h-[100px]"
-                            />
-                        )}
-                    </div>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleConfirmReason} disabled={isConfirmDisabled}>
+                            {reason === "Others" && (
+                                <Textarea
+                                    label="Please specify"
+                                    placeholder="Enter the specific reason"
+                                    value={otherReasonText}
+                                    onValueChange={setOtherReasonText}
+                                />
+                            )}
+                        </div>
+                    </ModalBody>
+                    <ModalFooter>
+                        <Button variant="light" onPress={handleDialogClose}>
+                            Cancel
+                        </Button>
+                        <Button color="primary" onPress={handleConfirmReason} disabled={isConfirmDisabled}>
                             Confirm
-                        </AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
+                        </Button>
+                    </ModalFooter>
+                </ModalContent>
+            </Modal>
         </>
     );
 };

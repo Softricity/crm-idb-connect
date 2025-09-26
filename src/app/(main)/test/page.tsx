@@ -1,119 +1,134 @@
-// components/AgentTest.tsx
 "use client";
 
-import { useState, useEffect } from "react";
-import { useAgentStore, Agent } from "@/stores/useAgentStore";
+import React, { useState } from "react";
+import { useNoteStore } from "@/stores/useNoteStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 
-export default function AgentTest() {
-  const { agents, fetchAgents, addAgent, updateAgent, deleteAgent } = useAgentStore();
-  const [newAgent, setNewAgent] = useState<Omit<Agent, "id" | "created_at">>({
-    name: "",
-    email: "",
-    mobile: "",
-    password: "",
-    agency_name: "",
-    address: "",
-    city: "",
-    state: "",
-    area: "",
-    zone: "",
-    association_type: "",
-    association_date: "",
-    agreement_start_date: "",
-    agreement_end_date: "",
-    remarks: "",
-  });
+const NotesTest = () => {
+  const {
+    notes,
+    loading,
+    fetchNotesByLeadId,
+    addNote,
+    updateNote,
+    deleteNote,
+    clearNotes,
+  } = useNoteStore();
 
-  useEffect(() => {
-    fetchAgents();
-  }, [fetchAgents]);
+  const [leadId, setLeadId] = useState("aa1ec268-46c4-44e9-a614-3a5d76ed5fd7");
+  const [text, setText] = useState("");
+  const { user } = useAuthStore();
 
-  const handleAddAgent = async () => {
-    await addAgent(newAgent);
-    setNewAgent({
-      name: "",
-      email: "",
-      mobile: "",
-      password: "",
-      agency_name: "",
-      address: "",
-      city: "",
-      state: "",
-      area: "",
-      zone: "",
-      association_type: "",
-      association_date: "",
-      agreement_start_date: "",
-      agreement_end_date: "",
-      remarks: "",
+  const handleFetch = async () => {
+    if (!leadId) return alert("Enter a Lead ID");
+    await fetchNotesByLeadId(leadId);
+  };
+
+  const handleAdd = async () => {
+    if (!text || !leadId) return alert("Enter text and Lead ID");
+    if (!user?.id) return alert("You must be logged in");
+
+    await addNote({
+      text,
+      lead_id: leadId,
+      created_by: "d345065f-cc0f-4234-b00a-8abfab5e8167",
     });
+    setText("");
+  };
+
+  const handleUpdate = async (id: string) => {
+    const newText = prompt("Enter new note text:");
+    if (!newText) return;
+    await updateNote(id, { text: newText });
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <h2 className="text-xl font-bold">Agent Store Tester</h2>
+    <div className="p-4 space-y-4">
+      <h2 className="text-xl font-bold">Notes Test Component</h2>
 
-      {/* Form to add a new agent */}
-      <div className="p-4 border rounded-lg shadow space-y-3">
-        <h3 className="font-semibold">Add New Agent</h3>
-        <div className="grid grid-cols-2 gap-3">
-          {Object.keys(newAgent).map((field) => (
-            <input
-              key={field}
-              type="text"
-              placeholder={field}
-              value={(newAgent as any)[field] || ""}
-              onChange={(e) =>
-                setNewAgent((prev) => ({ ...prev, [field]: e.target.value }))
-              }
-              className="border rounded p-2"
-            />
-          ))}
-        </div>
+      {/* Lead Input */}
+      <div className="flex space-x-2">
+        <input
+          className="border p-2 rounded w-64"
+          type="text"
+          placeholder="Enter Lead ID"
+          value={leadId}
+          onChange={(e) => setLeadId(e.target.value)}
+        />
         <button
-          onClick={handleAddAgent}
-          className="bg-blue-600 text-white px-4 py-2 rounded"
+          onClick={handleFetch}
+          className="bg-blue-500 text-white px-4 py-2 rounded"
         >
-          Add Agent
+          Fetch Notes
+        </button>
+        <button
+          onClick={clearNotes}
+          className="bg-gray-400 text-white px-4 py-2 rounded"
+        >
+          Clear
         </button>
       </div>
 
-      {/* List of agents */}
-      <div className="space-y-4">
-        <h3 className="font-semibold">Agents List</h3>
-        {agents.length === 0 ? (
-          <p className="text-gray-500">No agents found.</p>
-        ) : (
-          <ul className="space-y-3">
-            {agents.map((agent) => (
+      {/* Add Note */}
+      <div className="flex space-x-2">
+        <input
+          className="border p-2 rounded w-64"
+          type="text"
+          placeholder="New Note"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+        />
+        <button
+          onClick={handleAdd}
+          className="bg-green-500 text-white px-4 py-2 rounded"
+        >
+          Add Note
+        </button>
+      </div>
+
+      {/* Notes List */}
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
+        <ul className="space-y-2">
+          {notes.length === 0 ? (
+            <p>No notes found</p>
+          ) : (
+            notes.map((note) => (
               <li
-                key={agent.id}
-                className="flex justify-between items-center border p-3 rounded"
+                key={note.id}
+                className="border p-2 rounded flex justify-between items-center"
               >
-                <div>
-                  <p className="font-bold">{agent.name}</p>
-                  <p className="text-sm text-gray-600">{agent.email} | {agent.mobile}</p>
-                  <p className="text-sm text-gray-500">{agent.agency_name} - {agent.city}</p>
-                </div>
-                <div className="flex gap-2">
+                <span>
+                  <strong>{note.text}</strong> <br />
+                  <small>
+                    By: {note.created_by} |{" "}
+                    {note.created_at
+                      ? new Date(note.created_at).toLocaleString()
+                      : "N/A"}
+                  </small>
+                </span>
+                <div className="space-x-2">
                   <button
-                    onClick={() => updateAgent(agent.id!, { remarks: "Updated via UI" })}
-                    className="bg-yellow-500 text-white px-3 py-1 rounded"
+                    onClick={() => handleUpdate(note.id!)}
+                    className="bg-yellow-500 text-white px-2 py-1 rounded"
                   >
                     Update
                   </button>
                   <button
-                    onClick={() => deleteAgent(agent.id!)}
-                    className="bg-red-600 text-white px-3 py-1 rounded"
+                    onClick={() => deleteNote(note.id!)}
+                    className="bg-red-500 text-white px-2 py-1 rounded"
                   >
                     Delete
                   </button>
                 </div>
               </li>
-            ))}
-          </ul>
-        )}
-      </div>
+            ))
+          )}
+        </ul>
+      )}
     </div>
   );
-}
+};
+
+export default NotesTest;

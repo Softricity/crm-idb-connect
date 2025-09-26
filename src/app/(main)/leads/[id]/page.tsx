@@ -4,11 +4,22 @@ import { format } from "date-fns";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useLeadStore, Lead } from "@/stores/useLeadStore";
-import StatusTimeline from "@/components/leads-components/leadStatusTimeline";
 import LeadFormSheet from "@/components/leads-components/createUpdateLead";
-import { Button } from "@/components/ui/button";
+import { Button, Tabs, Tab } from "@heroui/react";
 import { toast } from "sonner";
 import { FilePen } from "lucide-react";
+import { NotesTab } from "@/components/leads-components/notesTab";
+import StatusTimeline from "@/components/leads-components/leadStatusTimeline";
+
+const FollowUpsTab = () => <div className="p-4 text-gray-700">📌 Follow Ups Component</div>;
+const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
+const CoursesTab = () => <div className="p-4 text-gray-700">🎓 Courses Component</div>;
+const TasksTab = () => <div className="p-4 text-gray-700">✅ Tasks Component</div>;
+const PaymentsTab = () => <div className="p-4 text-gray-700">💳 Payments Component</div>;
+const EmailsTab = () => <div className="p-4 text-gray-700">📧 Emails Component</div>;
+const FinancialsTab = () => <div className="p-4 text-gray-700">💰 Financials Component</div>;
+const WhatsAppTab = () => <div className="p-4 text-gray-700">💬 WhatsApp Component</div>;
+const ChatTab = () => <div className="p-4 text-gray-700">💭 Chat Component</div>;
 
 const InfoRow = ({ label, value }: { label: string; value?: string | null }) => (
     <div className="flex justify-between py-2 border-b border-dotted border-gray-200">
@@ -47,21 +58,12 @@ export default function LeadDetailPage() {
     const handleStatusChange = async (newStatus: string, reason?: string) => {
         if (!lead || !lead.id) return;
 
-        const payload: { status: string; reason?: string } = {
-            status: newStatus,
-        };
-
-        if (reason) {
-            payload.reason = reason;
-        }
+        const payload: { status: string; reason?: string } = { status: newStatus };
+        if (reason) payload.reason = reason;
 
         try {
             await updateLead(lead.id, payload);
-            setLead(prev => {
-                if (!prev) return null;
-                const updatedLead = { ...prev, ...payload };
-                return updatedLead;
-            });
+            setLead((prev) => (prev ? { ...prev, ...payload } : null));
             toast.success("Lead status updated successfully!");
         } catch (error) {
             toast.error("Failed to update lead status.");
@@ -70,9 +72,7 @@ export default function LeadDetailPage() {
 
     const handleSheetStateChange = (isOpen: boolean) => {
         setSheetOpen(isOpen);
-        if (!isOpen) {
-            fetchAndSetLead();
-        }
+        if (!isOpen) fetchAndSetLead();
     };
 
     if (loading) {
@@ -107,49 +107,100 @@ export default function LeadDetailPage() {
                                 {lead.assigned_to || "Unassigned"}
                             </p>
                         </div>
-                        <Button onClick={() => setSheetOpen(true)} className="text-gray-700/90 font-bold "><FilePen /> Update Details</Button>
+                        <Button
+                            onPress={() => setSheetOpen(true)}
+                            color="primary"
+                            variant="flat"
+                            startContent={<FilePen className="h-4 w-4" />}
+                        >
+                            Update Details
+                        </Button>
                     </div>
                 </div>
-
                 <StatusTimeline
                     currentStatus={lead.status || "new"}
                     onChange={handleStatusChange}
                 />
+                <Tabs aria-label="Lead Tabs" variant="underlined" className="mt-6">
+                    <Tab key="details" title="Details">
+                        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="bg-white p-6 rounded-lg shadow">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                    Personal & Lead Details
+                                </h3>
+                                <InfoRow label="Full Name" value={lead.name} />
+                                <InfoRow label="Mobile" value={lead.mobile} />
+                                <InfoRow label="Email" value={lead.email} />
+                                <InfoRow label="City" value={lead.city} />
+                                <InfoRow label="Lead Status" value={lead.status} />
+                                {(lead.status === "cold" || lead.status === "rejected") && (
+                                    <InfoRow label="Reason for Status" value={lead.reason} />
+                                )}
+                                <InfoRow label="Lead Type" value={lead.type} />
+                                <InfoRow label="Lead Purpose" value={lead.purpose} />
+                                <InfoRow label="Preferred Country" value={lead.preferred_country} />
+                            </div>
 
+                            <div className="bg-white p-6 rounded-lg shadow">
+                                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                                    Tracking Details
+                                </h3>
+                                <InfoRow label="UTM Source" value={lead.utm_source} />
+                                <InfoRow label="UTM Medium" value={lead.utm_medium} />
+                                <InfoRow label="UTM Campaign" value={lead.utm_campaign} />
+                                <InfoRow label="Assigned To" value={lead.assigned_to} />
+                                <InfoRow
+                                    label="Created At"
+                                    value={
+                                        lead.created_at
+                                            ? format(new Date(lead.created_at), "dd MMM yyyy, hh:mm a")
+                                            : "-"
+                                    }
+                                />
+                            </div>
+                        </div>
+                    </Tab>
 
-                <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="bg-white p-6 rounded-lg shadow">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                            Personal & Lead Details
-                        </h3>
-                        <InfoRow label="Full Name" value={lead.name} />
-                        <InfoRow label="Mobile" value={lead.mobile} />
-                        <InfoRow label="Email" value={lead.email} />
-                        <InfoRow label="City" value={lead.city} />
-                        <InfoRow label="Lead Status" value={lead.status} />
-                        {lead.status === "cold" || lead.status === "rejected" ? (
-                            <InfoRow label="Reason for Status" value={lead.reason} />
-                        ) : null}
-                        <InfoRow label="Lead Type" value={lead.type} />
-                        <InfoRow label="Lead Purpose" value={lead.purpose} />
+                    <Tab key="notes" title="Notes">
+                        <NotesTab leadId={lead?.id ?? ""} />
+                    </Tab>
 
-                        <InfoRow label="Preferred Country" value={lead.preferred_country} />
-                    </div>
+                    <Tab key="followups" title="Follow Ups">
+                        <FollowUpsTab />
+                    </Tab>
 
-                    <div className="bg-white p-6 rounded-lg shadow">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                            Tracking Details
-                        </h3>
-                        <InfoRow label="UTM Source" value={lead.utm_source} />
-                        <InfoRow label="UTM Medium" value={lead.utm_medium} />
-                        <InfoRow label="UTM Campaign" value={lead.utm_campaign} />
-                        <InfoRow label="Assigned To" value={lead.assigned_to} />
-                        <InfoRow
-                            label="Created At"
-                            value={lead.created_at ? format(new Date(lead.created_at), "dd MMM yyyy, hh:mm a") : '-'}
-                        />
-                    </div>
-                </div>
+                    <Tab key="documents" title="Documents">
+                        <DocumentsTab />
+                    </Tab>
+
+                    <Tab key="courses" title="Courses">
+                        <CoursesTab />
+                    </Tab>
+
+                    <Tab key="tasks" title="Tasks">
+                        <TasksTab />
+                    </Tab>
+
+                    <Tab key="payments" title="Payments">
+                        <PaymentsTab />
+                    </Tab>
+
+                    <Tab key="emails" title="Emails">
+                        <EmailsTab />
+                    </Tab>
+
+                    <Tab key="financials" title="Financials">
+                        <FinancialsTab />
+                    </Tab>
+
+                    <Tab key="whatsapp" title="WhatsApp">
+                        <WhatsAppTab />
+                    </Tab>
+
+                    <Tab key="chat" title="Chat">
+                        <ChatTab />
+                    </Tab>
+                </Tabs>
             </div>
 
             <LeadFormSheet
