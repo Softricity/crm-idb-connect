@@ -65,7 +65,7 @@ export function AgentFormFields({
     handleDateChange,
 }: AgentFormFieldsProps) {
     return (
-        <div className="space-y-12 mt-8">
+        <div className="space-y-12 ">
             <div className="space-y-6 rounded-xl border p-6 shadow-sm bg-white hover:shadow-md transition">
                 <h3 className="text-lg font-medium text-gray-800 border-b pb-2">
                     Personal Info

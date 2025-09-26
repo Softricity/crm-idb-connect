@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
-    Sheet,
-    SheetContent,
-    SheetHeader,
-    SheetTitle,
-} from "@/components/ui/sheet";
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerBody,
+  DrawerFooter,
+  Button,
+} from "@heroui/react";
 import { usePartnerStore, Partner } from "@/stores/usePartnerStore";
 import { validateMobile } from "@/lib/validation";
 import { AgentFormFields } from "./agentForm";
@@ -66,7 +67,6 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
                 if (!validateMobile(value)) return "Invalid mobile number";
                 return "";
             case "password":
-
                 if (agent?.id) return "";
                 if (!value || value.length < 6) return "Password must be at least 6 characters";
                 return "";
@@ -100,10 +100,8 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         Object.keys(formData).forEach((key) => {
             const field = key as keyof PartnerFormData;
             const error = validateField(field, formData[field]);
-            if (error) {
-                if (field !== 'remarks') {
-                    newErrors[field] = error;
-                }
+            if (error && field !== "remarks") {
+                newErrors[field] = error;
             }
         });
 
@@ -116,22 +114,29 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
             if (agent) {
                 setFormData({
                     ...agent,
-                    association_date: agent.association_date
-                        ? new Date(agent.association_date)
-                        : undefined,
+                    association_date: agent.association_date ? new Date(agent.association_date) : undefined,
                     agreement_start_date: agent.agreement_start_date
                         ? new Date(agent.agreement_start_date)
                         : undefined,
-                    agreement_end_date: agent.agreement_end_date
-                        ? new Date(agent.agreement_end_date)
-                        : undefined,
+                    agreement_end_date: agent.agreement_end_date ? new Date(agent.agreement_end_date) : undefined,
                 });
             } else {
                 setFormData({
-                    name: "", email: "", mobile: "", password: "", agency_name: "",
-                    address: "", city: "", state: "", area: "", zone: "",
-                    remarks: "", association_type: "", association_date: undefined,
-                    agreement_start_date: undefined, agreement_end_date: undefined,
+                    name: "",
+                    email: "",
+                    mobile: "",
+                    password: "",
+                    agency_name: "",
+                    address: "",
+                    city: "",
+                    state: "",
+                    area: "",
+                    zone: "",
+                    remarks: "",
+                    association_type: "",
+                    association_date: undefined,
+                    agreement_start_date: undefined,
+                    agreement_end_date: undefined,
                 });
             }
         } else {
@@ -139,9 +144,7 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         }
     }, [agent, open]);
 
-    const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-    ) => {
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
         const fieldName = name as keyof PartnerFormData;
         setFormData((prev) => ({ ...prev, [fieldName]: value }));
@@ -167,7 +170,6 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         const error = validateField(name, date);
         setErrors((prev) => ({ ...prev, [name]: error }));
     };
-
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -208,53 +210,54 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
     }
 
     return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="sm:max-w-2xl w-full overflow-y-auto px-8 py-10 bg-gray-50">
-                <SheetHeader>
-                    <SheetTitle className="text-2xl font-semibold tracking-tight text-gray-900">
-                        {agent ? "Edit Agent" : "Add New Agent"}
-                    </SheetTitle>
-                </SheetHeader>
+        <Drawer backdrop="blur" isOpen={open} onOpenChange={onOpenChange}>
+            <DrawerContent className="sm:max-w-2xl w-full overflow-y-hidden p-8 bg-gray-50">
+                {(onClose) => (
+                    <>
+                        <DrawerHeader className="text-2xl font-semibold tracking-tight text-gray-900">
+                            {agent ? "Edit Agent" : "Add New Agent"}
+                        </DrawerHeader>
 
-                <form onSubmit={handleSubmit} className="space-y-12">
-                    <AgentFormFields
-                        formData={formData}
-                        errors={errors}
-                        isSubmitting={isSubmitting}
-                        showPassword={showPassword}
-                        setShowPassword={setShowPassword}
-                        handleChange={handleChange}
-                        handlePhoneChange={handlePhoneChange}
-                        handleSelectChange={handleSelectChange}
-                        handleDateChange={handleDateChange}
-                    />
+                        <DrawerBody>
+                            <form onSubmit={handleSubmit} className="space-y-8 mt-4">
+                                <AgentFormFields
+                                    formData={formData}
+                                    errors={errors}
+                                    isSubmitting={isSubmitting}
+                                    showPassword={showPassword}
+                                    setShowPassword={setShowPassword}
+                                    handleChange={handleChange}
+                                    handlePhoneChange={handlePhoneChange}
+                                    handleSelectChange={handleSelectChange}
+                                    handleDateChange={handleDateChange}
+                                />
 
-                    <div className="flex justify-end gap-4 pt-4">
-                        <Button
-                            variant="outline"
-                            type="button"
-                            onClick={() => onOpenChange(false)}
-                            disabled={isSubmitting}
-                            className="rounded-lg px-5 py-2 border-gray-300 hover:bg-gray-100"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            type="submit"
-                            className="rounded-lg px-6 py-2 bg-primary text-white shadow hover:opacity-90 transition"
-                            disabled={isSubmitting}
-                        >
-                            {isSubmitting ? (
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            ) : agent ? (
-                                "Update Agent"
-                            ) : (
-                                "Add Agent"
-                            )}
-                        </Button>
-                    </div>
-                </form>
-            </SheetContent>
-        </Sheet>
+                                <div className="flex justify-end gap-4 pt-4">
+                                    <Button
+                                        variant="light"
+                                        type="button"
+                                        onPress={onClose}
+                                        isDisabled={isSubmitting}
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        color="primary"
+                                        type="submit"
+                                        isDisabled={isSubmitting}
+                                        startContent={
+                                            isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null
+                                        }
+                                        className="text-white"
+                                    >
+                                        {agent ? "Update Agent" : "Add Agent"}
+                                    </Button>
+                                </div>
+                            </form>
+                        </DrawerBody>
+                    </>
+                )}
+            </DrawerContent>
+        </Drawer>
     );
 }

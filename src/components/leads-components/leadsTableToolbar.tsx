@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Lead } from "@/stores/useLeadStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 
-// UPDATED: Props now accept all leads and the IDs of selected leads
 interface LeadsTableToolbarProps {
   allLeads: Lead[];
   selectedLeadIds: string[];
@@ -20,8 +19,10 @@ export default function LeadsTableToolbar({ allLeads, selectedLeadIds }: LeadsTa
 
   const { user } = useAuthStore();
   const handleDownloadCSV = () => {
-    // UPDATED: Filter leads to get only the selected ones
-    const leadsToExport = allLeads.filter(lead => selectedLeadIds.includes(lead.id!));
+    const leadsToExport =
+      selectedLeadIds.length > 0
+        ? allLeads.filter((lead) => selectedLeadIds.includes(lead?.id ?? ""))
+        : allLeads;
 
     if (leadsToExport.length === 0) {
       alert("Please select at least one lead to export.");
@@ -34,7 +35,6 @@ export default function LeadsTableToolbar({ allLeads, selectedLeadIds }: LeadsTa
       "utm_campaign", "assigned_to", "created_at",
     ];
 
-    // The rest of the logic now uses the filtered 'leadsToExport' array
     const csvContent = [
       headers.join(","),
       ...leadsToExport.map(lead =>
@@ -58,7 +58,7 @@ export default function LeadsTableToolbar({ allLeads, selectedLeadIds }: LeadsTa
 
   return (
     <div className="mt-5 flex flex-col sm:flex-row justify-between items-center gap-3 ">
-      {user?.role==="admin" && (<div className="flex items-center gap-2">
+      {user?.role === "admin" && (<div className="flex items-center gap-2">
         <Button variant="secondary" size="sm" disabled>
           <Flag className="h-4 w-4 mr-2" /> Flagged
         </Button>

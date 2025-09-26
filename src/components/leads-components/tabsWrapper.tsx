@@ -1,9 +1,10 @@
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+//tabsWrapper.tsx
+import { useState } from "react";
+import { Tabs, Tab, Card, CardBody } from "@heroui/react";
 import LeadsTableToolbar from "./leadsTableToolbar";
 import LeadsDisplay from "./displayLeads";
 import { Lead } from "@/stores/useLeadStore";
-import { useState } from "react";
+
 
 type TabName = "All" | "New" | "Lead In Process" | "Assigned" | "Cold" | "Rejected";
 
@@ -43,33 +44,36 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
     });
   };
 
-  return (
-    <Tabs defaultValue="All" className="w-full">
-      <TabsList className="rounded-md w-full py-5 px-0 mx-auto flex gap-2 bg-muted/40 shadow overflow-x-auto overflow-y-hidden">
-        {TAB_LABELS.map((tab) => (
-          <TabsTrigger
-            key={tab}
-            value={tab}
-            className="data-[state=active]:bg-teal-600 text-md data-[state=active]:text-white rounded-md px-4 py-5 transition-colors"
-          >
-            {tab}
-            <Badge variant="outline" className="ml-2 bg-white">
-              {filterLeads(tab).length}
-            </Badge>
-          </TabsTrigger>
-        ))}
-      </TabsList>
+  const renderTabTitle = (tab: TabName) => (
+    <div className="flex items-center justify-center">
+      {tab}
+      <span className="ml-2 inline-flex items-center justify-center rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700 group-data-[selected=true]:bg-white group-data-[selected=true]:text-teal-600">
+        {filterLeads(tab).length}
+      </span>
+    </div>
+  );
 
-      {TAB_LABELS.map((tab) => (
-        <TabsContent key={tab} value={tab} className="gap-5 flex flex-col">
-          <LeadsTableToolbar allLeads={leads} selectedLeadIds={selectedLeadIds} />
-          <LeadsDisplay
-            leads={leads}
-            selectedLeadIds={selectedLeadIds}
-            setSelectedLeadIds={setSelectedLeadIds}
-          />
-        </TabsContent>
-      ))}
-    </Tabs>
+  return (
+    <div className="w-full">
+      <Tabs aria-label="Lead Status Tabs" radius="md">
+        {TAB_LABELS.map((tab) => (
+          <Tab key={tab} title={renderTabTitle(tab)}>
+            <Card>
+              <CardBody>
+                <div className="gap-5 flex flex-col">
+                  <LeadsTableToolbar allLeads={leads} selectedLeadIds={selectedLeadIds} />
+                  <LeadsDisplay
+                    leads={filterLeads(tab)}
+                    selectedLeadIds={selectedLeadIds}
+                    setSelectedLeadIds={setSelectedLeadIds}
+                  />
+
+                </div>
+              </CardBody>
+            </Card>
+          </Tab>
+        ))}
+      </Tabs>
+    </div>
   );
 }

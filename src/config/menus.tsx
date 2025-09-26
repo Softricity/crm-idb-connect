@@ -37,14 +37,14 @@ export const menus: MenuItem[] = [
   { title: "Course Wiz", icon: <GraduationCap size={22} />, type: "link", link: "/courses" },
   { title: "Announcements", icon: <Bell size={22} />, type: "link", link: "/announcements" },
   { title: "Leads", icon: <Users size={22} />, type: "link", link: "/leads" },
-  { title: "Agents", icon: <ShieldUser size={22} />, type: "link", link: "/agents" },
   { title: "Counsellings", icon: <MessageCircle size={22} />, type: "link", link: "/counsellings" },
   { title: "Admissions", icon: <School size={22} />, type: "link", link: "/admissions" },
   { title: "Visas", icon: <FileCheck size={22} />, type: "link", link: "/visas" },
-
+  
   // Business
   { title: "Business", type: "title" },
   { title: "B2B Hub", icon: <Building size={22} />, type: "link", link: "/b2b-hub", badge: "42" },
+  { title: "Agents", icon: <ShieldUser size={22} />, type: "link", link: "/agents" },
   { title: "Commissions", icon: <DollarSign size={22} />, type: "link", link: "/commissions" },
 
   // Task Management

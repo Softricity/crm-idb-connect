@@ -66,11 +66,6 @@ const data = {
       url: "/counsellings",
     },
     {
-      title: "Agents",
-      icon: ShieldUser ,
-      url: "/agents",
-    },
-    {
       title: "Admissions",
       icon: School,
       url: "#",
@@ -87,6 +82,11 @@ const data = {
       icon: Building,
       url: "#",
       badge: "42",
+    },
+    {
+      title: "Agents",
+      icon: ShieldUser ,
+      url: "/agents",
     },
     {
       title: "Commissions",

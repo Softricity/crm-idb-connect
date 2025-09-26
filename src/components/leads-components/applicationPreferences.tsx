@@ -1,38 +1,30 @@
 "use client";
 
-import { Label } from "@/components/ui/label";
 import {
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Input,
+} from "@heroui/react";
 // @ts-ignore
 import countryList from "react-select-country-list";
 import { Lead } from "@/stores/useLeadStore";
 import { Dispatch, SetStateAction, useState } from "react";
-
 import { useAuthStore } from "@/stores/useAuthStore";
-
-interface CountryOption {
-  label: string;
-  value: string;
-}
+import { Label } from "../ui/label";
 
 interface ApplicationPreferencesProps {
   formData: Omit<Lead, "id" | "created_at">;
   setFormData: Dispatch<SetStateAction<Omit<Lead, "id" | "created_at">>>;
 }
 
-const countryOptions: CountryOption[] = countryList().getData();
+const countryOptions = countryList().getData();
 
 export default function ApplicationPreferences({
   formData,
   setFormData,
 }: ApplicationPreferencesProps) {
   const { user } = useAuthStore();
-  const [isOther, setIsOther] = useState(false);
+  const [isOther, setIsOther] = useState(formData.utm_source === "");
 
   const handleUtmChange = (value: string) => {
     if (value === "Other") {
@@ -51,8 +43,10 @@ export default function ApplicationPreferences({
         <div className="space-y-2">
           <Label className="text-sm font-medium">Applying for</Label>
           <Select
-            value={formData.purpose || ""}
-            onValueChange={(value) => {
+            placeholder="Select IELTS, PTE, or Study Abroad"
+            selectedKeys={new Set([formData.purpose])}
+            onChange={(e) => {
+              const value = e.target.value;
               setFormData((prev) => ({
                 ...prev,
                 purpose: value,
@@ -60,14 +54,9 @@ export default function ApplicationPreferences({
               }));
             }}
           >
-            <SelectTrigger className="w-full rounded-lg">
-              <SelectValue placeholder="Select IELTS, PTE, or Study Abroad" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="IELTS">IELTS</SelectItem>
-              <SelectItem value="PTE">PTE</SelectItem>
-              <SelectItem value="Study Abroad">Study Abroad</SelectItem>
-            </SelectContent>
+            <SelectItem key="IELTS">IELTS</SelectItem>
+            <SelectItem key="PTE">PTE</SelectItem>
+            <SelectItem key="Study Abroad">Study Abroad</SelectItem>
           </Select>
         </div>
 
@@ -75,21 +64,16 @@ export default function ApplicationPreferences({
           <div className="space-y-2">
             <Label className="text-sm font-medium">Preferred Country</Label>
             <Select
-              value={formData.preferred_country || ""}
-              onValueChange={(value) =>
-                setFormData((prev) => ({ ...prev, preferred_country: value }))
+              placeholder="Select Country"
+              selectedKeys={new Set([formData.preferred_country ?? ""])}
+              className="max-h-64"
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, preferred_country: e.target.value }))
               }
             >
-              <SelectTrigger className="w-full rounded-lg">
-                <SelectValue placeholder="Select Country" />
-              </SelectTrigger>
-              <SelectContent className="max-h-64">
-                {countryOptions.map((c) => (
-                  <SelectItem key={c.value} value={c.label}>
-                    {c.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              {countryOptions.map((country : any) => (
+                <SelectItem key={country.label}>{country.label}</SelectItem>
+              ))}
             </Select>
           </div>
         )}
@@ -98,22 +82,26 @@ export default function ApplicationPreferences({
           <div className="space-y-2">
             <Label className="text-sm font-medium">Source</Label>
             <Select
-              value={isOther ? "Other" : formData.utm_source || ""}
-              onValueChange={handleUtmChange}
+              placeholder="Select Source"
+              selectedKeys={
+                new Set([
+                  isOther
+                    ? "Other"
+                    : formData.utm_source
+                    ? formData.utm_source
+                    : ""
+                ])
+              }
+              onChange={(e) => handleUtmChange(e.target.value)}
             >
-              <SelectTrigger className="w-full rounded-lg">
-                <SelectValue placeholder="Select Source" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Instagram">Instagram</SelectItem>
-                <SelectItem value="WhatsApp">WhatsApp</SelectItem>
-                <SelectItem value="Walk-in">Walk-in</SelectItem>
-                <SelectItem value="Facebook">Facebook</SelectItem>
-                <SelectItem value="Referral">Referral</SelectItem>
-                <SelectItem value="Website">Website</SelectItem>
-                <SelectItem value="Google Ads">Google Ads</SelectItem>
-                <SelectItem value="Other">Other</SelectItem>
-              </SelectContent>
+              <SelectItem key="Instagram">Instagram</SelectItem>
+              <SelectItem key="WhatsApp">WhatsApp</SelectItem>
+              <SelectItem key="Walk-in">Walk-in</SelectItem>
+              <SelectItem key="Facebook">Facebook</SelectItem>
+              <SelectItem key="Referral">Referral</SelectItem>
+              <SelectItem key="Website">Website</SelectItem>
+              <SelectItem key="Google Ads">Google Ads</SelectItem>
+              <SelectItem key="Other">Other</SelectItem>
             </Select>
           </div>
         )}
@@ -121,14 +109,12 @@ export default function ApplicationPreferences({
         {user?.role === "agent" && isOther && (
           <div className="space-y-2">
             <Label className="text-sm font-medium">Other Source</Label>
-            <input
-              type="text"
+            <Input
               placeholder="Enter custom source"
               value={formData.utm_source || ""}
               onChange={(e) =>
                 setFormData((prev) => ({ ...prev, utm_source: e.target.value }))
               }
-              className="w-full rounded-lg border p-2"
             />
           </div>
         )}
