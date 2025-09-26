@@ -8,6 +8,9 @@ export interface Note {
   id?: string;
   text: string;
   lead_id: string;
+  partner?: {
+    name: string;
+  };
   created_by: string;
   created_at?: string;
 }
@@ -30,7 +33,7 @@ export const useNoteStore = create<NoteState>((set) => ({
     set({ loading: true });
     const { data, error } = await supabase
       .from("notes")
-      .select("*")
+      .select("*, partner:created_by(name)")
       .eq("lead_id", leadId)
       .order("created_at", { ascending: false });
 

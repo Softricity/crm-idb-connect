@@ -84,7 +84,7 @@ const NoteCard = ({ note }: { note: Note }) => {
               {note.created_at
                 ? format(new Date(note.created_at), "dd MMM yyyy, p")
                 : "..."}{" "}
-              by <span className="font-medium">{note.created_by}</span>
+              by <span className="font-medium">{note?.partner?.name}</span>
             </p>
             {isEditing && (
               <div className="flex gap-2 mt-3">
