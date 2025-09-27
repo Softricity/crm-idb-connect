@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { FilePen } from "lucide-react";
 import NotesTab from "@/components/leads-components/notesTab";
 import StatusTimeline from "@/components/leads-components/leadStatusTimeline";
+import FollowUpComponent from "@/components/leads-components/followupTab";
 
 const FollowUpsTab = () => <div className="p-4 text-gray-700">📌 Follow Ups Component</div>;
 const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
@@ -189,7 +190,11 @@ export default function LeadDetailPage() {
                     </Tab>
 
                     <Tab key="followups" title="Follow Ups">
-                        <FollowUpsTab />
+                        <FollowUpComponent
+                            leadId={lead?.id??""}
+                            leadName={lead?.name??""}
+                            leadPhone={lead?.mobile??""}
+                        />
                     </Tab>
 
                     <Tab key="documents" title="Documents">

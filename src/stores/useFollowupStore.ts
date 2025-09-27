@@ -30,12 +30,17 @@ interface FollowupState {
   loading: boolean;
 
   fetchFollowupsByLeadId: (leadId: string) => Promise<void>;
-  addFollowup: (followup: Omit<Followup, "id" | "created_at" | "partner" | "comments">) => Promise<void>;
+  addFollowup: (
+    followup: Omit<Followup, "id" | "partner" | "comments">
+  ) => Promise<void>;
   updateFollowup: (id: string, updates: Partial<Followup>) => Promise<void>;
   deleteFollowup: (id: string) => Promise<void>;
 
-  addComment: (comment: Omit<FollowupComment, "id" | "created_at">) => Promise<void>;
+  addComment: (
+    comment: Omit<FollowupComment, "id" | "created_at">
+  ) => Promise<void>;
   fetchCommentsByFollowupId: (followupId: string) => Promise<FollowupComment[]>;
+  deleteAllCommentsForFollowup: (followupId: string) => Promise<void>;
 
   markComplete: (id: string) => Promise<void>;
   extendDueDate: (id: string, newDate: string) => Promise<void>;
@@ -49,11 +54,13 @@ export const useFollowupStore = create<FollowupState>((set, get) => ({
     set({ loading: true });
     const { data, error } = await supabase
       .from("followups")
-      .select(`
+      .select(
+        `
         *,
         partner:created_by(name),
         comments:followup_comments(*)
-      `)
+      `
+      )
       .eq("lead_id", leadId)
       .order("created_at", { ascending: false });
 
@@ -76,7 +83,9 @@ export const useFollowupStore = create<FollowupState>((set, get) => ({
       throw error;
     }
 
-    set((state) => ({ followups: [...(data as Followup[]), ...state.followups] }));
+    set((state) => ({
+      followups: [...(data as Followup[]), ...state.followups],
+    }));
   },
 
   updateFollowup: async (id, updates) => {
@@ -122,7 +131,10 @@ export const useFollowupStore = create<FollowupState>((set, get) => ({
     set((state) => ({
       followups: state.followups.map((f) =>
         f.id === comment.followup_id
-          ? { ...f, comments: [...(f.comments || []), ...(data as FollowupComment[])] }
+          ? {
+              ...f,
+              comments: [...(f.comments || []), ...(data as FollowupComment[])],
+            }
           : f
       ),
     }));
@@ -140,6 +152,25 @@ export const useFollowupStore = create<FollowupState>((set, get) => ({
       return [];
     }
     return data as FollowupComment[];
+  },
+
+  deleteAllCommentsForFollowup: async (followupId) => {
+    const { error } = await supabase
+      .from("followup_comments")
+      .delete()
+      .eq("followup_id", followupId);
+
+    if (error) {
+      console.error("Error deleting comments for followup:", error.message);
+      throw error;
+    }
+
+    // Update the local state to remove comments from the specific followup
+    set((state) => ({
+      followups: state.followups.map((f) =>
+        f.id === followupId ? { ...f, comments: [] } : f
+      ),
+    }));
   },
 
   markComplete: async (id) => {
@@ -178,5 +209,5 @@ export const useFollowupStore = create<FollowupState>((set, get) => ({
         f.id === id ? { ...f, ...(data?.[0] as Followup) } : f
       ),
     }));
-  }
+  },
 }));

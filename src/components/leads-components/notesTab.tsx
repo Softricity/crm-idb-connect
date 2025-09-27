@@ -31,14 +31,12 @@ const NoteCard = ({ note }: { note: Note }) => {
       .toUpperCase();
 
   const handleDelete = async () => {
-    if (window.confirm("Are you sure you want to delete this note?")) {
       try {
         await deleteNote(note.id!);
         toast.success("Note deleted successfully.");
       } catch (error) {
         toast.error("Failed to delete note.");
       }
-    }
   };
 
   const handleUpdate = async () => {
