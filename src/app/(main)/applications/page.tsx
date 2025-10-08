@@ -1,5 +1,5 @@
 "use client";
-import ApplicationsDataTable from "@/components/leads-components/application-components/displayApplication";
+import ApplicationsDataTable from "@/components/application-components/displayApplication";
 import { useLeadStore } from "@/stores/useLeadStore";
 import React, { useEffect, useState } from "react";
 

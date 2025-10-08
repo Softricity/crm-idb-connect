@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Lead, useLeadStore } from "@/stores/useLeadStore";
-import LeadsTable from "../leadsTable";
+import LeadsTable from "../leads-components/leadsTable";
 
 interface ApplicationsDataTableProps {
     applications: Lead[];

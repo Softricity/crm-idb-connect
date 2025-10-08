@@ -25,7 +25,7 @@ export default function FollowupList({
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        if (completed) return <Chip color="success" variant="flat">Completed</Chip>;
+        if (completed) return <></>;
         if (date.toDateString() === today.toDateString()) return <Chip color="danger">Due Today</Chip>;
         if (date.toDateString() === tomorrow.toDateString()) return <Chip color="warning">Due Tomorrow</Chip>;
         return <Chip color="default">Due on {format(date, "dd/MM/yyyy hh:mm a")}</Chip>;

@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 // 1. Color scheme for different event types
-const eventColors: { [key: string]: { bg: string; icon: string } } = {
+export const eventColors: { [key: string]: { bg: string; icon: string } } = {
   // Additions -> Green
   [TimelineEvent.LEAD_CREATED]: { bg: "bg-green-50", icon: "text-green-600" },
   [TimelineEvent.LEAD_NOTE_ADDED]: { bg: "bg-green-50", icon: "text-green-600" },
@@ -50,7 +50,7 @@ const eventColors: { [key: string]: { bg: string; icon: string } } = {
 };
 
 // 2. Icon mapping for different event types
-const eventIcons: { [key in TimelineEvent]?: React.ElementType } = {
+export const eventIcons: { [key in TimelineEvent]?: React.ElementType } = {
   [TimelineEvent.LEAD_CREATED]: UserPlus,
   [TimelineEvent.LEAD_NAME_CHANGED]: Edit3,
   [TimelineEvent.LEAD_EMAIL_CHANGED]: Mail,
@@ -71,7 +71,7 @@ const eventIcons: { [key in TimelineEvent]?: React.ElementType } = {
 };
 
 // 3. Function to render the human-readable action string
-const renderEventAction = (event: Timeline, leadName: string) => {
+export const renderEventAction = (event: Timeline, leadName: string) => {
   const { event_type, old_state, new_state } = event;
 
   const Field = ({ children }: { children: React.ReactNode }) => <strong className="font-semibold text-gray-800">{children}</strong>;
@@ -118,7 +118,7 @@ const renderEventAction = (event: Timeline, leadName: string) => {
 };
 
 // 4. Sub-component for a single timeline item
-const TimelineItem = ({ event, isLast, leadName }: { event: Timeline; isLast: boolean; leadName: string; }) => {
+export const TimelineItem = ({ event, isLast, leadName }: { event: Timeline; isLast: boolean; leadName: string; }) => {
   const Icon = eventIcons[event.event_type as TimelineEvent] || History;
   const colors = eventColors[event.event_type] || eventColors.DEFAULT;
 
