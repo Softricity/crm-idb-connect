@@ -1,30 +1,39 @@
-"use client"
+"use client";
 
-import { AppSidebar } from "@/components/app-sidebar"
-import { Separator } from "@/components/ui/separator"
-import {
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar"
+import React from "react";
+import Sidebar from "@/components/sidebar"; // desktop sidebar
+import Navbar from "@/components/navbar";   // mobile navbar
+import { menus } from "@/config/menus";    // unified menus
+import { Toaster } from "@/components/ui/sonner";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useEffect } from "react";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+    const initAuth = useAuthStore((state) => state.initAuth);
+
+    useEffect(() => {
+      initAuth();
+    }, [initAuth]);
   return (
-    <SidebarProvider>
-      <AppSidebar className="border-l-4 border-l-blue-500 min-w-13" />
-      <SidebarInset className="sm:rounded-t-[40px] sm:px-4 sm:border sm:m-3 sm:mb-0">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator
-            orientation="vertical"
-            className="mr-2 data-[orientation=vertical]:h-4"
-          />
-            <h1 className="text-lg font-black sm:hidden">IDB Connect</h1>
-        </header>
-        <div className="flex flex-1 flex-col gap-4 p-4">
-          {children}
+    <div className="flex h-screen w-full">
+      {/* Desktop Sidebar */}
+      <Sidebar />
+
+      {/* Main Content */}
+      <div className="flex flex-col flex-1">
+        {/* Mobile Navbar */}
+        <div className="lg:hidden">
+          <Navbar menus={menus} />
         </div>
-      </SidebarInset>
-    </SidebarProvider>
-  )
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+          {children}
+        </main>
+      </div>
+
+      {/* Global Toaster */}
+      <Toaster richColors position="top-right" />
+    </div>
+  );
 }

@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead API Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 2rem 3rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 {
+            color: #111;
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+        form div {
+            margin-bottom: 1rem;
+        }
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+        }
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        button {
+            width: 100%;
+            padding: 0.85rem;
+            background-color: #0070f3;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        button:hover {
+            background-color: #005bb5;
+        }
+        #response-output {
+            margin-top: 1.5rem;
+            background-color: #2d2d2d;
+            color: #f4f4f4;
+            padding: 1rem;
+            border-radius: 6px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-family: "Courier New", Courier, monospace;
+            min-height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Create a New Lead</h1>
+        <form id="lead-form">
+            <div>
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" value="Test Lead" required>
+            </div>
+            <div>
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="test@example.com" required>
+            </div>
+            <div>
+                <label for="mobile">Mobile</label>
+                <input type="tel" id="mobile" name="mobile" value="9876543210" required>
+            </div>
+            <div>
+                <label for="type">Type</label>
+                <input type="text" id="type" name="type" value="Student" required>
+            </div>
+            <div>
+                <label for="city">City</label>
+                <input type="text" id="city" name="city" value="Mumbai" required>
+            </div>
+            <div>
+                <label for="purpose">Purpose</label>
+                <input type="text" id="purpose" name="purpose" value="Study Abroad" required>
+            </div>
+            <div>
+                <label for="status">Status</label>
+                <input type="text" id="status" name="status" value="New" required>
+            </div>
+            <button type="submit">Create Lead</button>
+        </form>
+
+        <h2>API Response:</h2>
+        <pre id="response-output">Waiting for submission...</pre>
+    </div>
+
+    <script>
+        const leadForm = document.getElementById('lead-form');
+        const responseOutput = document.getElementById('response-output');
+
+        leadForm.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            responseOutput.textContent = 'Sending...';
+
+            // 1. Gather form data into an object
+            const formData = {
+                name: document.getElementById('name').value,
+                email: document.getElementById('email').value,
+                mobile: document.getElementById('mobile').value,
+                type: document.getElementById('type').value,
+                city: document.getElementById('city').value,
+                purpose: document.getElementById('purpose').value,
+                status: document.getElementById('status').value,
+                // **IMPORTANT**: In a real app, this would come from your user session.
+                // For this test, we are hardcoding a sample UUID.
+                created_by: 'cf6ee526-4e7b-49ca-9da3-49216d04800e'
+            };
+
+            try {
+                // 2. Send the data to the API endpoint
+                const response = await fetch('http://localhost:3000/api/leads', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData),
+                });
+
+                // 3. Get the JSON response from the server
+                const result = await response.json();
+
+                // 4. Display the response
+                responseOutput.style.color = response.ok ? '#77dd77' : '#ff6961';
+                responseOutput.textContent = JSON.stringify(result, null, 2);
+
+            } catch (error) {
+                // Handle network errors
+                responseOutput.style.color = '#ff6961';
+                responseOutput.textContent = `Network Error: ${error.message}`;
+            }
+        });
+    </script>
+</body>
+</html>

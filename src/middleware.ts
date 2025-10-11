@@ -3,29 +3,74 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 export async function middleware(request: NextRequest) {
+  const currentPath = request.nextUrl.pathname;
+
+  // 1. Handle API requests (for CORS)
+  if (currentPath.startsWith("/api/")) {
+    const response = NextResponse.next();
+    // Add CORS headers to the response
+    response.headers.append("Access-Control-Allow-Credentials", "true");
+    response.headers.append("Access-Control-Allow-Origin", "*"); // Replace with your actual origin in production
+    response.headers.append("Access-Control-Allow-Methods", "GET,DELETE,PATCH,POST,PUT");
+    response.headers.append(
+      "Access-Control-Allow-Headers",
+      "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version"
+    );
+    return response;
+  }
+
+  // 2. Handle Page requests (your existing authentication logic)
   const { supabase, response } = createSupabaseClient(request);
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const partnerSession = request.cookies.get("partner-session");
+  let partnerUser = null;
 
-  if (!session && request.nextUrl.pathname !== "/login") {
+  if (partnerSession) {
+    try {
+      partnerUser = JSON.parse(partnerSession.value);
+    } catch (error) {
+      const responseWithClearedCookie = NextResponse.next({
+        request: { headers: request.headers },
+      });
+      responseWithClearedCookie.cookies.delete("partner-session");
+      return responseWithClearedCookie;
+    }
+  }
+
+  const isAuthenticated = !!partnerUser;
+
+  if (!isAuthenticated && currentPath !== "/login") {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (session && request.nextUrl.pathname === "/login") {
+  if (isAuthenticated && (currentPath === "/login" || currentPath === "/")) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  if (isAuthenticated && partnerUser) {
+    const userRole = partnerUser.role;
+
+    if (currentPath.startsWith("/admin") && userRole !== "admin") {
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
+    if (userRole === "agent") {
+      if (!(currentPath === "/b2b" || currentPath.startsWith("/b2b/"))) {
+        return NextResponse.redirect(new URL("/b2b", request.url));
+      }
+    }
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api|.*\\..*).*)"],
+  // ✅ Updated matcher to include both pages and API routes
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\..*).*)"],
 };
 
 
-
+// This helper function remains the same
 const createSupabaseClient = (request: NextRequest) => {
   let response = NextResponse.next({ request: { headers: request.headers } });
 

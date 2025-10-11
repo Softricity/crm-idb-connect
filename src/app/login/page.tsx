@@ -13,14 +13,18 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [hasAttemptedLogin, setHasAttemptedLogin] = useState(false);
 
-  const { login, isAuthenticated, loading } = useAuthStore();
+  const { user, login, isAuthenticated, loading } = useAuthStore();
   const router = useRouter();
 
 
   useEffect(() => {
     if (hasAttemptedLogin && !loading) {
-      if (isAuthenticated) {
+      if (isAuthenticated && user?.role==="admin") {
+        console.log("Admin User Logged In");
         router.push("/dashboard");
+      }else if(isAuthenticated && user?.role!=="admin"){
+        console.log("B2B User Logged In");
+        router.push("/b2b")
       } else {
         setError("Invalid email or password. Please try again.");
       }

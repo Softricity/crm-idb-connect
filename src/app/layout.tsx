@@ -1,9 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Outfit as Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import {HeroUIProvider} from "@heroui/react";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
+  weight: ["400", "500", "600", "700"],
   subsets: ["latin"],
 });
 
@@ -25,9 +27,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${geistSans.className} antialiased`}
       >
-        {children}
+        <HeroUIProvider>
+          {children}
+        </HeroUIProvider>
       </body>
     </html>
   );
