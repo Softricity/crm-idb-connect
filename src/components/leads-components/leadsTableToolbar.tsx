@@ -59,10 +59,10 @@ export default function LeadsTableToolbar({ allLeads, selectedLeadIds }: LeadsTa
   return (
     <div className="mt-5 flex flex-col sm:flex-row justify-between items-center gap-3 ">
       {user?.role === "admin" && (<div className="flex items-center gap-2">
-        <Button variant="secondary" size="sm" disabled>
+        <Button variant="secondary" size="sm" disabled className="text-white">
           <Flag className="h-4 w-4 mr-2" /> Flagged
         </Button>
-        <Button variant="secondary" size="sm" disabled>
+        <Button variant="secondary" size="sm" disabled className="text-white">
           <Filter className="h-4 w-4 mr-2" /> Apply Filters
         </Button>
       </div>)}
