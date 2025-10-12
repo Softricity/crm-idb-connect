@@ -48,11 +48,9 @@ export default function FollowupDetails({
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
-                        {followup.completed ? (
-                            <Chip color="success" size="lg" variant="flat"><CheckIcon className="w-4 h-4 mr-1"/>Completed</Chip>
-                        ) : (
+                        {!followup.completed &&
                             <Chip color="warning" size="lg">{format(new Date(followup.due_date!), "dd MMMM yyyy hh:mm a")}</Chip>
-                        )}
+                        }
                         <Dropdown placement="bottom-end">
                             <DropdownTrigger>
                                 <Button isIconOnly variant="light" radius="full" className="hover:bg-gray-100">

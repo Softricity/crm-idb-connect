@@ -26,8 +26,10 @@ export interface Lead {
 
 interface LeadState {
   leads: Lead[];
+  applications: Lead[];
   loading: boolean;
   fetchLeads: () => Promise<void>;
+  fetchApplications: () => Promise<void>;
   fetchLeadById: (id: string) => Promise<Lead | null>;
   getAgentLeads: (agentId: string) => Promise<void>;
   addLead: (lead: Omit<Lead, "id" | "created_at">) => Promise<void>;
@@ -36,6 +38,7 @@ interface LeadState {
 
 export const useLeadStore = create<LeadState>((set) => ({
   leads: [],
+  applications: [],
   loading: false,
 
   fetchLeads: async () => {
@@ -43,11 +46,29 @@ export const useLeadStore = create<LeadState>((set) => ({
     const { data, error } = await supabase
       .from("leads")
       .select("*")
+      .eq("type", "lead")
       .order("created_at", { ascending: false });
+
     if (error) {
       console.error("Error fetching leads:", error.message);
     } else {
       set({ leads: data as Lead[] });
+    }
+    set({ loading: false });
+  },
+
+  fetchApplications: async () => {
+    set({ loading: true });
+    const { data, error } = await supabase
+      .from("leads")
+      .select("*")
+      .eq("type", "application")
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Error fetching leads:", error.message);
+    } else {
+      set({ applications: data as Lead[] });
     }
     set({ loading: false });
   },
@@ -119,8 +140,8 @@ export const useLeadStore = create<LeadState>((set) => ({
       .single();
 
     if (!oldData) {
-        console.error("Could not find lead to update.");
-        return;
+      console.error("Could not find lead to update.");
+      return;
     }
 
     // 2. Perform the update
@@ -147,12 +168,12 @@ export const useLeadStore = create<LeadState>((set) => ({
 
     // 4. *** MODIFIED SECTION: Log specific changes to the timeline ***
     const fieldsToTrack = [
-      { key: 'name', eventType: TimelineEvent.LEAD_NAME_CHANGED },
-      { key: 'mobile', eventType: TimelineEvent.LEAD_PHONE_CHANGED },
-      { key: 'email', eventType: TimelineEvent.LEAD_EMAIL_CHANGED },
-      { key: 'purpose', eventType: TimelineEvent.LEAD_PURPOSE_CHANGED },
-      { key: 'assigned_to', eventType: TimelineEvent.LEAD_OWNER_CHANGED },
-      { key: 'status', eventType: TimelineEvent.LEAD_STATUS_CHANGED },
+      { key: "name", eventType: TimelineEvent.LEAD_NAME_CHANGED },
+      { key: "mobile", eventType: TimelineEvent.LEAD_PHONE_CHANGED },
+      { key: "email", eventType: TimelineEvent.LEAD_EMAIL_CHANGED },
+      { key: "purpose", eventType: TimelineEvent.LEAD_PURPOSE_CHANGED },
+      { key: "assigned_to", eventType: TimelineEvent.LEAD_OWNER_CHANGED },
+      { key: "status", eventType: TimelineEvent.LEAD_STATUS_CHANGED },
     ] as const; // `as const` provides better type safety
 
     const timelineEvents = [];
@@ -168,7 +189,7 @@ export const useLeadStore = create<LeadState>((set) => ({
           lead_id: updatedLead.id!,
           event_type: field.eventType,
           old_state: oldValue ?? "N/A", // Store old value as string
-          new_state: newValue,          // Store new value as string
+          new_state: newValue, // Store new value as string
           created_by: updatedLead.created_by,
         });
       }
@@ -176,7 +197,7 @@ export const useLeadStore = create<LeadState>((set) => ({
 
     // Insert all detected change events into the timeline in a single call
     if (timelineEvents.length > 0) {
-        await supabase.from("timeline").insert(timelineEvents);
+      await supabase.from("timeline").insert(timelineEvents);
     }
   },
 }));
