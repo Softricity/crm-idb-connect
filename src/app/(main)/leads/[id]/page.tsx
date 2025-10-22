@@ -12,6 +12,7 @@ import NotesTab from "@/components/leads-components/notesTab";
 import StatusTimeline from "@/components/leads-components/leadStatusTimeline";
 import FollowUpComponent from "@/components/leads-components/followupTab";
 import TimeLineTab from "@/components/leads-components/timeLineTab";
+import ApplicantProfilePanel from "@/components/application-components/applicationProfilePanel";
 
 const FollowUpsTab = () => <div className="p-4 text-gray-700">📌 Follow Ups Component</div>;
 const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
@@ -184,6 +185,7 @@ export default function LeadDetailPage() {
                                 />
                             </div>
                         </div>
+                        {lead?.type === "application" && <ApplicantProfilePanel />}
                     </Tab>
 
                     <Tab key="notes" title="Notes">
@@ -192,9 +194,9 @@ export default function LeadDetailPage() {
 
                     <Tab key="followups" title="Follow Ups">
                         <FollowUpComponent
-                            leadId={lead?.id??""}
-                            leadName={lead?.name??""}
-                            leadPhone={lead?.mobile??""}
+                            leadId={lead?.id ?? ""}
+                            leadName={lead?.name ?? ""}
+                            leadPhone={lead?.mobile ?? ""}
                         />
                     </Tab>
 

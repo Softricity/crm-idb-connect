@@ -95,7 +95,7 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
       } else {
         const leadData = {
           ...formData,
-          created_by: user?.role === "admin" ? null : user?.id,
+          created_by: user?.role === "admin" ? "admin" : user?.id,
           utm_medium: user?.role !== "agent" ? "walkin" : partnerDetails?.name,
           utm_campaign: user?.role !== "agent" ? "walkin" : partnerDetails?.agency_name,
         };
