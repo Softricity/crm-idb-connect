@@ -30,19 +30,20 @@ const statusColorMap: Record<string, "default" | "primary" | "secondary" | "succ
 export function CounsellorLeadsTable() {
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
-  const { leads, loading, fetchLeads, updateLead } = useLeadStore();
+  const { leads, loading, getCounsellorLeads, updateLead } = useLeadStore();
   const [page, setPage] = React.useState(1);
   const rowsPerPage = 10;
 
   React.useEffect(() => {
-    fetchLeads();
-  }, [fetchLeads]);
+    if (user?.id) {
+      getCounsellorLeads(user.id);
+    }
+  }, [getCounsellorLeads, user?.id]);
 
-  // Filter leads assigned to this counsellor
+  // All leads are already filtered by counsellor ID from the store
   const myLeads = React.useMemo(() => {
-    if (!user?.id) return [];
-    return leads.filter((lead) => lead.assigned_to === user.id);
-  }, [leads, user]);
+    return leads;
+  }, [leads]);
 
   const paginatedLeads = React.useMemo(() => {
     const start = (page - 1) * rowsPerPage;
@@ -64,7 +65,9 @@ export function CounsellorLeadsTable() {
     try {
       await updateLead(lead.id, { is_flagged: !lead.is_flagged });
       toast.success(lead.is_flagged ? "Lead unflagged" : "Lead flagged");
-      fetchLeads();
+      if (user?.id) {
+        getCounsellorLeads(user.id);
+      }
     } catch (error) {
       toast.error("Failed to update flag");
     }

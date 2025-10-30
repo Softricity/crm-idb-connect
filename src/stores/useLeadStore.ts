@@ -37,6 +37,7 @@ interface LeadState {
   fetchApplications: () => Promise<void>;
   fetchLeadById: (id: string) => Promise<Lead | null>;
   getAgentLeads: (agentId: string) => Promise<void>;
+  getCounsellorLeads: (counsellorId: string) => Promise<void>;
   addLead: (lead: Omit<Lead, "id" | "created_at">) => Promise<void>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
 }
@@ -99,6 +100,23 @@ export const useLeadStore = create<LeadState>((set) => ({
       .eq("created_by", agentId);
     if (error) {
       console.error("Error fetching agent leads:", error.message);
+      throw error;
+    } else {
+      set({ leads: data as Lead[] });
+    }
+    set({ loading: false });
+  },
+
+  getCounsellorLeads: async (counsellorId: string) => {
+    set({ loading: true });
+    const { data, error } = await supabase
+      .from("leads")
+      .select("*, assigned_partner:assigned_to(name, email)")
+      .eq("assigned_to", counsellorId)
+      .eq("type", "lead")
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.error("Error fetching counsellor leads:", error.message);
       throw error;
     } else {
       set({ leads: data as Lead[] });
