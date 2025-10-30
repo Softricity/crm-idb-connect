@@ -28,10 +28,15 @@ interface LeadActionsMenuProps {
     lead?: Lead;
     onAssignClick?: () => void;
     showAssign?: boolean;
+    userRole?: "admin" | "counsellor" | "agent";
 }
 
-export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssign = false }: LeadActionsMenuProps) {
+export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssign = false, userRole = "admin" }: LeadActionsMenuProps) {
     const router = useRouter();
+    
+    // Determine the base path based on user role
+    const basePath = userRole === "counsellor" ? "/counsellor/leads" : "/leads";
+    
     return (
         <Dropdown>
             <DropdownTrigger>
@@ -63,14 +68,14 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                     <DropdownItem
                         key="notes"
                         startContent={<NotebookPen className="h-4 w-4 text-indigo-500" />}
-                        onClick={() => router.push(`/leads/${leadId}?tab=notes`)}
+                        onClick={() => router.push(`${basePath}/${leadId}?tab=notes`)}
                     >
                         Notes
                     </DropdownItem>
 
                     <DropdownItem key="follow_up"
                         startContent={<CalendarFold className="h-4 w-4 text-pink-500" />}
-                        onClick={() => router.push(`/leads/${leadId}?tab=followups`)}>
+                        onClick={() => router.push(`${basePath}/${leadId}?tab=followups`)}>
                         Follow-up
                     </DropdownItem>
                 </DropdownSection>
@@ -78,20 +83,20 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                     <DropdownItem
                         key="text"
                         startContent={<MessageSquareText className="h-4 w-4 text-blue-500" />}
-                        onClick={() => router.push(`/leads/${leadId}?tab=chat`)}
+                        onClick={() => router.push(`${basePath}/${leadId}?tab=chat`)}
                     >
                         Text Message
                     </DropdownItem>
                     <DropdownItem
                         key="whatsapp"
                         startContent={<MessageCircleCode className="h-4 w-4 text-green-500" />}
-                        onClick={() => router.push(`/leads/${leadId}?tab=whatsapp`)}>
+                        onClick={() => router.push(`${basePath}/${leadId}?tab=whatsapp`)}>
                         WhatsApp
                     </DropdownItem>
                     <DropdownItem
                         key="mail"
                         startContent={<AtSign className="h-4 w-4 text-purple-500" />}
-                        onClick={() => router.push(`/leads/${leadId}?tab=emails`)}>
+                        onClick={() => router.push(`${basePath}/${leadId}?tab=emails`)}>
                         Email
                     </DropdownItem>
                 </DropdownSection>

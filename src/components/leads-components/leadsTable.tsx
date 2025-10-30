@@ -145,6 +145,7 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
                   leadId={lead.id || ""} 
                   lead={lead}
                   showAssign={user?.role === "admin"}
+                  userRole={user?.role}
                   onAssignClick={() => {
                     setSelectedLeadForAssignment(lead);
                     setIsAssignModalOpen(true);
@@ -159,7 +160,8 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
                 className="cursor-pointer text-lg text-gray-500 active:opacity-50 border-none bg-transparent p-0"
                 onClick={(e) => {
                   e.stopPropagation();
-                  router.push(`/leads/${lead.id}`);
+                  const basePath = user?.role === "counsellor" ? "/counsellor/leads" : "/leads";
+                  router.push(`${basePath}/${lead.id}`);
                 }}
               >
                 <ArrowRight className="h-4 w-4" />
@@ -182,7 +184,7 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
           selectedKeys={selectedLeadIds}
           onSelectionChange={(keys) => handleSelectionChange(keys as "all" | Set<React.Key>)}
         >
-          <TableHeader columns={visibleColumns.filter(col => user?.role === "admin" || col.uid !== 'actions')}>
+          <TableHeader columns={visibleColumns}>
             {(column) => (
               <TableColumn key={column.uid} align={column.uid === "actions" ? "end" : "start"}>
                 {column.name}
