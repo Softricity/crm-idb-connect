@@ -8,8 +8,9 @@ import {
 // @ts-ignore
 import countryList from "react-select-country-list";
 import { Lead } from "@/stores/useLeadStore";
-import { Dispatch, SetStateAction, useState } from "react";
+import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { usePartnerStore } from "@/stores/usePartnerStore";
 import { Label } from "../ui/label";
 
 interface ApplicationPreferencesProps {
@@ -24,7 +25,14 @@ export default function ApplicationPreferences({
   setFormData,
 }: ApplicationPreferencesProps) {
   const { user } = useAuthStore();
+  const { partners, fetchPartners } = usePartnerStore();
   const [isOther, setIsOther] = useState(formData.utm_source === "");
+
+  useEffect(() => {
+    fetchPartners();
+  }, [fetchPartners]);
+
+  const counsellors = partners.filter((p) => p.role === "counsellor");
 
   const handleUtmChange = (value: string) => {
     if (value === "Other") {
@@ -73,6 +81,26 @@ export default function ApplicationPreferences({
             >
               {countryOptions.map((country : any) => (
                 <SelectItem key={country.label}>{country.label}</SelectItem>
+              ))}
+            </Select>
+          </div>
+        )}
+
+        {user?.role === "admin" && (
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Assign to Counsellor</Label>
+            <Select
+              placeholder="Select Counsellor"
+              selectedKeys={new Set(formData.assigned_to ? [formData.assigned_to] : [])}
+              onChange={(e) =>
+                setFormData((prev) => ({ ...prev, assigned_to: e.target.value || null }))
+              }
+            >
+              <SelectItem key="">Unassigned</SelectItem>
+              {counsellors.map((counsellor) => (
+                <SelectItem key={counsellor.id!}>
+                  {counsellor.name} ({counsellor.email})
+                </SelectItem>
               ))}
             </Select>
           </div>

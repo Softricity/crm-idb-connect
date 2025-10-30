@@ -1,12 +1,28 @@
 "use client";
 
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { Download, Filter, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Lead, useLeadStore } from "@/stores/useLeadStore";
 import LeadsTable from "../leads-components/leadsTable";
+import ColumnVisibilitySelector, { ColumnConfig } from "../leads-components/columnVisibilitySelector";
+
+// Default column configuration for applications
+const DEFAULT_APPLICATION_COLUMNS: ColumnConfig[] = [
+    { uid: "select", name: "", isVisible: true, isMandatory: true },
+    { uid: "date", name: "Date", isVisible: true, isMandatory: true },
+    { uid: "name", name: "Name", isVisible: true, isMandatory: true },
+    { uid: "phone", name: "Phone", isVisible: false, isMandatory: false },
+    { uid: "email", name: "Email", isVisible: false, isMandatory: false },
+    { uid: "owner", name: "Lead Owner", isVisible: true, isMandatory: false },
+    { uid: "type", name: "Lead Type", isVisible: false, isMandatory: false },
+    { uid: "source", name: "Lead Source", isVisible: false, isMandatory: false },
+    { uid: "country", name: "Preferred Country", isVisible: false, isMandatory: false },
+    { uid: "status", name: "Lead Status", isVisible: true, isMandatory: false },
+    { uid: "actions", name: "Action", isVisible: true, isMandatory: true },
+];
 
 interface ApplicationsDataTableProps {
     applications: Lead[];
@@ -21,12 +37,26 @@ export default function ApplicationsDataTable({
 }: ApplicationsDataTableProps) {
 
     const { loading } = useLeadStore();
+    const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_APPLICATION_COLUMNS);
+    const [showOnlyFlagged, setShowOnlyFlagged] = useState(false);
+
+    const handleColumnsChange = (updatedColumns: ColumnConfig[]) => {
+        setColumns(updatedColumns);
+    };
+    
+    // Filter applications based on flag toggle
+    const filteredApplications = showOnlyFlagged 
+        ? applications.filter(app => app.is_flagged === true)
+        : applications;
+    
+    // Count flagged applications in current view
+    const flaggedCount = filteredApplications.filter(app => app.is_flagged === true).length;
 
     const handleDownloadCSV = () => {
         const applicationsToExport =
             selectedApplicationIds.length > 0
-                ? applications.filter((app) => selectedApplicationIds.includes(app?.id ?? ""))
-                : applications;
+                ? filteredApplications.filter((app) => selectedApplicationIds.includes(app?.id ?? ""))
+                : filteredApplications;
 
         if (applicationsToExport.length === 0) {
             alert("Please select at least one application to export.");
@@ -73,21 +103,32 @@ export default function ApplicationsDataTable({
             );
         }
 
-        return <LeadsTable leads={applications} selectedLeadIds={selectedApplicationIds} setSelectedLeadIds={setSelectedApplicationIds} />;
+        return <LeadsTable leads={filteredApplications} selectedLeadIds={selectedApplicationIds} setSelectedLeadIds={setSelectedApplicationIds} columns={columns} />;
     }
 
     return (
         <div className="w-full">
             <div className="mt-5 flex flex-col sm:flex-row justify-between items-center gap-3">
                     <div className="flex items-center gap-2">
-                        <Button variant="secondary" size="sm" disabled>
-                            <Flag className="h-4 w-4 mr-2" /> Flagged
+                        <Button 
+                            variant={showOnlyFlagged ? "default" : "secondary"}
+                            size="sm"
+                            onClick={() => setShowOnlyFlagged(!showOnlyFlagged)}
+                            className={showOnlyFlagged ? "bg-primary text-white hover:bg-primary/90" : ""}
+                        >
+                            <Flag className={`h-4 w-4 mr-2 ${showOnlyFlagged ? 'fill-white' : 'fill-red-500'}`} />
+                            {showOnlyFlagged ? 'Show All' : `Flagged (${flaggedCount})`}
                         </Button>
                         <Button variant="secondary" size="sm" disabled>
                             <Filter className="h-4 w-4 mr-2" /> Apply Filters
                         </Button>
                     </div>
                     <div className="flex items-center gap-2">
+                    <ColumnVisibilitySelector
+                        columns={columns}
+                        onColumnsChange={handleColumnsChange}
+                        storageKey="applications_column_visibility"
+                    />
                     <Button variant="outline" size="sm" onClick={handleDownloadCSV}>
                         <Download className="h-4 w-4 mr-2" />
                         {selectedApplicationIds.length > 0

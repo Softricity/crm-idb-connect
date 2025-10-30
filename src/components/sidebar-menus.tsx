@@ -15,7 +15,7 @@ export default function SidebarMenus({
   const currentMenu = usePathname();
 
   return (
-    <div className="flex flex-col gap-2 px-3 h-[76vh] overflow-y-auto">
+    <div className="flex flex-col gap-2 px-3 h-[72vh] overflow-y-auto">
       {menus.map((menu, index) =>
         menu.type === "link" ? (
           <Tooltip
@@ -24,11 +24,11 @@ export default function SidebarMenus({
             placement="right"
             color="secondary"
             isDisabled={open} // ✅ Only show tooltip when collapsed
-            className="text-white"
+            className="text-white text-sm"
           >
             <Link
               href={menu.link ?? ""}
-              className={`flex items-center gap-4 px-3 py-3 rounded-xl text-black transition-colors 
+              className={`flex items-center gap-4 px-3 text-sm py-3 rounded-xl text-black transition-colors 
                 ${!open && "justify-center"} 
                 ${
                   currentMenu === menu.link

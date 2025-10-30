@@ -19,7 +19,7 @@ export default function Sidebar() {
       {/* Desktop Sidebar */}
       <div
         className={`hidden lg:flex flex-col justify-between overflow-y-hidden border-r border-gray-300 h-screen 
-        ${open ? "min-w-72" : "w-20"} transition-width duration-300`}
+        ${open ? "w-60" : "w-20"} transition-width duration-300`}
       >
         <div>
           {/* Header */}
@@ -36,6 +36,7 @@ export default function Sidebar() {
               className="min-w-14 min-h-14 flex justify-center items-center p-2 rounded-2xl hover:bg-gray-200 transition-colors"
             >
               <LogOut
+                size={18}
                 className={`rotate-${open ? "180" : "0"} transition-transform duration-300`}
               />
             </button>
@@ -57,7 +58,7 @@ export default function Sidebar() {
         </div>
 
         {/* ✅ User Section at Bottom */}
-        <div className="p-3 border-t border-gray-200">
+        <div className="py-3 border-t border-gray-200">
           <NavUser user={{name: "Admin", email: user?.email ?? "", avatar: "https://swiftwebapp.sgp1.digitaloceanspaces.com/images/avatar.png"}} />
         </div>
       </div>

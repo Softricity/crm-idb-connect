@@ -44,19 +44,43 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAuthenticated && (currentPath === "/login" || currentPath === "/")) {
+    // Redirect based on role
+    if (partnerUser?.role === "agent") {
+      return NextResponse.redirect(new URL("/b2b", request.url));
+    } else if (partnerUser?.role === "counsellor") {
+      return NextResponse.redirect(new URL("/counsellor", request.url));
+    }
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   if (isAuthenticated && partnerUser) {
     const userRole = partnerUser.role;
 
+    // Admin-only routes
     if (currentPath.startsWith("/admin") && userRole !== "admin") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
+    // Agent role - redirect to B2B panel
     if (userRole === "agent") {
       if (!(currentPath === "/b2b" || currentPath.startsWith("/b2b/"))) {
         return NextResponse.redirect(new URL("/b2b", request.url));
+      }
+    }
+
+    // Counsellor role - redirect to counsellor panel
+    if (userRole === "counsellor") {
+      if (!(currentPath === "/counsellor" || currentPath.startsWith("/counsellor/"))) {
+        return NextResponse.redirect(new URL("/counsellor", request.url));
+      }
+    }
+
+    // Prevent agents and counsellors from accessing admin routes
+    if (userRole !== "admin") {
+      if (currentPath.startsWith("/agents") || 
+          currentPath.startsWith("/counsellors") || 
+          currentPath.startsWith("/commissions")) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }
   }

@@ -19,11 +19,14 @@ export interface Lead {
   utm_medium?: string | null;
   utm_campaign?: string | null;
   assigned_to?: string | null;
-  assigned_partner?: { name: string; email?: string; } | null;
-  is_flagged?: boolean;
+  assigned_partner?: {
+    name: string;
+    email?: string;
+  } | null;
   created_at?: string;
   created_by?: string | null;
   reason?: string | null;
+  is_flagged?: boolean;
 }
 
 interface LeadState {

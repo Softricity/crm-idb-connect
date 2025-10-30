@@ -4,14 +4,16 @@ import { Lead, useLeadStore } from "@/stores/useLeadStore";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import LeadsTable from "./leadsTable";
+import { ColumnConfig } from "./columnVisibilitySelector";
 
 type LeadsDisplayProps = {
   leads: Lead[];
   selectedLeadIds: string[];
   setSelectedLeadIds: Dispatch<SetStateAction<string[]>>;
+  columns: ColumnConfig[];
 };
 
-export default function LeadsDisplay({ leads, selectedLeadIds, setSelectedLeadIds }: LeadsDisplayProps) {
+export default function LeadsDisplay({ leads, selectedLeadIds, setSelectedLeadIds, columns }: LeadsDisplayProps) {
   
   const { loading } = useLeadStore();
   
@@ -27,7 +29,7 @@ export default function LeadsDisplay({ leads, selectedLeadIds, setSelectedLeadId
     );
   }
 
-  return <LeadsTable leads={leads} selectedLeadIds={selectedLeadIds} setSelectedLeadIds={setSelectedLeadIds} />;
+  return <LeadsTable leads={leads} selectedLeadIds={selectedLeadIds} setSelectedLeadIds={setSelectedLeadIds} columns={columns} />;
 }
 
 

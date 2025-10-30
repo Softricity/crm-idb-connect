@@ -14,6 +14,7 @@ import FollowUpComponent from "@/components/leads-components/followupTab";
 import TimeLineTab from "@/components/leads-components/timeLineTab";
 import ApplicantProfilePanel from "@/components/application-components/applicationProfilePanel";
 import { useSearchParams } from "next/navigation";
+import ApplicationDetailsView from "@/components/application-components/applicationDetailsView";
 
 const FollowUpsTab = () => <div className="p-4 text-gray-700">📌 Follow Ups Component</div>;
 const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
@@ -187,7 +188,7 @@ export default function LeadDetailPage() {
                                 />
                             </div>
                         </div>
-                        {lead?.type === "application" && <ApplicantProfilePanel />}
+                        <ApplicationDetailsView leadId={lead?.id ?? ""} />
                     </Tab>
 
                     <Tab key="notes" title="Notes">
