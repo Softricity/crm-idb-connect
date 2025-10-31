@@ -45,6 +45,7 @@ export const menus: MenuItem[] = [
   { title: "Agents", icon: <ShieldUser size={20} />, type: "link", link: "/agents" },
   { title: "Counsellors", icon: <Users size={20} />, type: "link", link: "/counsellors" },
   { title: "Commissions", icon: <DollarSign size={20} />, type: "link", link: "/commissions" },
+  { title: "Referrals", icon: <Link size={20} />, type: "link", link: "/referrals" },
 
   // Task Management
   { title: "Task Management", type: "title" },
@@ -62,7 +63,6 @@ export const b2bMenus: MenuItem[] = [
   { title: "Main", type: "title" },
   { title: "Home", icon: <LayoutDashboard size={20} />, type: "link", link: "/b2b" },
   { title: "Course Wiz", icon: <GraduationCap size={20} />, type: "link", link: "#" },
-  { title: "Referals", icon: <Link size={20} />, type: "link", link: "/b2b/referrals" },
   { title: "Agents Leads", icon: <Users size={20} />, type: "link", link: "/b2b/agent-leads" },
   { title: "Reports", icon: <FileText size={20} />, type: "link", link: "#" },
   { title: "Announcements", icon: <Bell size={20} />, type: "link", link: "#" },
