@@ -113,7 +113,7 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
           </Chip>
         );
       case "source":
-        return <span className="capitalize">{lead?.utm_source || "-"} / {lead?.utm_medium || "-"}</span>;
+        return <span className="capitalize">{lead?.utm_source || "-"} / {lead?.utm_medium || "-"} / {lead?.utm_campaign || "-"}</span>;
       case "country":
         return lead.preferred_country ?? "-";
       case "status":
