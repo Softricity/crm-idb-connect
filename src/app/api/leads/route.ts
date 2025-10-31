@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { cookies } from "next/headers"; // ⬅️ **Import cookies**
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 
 interface LeadData {
@@ -21,7 +21,6 @@ interface LeadData {
 }
 
 export async function POST(req: NextRequest) {
-  // ✅ **Updated to match your server.ts**
   const cookieStore = cookies();
   const supabase = await createClient(cookieStore);
   
@@ -33,6 +32,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: "Missing required fields: name, mobile, email, and created_by are required." },
         { status: 400 }
+      );
+    }
+
+    // **Check for duplicate email or mobile**
+    const { data: existingLead } = await supabase
+      .from("leads")
+      .select("id, email, mobile")
+      .or(`email.eq.${leadData.email},mobile.eq.${leadData.mobile}`)
+      .maybeSingle();
+
+    if (existingLead) {
+      return NextResponse.json(
+        { 
+          error: "Your details already exist in our system. Our team will contact you soon.",
+          duplicate: true 
+        },
+        { status: 409 }
       );
     }
 
