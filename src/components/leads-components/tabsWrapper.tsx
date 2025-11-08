@@ -141,6 +141,7 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
                   <LeadsTableToolbar 
                     allLeads={leads} 
                     selectedLeadIds={selectedLeadIds}
+                    setSelectedLeadIds={setSelectedLeadIds}
                     columns={columns}
                     onColumnsChange={handleColumnsChange}
                     showOnlyFlagged={showOnlyFlagged}
