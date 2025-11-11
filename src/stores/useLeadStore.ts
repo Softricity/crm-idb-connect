@@ -40,9 +40,10 @@ interface LeadState {
   getCounsellorLeads: (counsellorId: string) => Promise<void>;
   addLead: (lead: Omit<Lead, "id" | "created_at">) => Promise<void>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
+  getLeadIds: () => string[];
 }
 
-export const useLeadStore = create<LeadState>((set) => ({
+export const useLeadStore = create<LeadState>((set, get) => ({
   leads: [],
   applications: [],
   loading: false,
@@ -152,6 +153,11 @@ export const useLeadStore = create<LeadState>((set) => ({
       new_state: `Lead created for ${newLead.name}`, // Storing a simple string
       created_by: newLead.created_by,
     });
+  },
+
+  getLeadIds: () => {
+    const state = get();
+    return state.leads.map((lead) => lead.id!).filter(Boolean);
   },
 
   updateLead: async (id, updates) => {

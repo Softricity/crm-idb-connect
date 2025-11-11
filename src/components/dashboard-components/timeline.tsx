@@ -229,7 +229,7 @@ export default function DashboardTimeline({ leadIds }: { leadIds: string[] }) {
 
     if (feed.length === 0) {
         return (
-            <div className="flex items-center justify-center p-8 mt-4 h-full bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+            <div className="flex items-center justify-center p-8 mt-4 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
                 <div className="text-center">
                     <History className="mx-auto h-12 w-12 text-gray-400" />
                     <h3 className="mt-2 text-sm font-semibold text-gray-900">No Activity Yet</h3>
@@ -240,8 +240,8 @@ export default function DashboardTimeline({ leadIds }: { leadIds: string[] }) {
     }
 
     return (
-        <div className="bg-white p-5 rounded-xl shadow-sm">
-            <h2 className="text-xl mb-6 text-gray-900">Timeline</h2>
+        <div className="bg-white px-5 rounded-xl shadow-xl max-h-[370px] overflow-y-scroll relative">
+            <h2 className="text-xl mb-6 text-gray-900 sticky top-0 bg-white z-9999 py-2">Timeline</h2>
             <div>
                 {feed.map((event, index) => (
                     <TimelineItem

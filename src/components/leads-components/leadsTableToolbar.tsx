@@ -11,10 +11,15 @@ import { Button } from "@/components/ui/button";
 import { Lead } from "@/stores/useLeadStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import ColumnVisibilitySelector, { ColumnConfig } from "./columnVisibilitySelector";
+import { useState } from "react";
+import BulkChangeStatusModal from "./bulkChangeStatusModal";
+import { set } from "date-fns";
+import BulkCommunicationModal from "./bulkCommunicationModal";
 
 interface LeadsTableToolbarProps {
   allLeads: Lead[];
   selectedLeadIds: string[];
+  setSelectedLeadIds: (ids: string[]) => void;
   columns: ColumnConfig[];
   onColumnsChange: (columns: ColumnConfig[]) => void;
   showOnlyFlagged: boolean;
@@ -25,10 +30,11 @@ interface LeadsTableToolbarProps {
   filtersActiveCount?: number;
 }
 
-export default function LeadsTableToolbar({ 
-  allLeads, 
-  selectedLeadIds, 
-  columns, 
+export default function LeadsTableToolbar({
+  allLeads,
+  selectedLeadIds,
+  setSelectedLeadIds,
+  columns,
   onColumnsChange,
   showOnlyFlagged,
   onToggleFlagged,
@@ -39,10 +45,12 @@ export default function LeadsTableToolbar({
 }: LeadsTableToolbarProps) {
 
   const { user } = useAuthStore();
-  
+  const [isBulkStatusOpen, setIsBulkStatusOpen] = useState(false);
+  const [isBulkCommunicationModalOpen, setIsBulkCommunicationModalOpen] = useState(false);
+
   // Count flagged leads in current view
   const flaggedCount = currentTabLeads.filter(lead => lead.is_flagged === true).length;
-  
+
   const handleDownloadCSV = () => {
     const leadsToExport =
       selectedLeadIds.length > 0
@@ -84,7 +92,7 @@ export default function LeadsTableToolbar({
   return (
     <div className="mt-5 flex flex-col sm:flex-row justify-between items-center gap-3 ">
       {user?.role === "admin" && (<div className="flex items-center gap-2">
-        <Button 
+        <Button
           variant={showOnlyFlagged ? "default" : "secondary"}
           size="sm"
           onClick={onToggleFlagged}
@@ -94,9 +102,9 @@ export default function LeadsTableToolbar({
           {showOnlyFlagged ? 'Show All' : `Flagged (${flaggedCount})`}
         </Button>
         {selectedLeadIds.length > 0 && onBulkAssign && (
-          <Button 
-            variant="secondary" 
-            size="sm" 
+          <Button
+            variant="secondary"
+            size="sm"
             onClick={onBulkAssign}
             className="text-white"
           >
@@ -104,13 +112,34 @@ export default function LeadsTableToolbar({
             Assign ({selectedLeadIds.length})
           </Button>
         )}
-        <Button 
-          variant="secondary" 
-          size="sm" 
+
+        <Button
+          variant="secondary"
+          size="sm"
+          className="text-white"
+          disabled={selectedLeadIds.length === 0}
+          onClick={() => setIsBulkStatusOpen(true)}
+        >
+          Change Status ({selectedLeadIds.length})
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="sm"
+          className="text-white"
+          disabled={selectedLeadIds.length === 0}
+          onClick={() => setIsBulkCommunicationModalOpen(true)}
+        >
+          Bulk Send Message ({selectedLeadIds.length})
+        </Button>
+
+        <Button
+          variant="secondary"
+          size="sm"
           onClick={onOpenFilters}
           className="text-white"
         >
-          <Filter className="h-4 w-4 mr-2" /> 
+          <Filter className="h-4 w-4 mr-2" />
           Apply Filters {filtersActiveCount > 0 && `(${filtersActiveCount})`}
         </Button>
       </div>)}
@@ -125,6 +154,25 @@ export default function LeadsTableToolbar({
           {selectedLeadIds.length > 0 ? `Download (${selectedLeadIds.length}) Selected` : 'Download CSV'}
         </Button>
       </div>
+
+      <BulkChangeStatusModal
+        isOpen={isBulkStatusOpen}
+        onOpenChange={setIsBulkStatusOpen}
+        selectedLeadIds={selectedLeadIds}
+        allLeads={allLeads}
+        onComplete={() => (setSelectedLeadIds([]))}
+      />
+      <BulkCommunicationModal
+        isOpen={isBulkCommunicationModalOpen}
+        onOpenChange={setIsBulkCommunicationModalOpen}
+        selectedLeadIds={selectedLeadIds}
+        allLeads={allLeads}
+        onComplete={() => (setSelectedLeadIds([]))}
+        // // pass your actual messaging functions here
+        // sendSMS={sendSMS}
+        // sendWhatsAppMessage={sendWhatsAppMessage}
+        // sendEmail={sendEmail}
+      />
     </div>
   );
 }

@@ -1,42 +1,58 @@
 "use client";
-import { useEffect } from "react";
-import { Spacer } from "@heroui/react";
-import { useDashboardStore } from "@/stores/useDashboardStore";
-import StatusChart from "../../../components/dashboard-components/statusChart";
-import SourceChart from "@/components/dashboard-components/sourceChart";
-import DashboardTile from "@/components/dashboard-components/dashboardTiles";
-import { LeadsLast7Days } from "@/components/dashboard-components/last7DaysLeads";
-import DashboardTimeline from "@/components/dashboard-components/timeline";
+
+import { useState } from "react";
+import { Tabs, Tab } from "@heroui/react";
+import { SearchIcon } from "lucide-react";
+import DashboardHome from "@/components/dashboard-components/dashboardHome";
+import DashboardLeads from "@/components/dashboard-components/dashboardLeads";
+import DashboardApplications from "@/components/dashboard-components/dashboardApplications";
+import DashboardPayments from "@/components/dashboard-components/dashboardPayments";
+import SearchDrawer from "@/components/dashboard-components/SearchDrawer";
 
 export default function Page() {
-  const { loading, metrics, bySource, byStatus, last7Days, refresh } = useDashboardStore();
+    const [selected, setSelected] = useState("home");
+    const [openSearch, setOpenSearch] = useState(false);
+    return (
+        <div className="w-full flex flex-col px-6 py-4 gap-6">
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+            <div className="flex items-center justify-between w-full">
 
-  const tempIds = ["64989d48-8e59-4204-bf5e-84083ac784e4", "077602db-2d2b-463f-bea4-60b738d7dd9a"];
-  return (
-    <div className="p-6 space-y-6">
-      {/* Tiles Section */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        <DashboardTile label="Today's Leads" value={metrics.todaysLeads} loading={loading} />
-        <DashboardTile label="Converted Leads" value={metrics.converted} loading={loading} />
-        <DashboardTile label="Rejected Leads" value={metrics.rejected} loading={loading} />
-        <DashboardTile label="Total Leads" value={metrics.total} loading={loading} />
-      </div>
+                <Tabs
+                    aria-label="Dashboard Sections"
+                    selectedKey={selected}
+                    onSelectionChange={(key) => setSelected(key as string)}
+                    variant="solid"
+                    color="secondary"
+                    radius="full"
+                    classNames={{
+                        tabList: "bg-gray-100 p-1 rounded-full shadow-sm",
+                        tab: "px-6 py-2 text-sm font-medium",
+                    }}
+                >
+                    <Tab key="home" title="Home" />
+                    <Tab key="leads" title="Leads" />
+                    <Tab key="applications" title="Applications" />
+                    <Tab key="payments" title="Payments" />
+                </Tabs>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                    onClick={() => setOpenSearch(true)}
+                    className="cursor-pointer flex items-center gap-2 w-[260px] md:w-[320px] px-4 py-2 rounded-full border border-gray-300 text-gray-500 hover:border-blue-500 hover:bg-blue-50 transition"
+                >
+                    <SearchIcon className="h-4 w-4" />
+                    <span className="text-sm">Search Anything...</span>
+                </div>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <StatusChart data={byStatus} />
-          <SourceChart data={bySource} />
+            <div className="min-h-[70vh]">
+                {selected === "home" && <DashboardHome />}
+                {selected === "leads" && <DashboardLeads />}
+                {selected === "applications" && <DashboardApplications />}
+                {selected === "payments" && <DashboardPayments />}
+            </div>
+
+            <SearchDrawer open={openSearch} onClose={() => setOpenSearch(false)} />
+
         </div>
-        <DashboardTimeline leadIds={tempIds} />
-        <LeadsLast7Days data={last7Days} />
-      </div>
-
-
-    </div>
-  );
+    );
 }
