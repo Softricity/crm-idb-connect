@@ -28,7 +28,9 @@ interface OfflinePaymentState {
   fetchPaymentsByReceiver: (receiverId: string) => Promise<void>;
   addPayment: (payment: Omit<OfflinePayment, "id" | "created_at" | "partners" | "leads">) => Promise<void>;
   updatePayment: (id: string, updates: Partial<OfflinePayment>) => Promise<void>;
-  deletePayment: (id: string) => Promise<void>;
+  deletePayment: (id: string, fileUrl?: string) => Promise<void>;
+  uploadPaymentFile: (file: File, leadId?: string) => Promise<string | null>;
+  deletePaymentFile: (fileUrl: string) => Promise<void>;
 }
 
 export const useOfflinePaymentStore = create<OfflinePaymentState>((set, get) => ({
@@ -44,8 +46,10 @@ export const useOfflinePaymentStore = create<OfflinePaymentState>((set, get) => 
       .eq("lead_id", leadId)
       .order("created_at", { ascending: false });
 
-    if (error) console.error("Error fetching payments:", error.message);
-    else set({ payments: data as OfflinePayment[] });
+    if (error) {
+      console.error("Error fetching payments:", error.message);
+      throw error;
+    } else set({ payments: data as OfflinePayment[] });
     set({ loading: false });
   },
 
@@ -58,7 +62,8 @@ export const useOfflinePaymentStore = create<OfflinePaymentState>((set, get) => 
       .eq("receiver", receiverId)
       .order("created_at", { ascending: false });
 
-    if (error) console.error("Error fetching receiver payments:", error.message);
+    if (error)
+      console.error("Error fetching receiver payments:", error.message);
     else set({ payments: data as OfflinePayment[] });
     set({ loading: false });
   },
@@ -118,19 +123,28 @@ export const useOfflinePaymentStore = create<OfflinePaymentState>((set, get) => 
   },
 
   // Delete a payment
-  deletePayment: async (id) => {
+  deletePayment: async (id,fileUrl) => {
     const { data: oldData } = await supabase
       .from("offline_payments")
       .select("lead_id, amount, currency")
       .eq("id", id)
       .single();
 
-    const { error } = await supabase.from("offline_payments").delete().eq("id", id);
+    const { error } = await supabase
+      .from("offline_payments")
+      .delete()
+      .eq("id", id);
+
     if (error) throw error;
 
     set((state) => ({
       payments: state.payments.filter((p) => p.id !== id),
     }));
+
+    const targetFile = fileUrl;
+      if (targetFile) {
+        await get().deletePaymentFile(targetFile);
+      }
 
     // Optional timeline logging
     if (oldData) {
@@ -139,6 +153,52 @@ export const useOfflinePaymentStore = create<OfflinePaymentState>((set, get) => 
         event_type: TimelineEvent.OFFLINE_PAYMENT_DELETED,
         old_state: `${oldData.amount} ${oldData.currency}`,
       });
+    }
+  },
+  uploadPaymentFile: async (file: File, leadId?: string) => {
+    try {
+      if (!file) return null;
+
+      const date = new Date().toISOString();
+      const safeName = file.name.replace(/\s+/g, "_");
+      const path = `payments/${leadId || "unknown"}-${date}-${safeName}`;
+
+      const { error } = await supabase.storage
+        .from("idb-offline-payments")
+        .upload(path, file, {
+          cacheControl: "3600",
+          upsert: false,
+        });
+      if (error) throw error;
+
+      const { data } = supabase.storage.from("idb-offline-payments").getPublicUrl(path);
+      return data.publicUrl;
+    } catch (err) {
+      console.error("Upload failed:", err);
+      return null;
+    }
+  },
+  deletePaymentFile: async (fileUrl) => {
+    try {
+      if (!fileUrl) return;
+
+      // Extract path after bucket name
+      const url = new URL(fileUrl);
+      const pathname = url.pathname;
+      const match = pathname.match(/idb-offline-payments\/(.*)$/);
+      const filePath = match ? match[1] : null;
+
+      if (!filePath) {
+        console.warn("⚠️ Could not extract file path from URL:", fileUrl);
+        return;
+      }
+
+      const { error } = await supabase.storage.from("idb-offline-payments").remove([filePath]);
+      if (error) throw error;
+
+      console.log("File deleted:", filePath);
+    } catch (err) {
+      console.error("Error deleting file from storage:", err);
     }
   },
 }));
