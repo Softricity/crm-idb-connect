@@ -1,5 +1,6 @@
 // stores/applicationStore.ts
 import { create } from "zustand";
+import api from "@/lib/api";
 import { createClient } from "@/lib/supabase/client";
 
 const supabase = createClient();
@@ -363,15 +364,20 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
     set({ loading: true });
 
     try {
-      // Check if application exists
-      const { data: appData, error: appError } = await supabase
-        .from("applications")
-        .select("*")
-        .eq("lead_id", leadId)
-        .single();
-
-      if (appError && appError.code !== "PGRST116") {
-        throw appError;
+      // Check if application exists using API
+      let appData;
+      try {
+        appData = await api.ApplicationsAPI.fetchApplicationByLeadId(leadId);
+      } catch (error: any) {
+        // If not found, initialize with lead_id
+        if (error.statusCode === 404 || error.message?.includes('not found')) {
+          set({
+            application: { lead_id: leadId },
+            loading: false,
+          });
+          return true;
+        }
+        throw error;
       }
 
       if (!appData) {
@@ -444,33 +450,19 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
 
       // Create application if it doesn't exist
       if (!applicationId) {
-        const { data: appData, error: appError } = await supabase
-          .from("applications")
-          .insert([{ ...state.application, lead_id: leadId }])
-          .select("id")
-          .single();
-
-        if (appError) throw appError;
+        const appData = await api.ApplicationsAPI.createApplication({
+          ...state.application,
+          lead_id: leadId,
+        });
 
         applicationId = appData.id;
         set({ applicationId });
 
-        // --- Update the lead type here ---
-        const { error: leadError } = await supabase
-          .from("leads")
-          .update({ type: "application" })
-          .eq("id", leadId);
-
-        if (leadError) throw leadError;
+        // Backend handles updating lead type to "application"
       } else {
         // Update main application data if section is 'application'
         if (section === "application") {
-          const { error: updateError } = await supabase
-            .from("applications")
-            .update(state.application)
-            .eq("id", applicationId);
-
-          if (updateError) throw updateError;
+          await api.ApplicationsAPI.updateApplication(applicationId, state.application);
         }
       }
 
@@ -592,14 +584,9 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
         if (!success) throw new Error("Failed to save final section");
       }
 
-      // Mark application as submitted (you might want to add a status field to track this)
+      // Mark application as submitted
       if (state.applicationId) {
-        const { error } = await supabase
-          .from("applications")
-          .update({ status: "submitted" })
-          .eq("id", state.applicationId);
-
-        if (error) throw error;
+        await api.ApplicationsAPI.updateApplication(state.applicationId, { status: "submitted" });
       }
 
       set({ loading: false });

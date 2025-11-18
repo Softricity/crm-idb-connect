@@ -1,0 +1,29 @@
+model permission_group {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique
+  permissions permission[]
+}
+
+model permission {
+  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String           @unique
+  permission_group_id String?         @db.Uuid
+  permission_group   permission_group? @relation(fields: [permission_group_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  role_permissions   role_permission[]
+}
+
+model role {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique
+  description String?
+  role_permissions role_permission[]
+}
+
+model role_permission {
+  role_id       String     @db.Uuid
+  permission_id String     @db.Uuid
+  role          role       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  permission    permission @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([role_id, permission_id])
+}

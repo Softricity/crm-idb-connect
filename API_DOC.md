@@ -92,7 +92,7 @@ All routes are relative to the NestJS server URL (e.g., `http://localhost:3000`)
 ### Get All Leads
 -   **Route:** `GET /leads`
 -   **Authentication:** **JWT Required**
--   **Description:** Retrieves all leads, ordered by newest first. Includes `assigned_partner` object (name, email).
+-   **Description:** Retrieves all leads, ordered by newest first. Includes `partners_leads_assigned_toTopartners` object (name, email).
 
 ### Get Single Lead
 -   **Route:** `GET /leads/:id`

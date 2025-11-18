@@ -11,7 +11,7 @@ const matchText = (lead: Lead, q: string) => {
     lead.name ?? "",
     lead.mobile ?? "",
     lead.email ?? "",
-    lead.assigned_partner?.name ?? "",
+    lead.partners_leads_assigned_toTopartners?.name ?? "",
     lead.purpose ?? "",
     lead.utm_source ?? "",
     lead.utm_medium ?? "",
@@ -40,7 +40,7 @@ export function filterLeads(leads: Lead[], f: LeadFilterState): Lead[] {
 
     // Multi-selects
     if (!inSet(lead.purpose ?? "", types)) return false;
-    if (!inSet(lead.assigned_partner?.name ?? "Unassigned", owners)) return false;
+    if (!inSet(lead.partners_leads_assigned_toTopartners?.name ?? "Unassigned", owners)) return false;
     if (!inSet((lead.status ?? "").toLowerCase(), statuses.map((s) => s.toLowerCase()))) return false;
     if (!inSet(lead.utm_source ?? "", sources)) return false;
     if (!inSet(lead.preferred_country ?? "", countries)) return false;

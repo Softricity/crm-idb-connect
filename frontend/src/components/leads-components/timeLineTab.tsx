@@ -20,6 +20,7 @@ import {
   CheckCircle,
   MessageSquare,
   History,
+  DollarSign,
 } from "lucide-react";
 
 // 1. Color scheme for different event types
@@ -45,6 +46,10 @@ export const eventColors: { [key: string]: { bg: string; icon: string } } = {
   [TimelineEvent.LEAD_NOTE_DELETED]: { bg: "bg-red-50", icon: "text-red-600" },
   [TimelineEvent.LEAD_FOLLOWUP_DELETED]: { bg: "bg-red-50", icon: "text-red-600" },
   [TimelineEvent.LEAD_FOLLOWUP_COMMENT_DELETED]: { bg: "bg-red-50", icon: "text-red-600" },
+  [TimelineEvent.OFFLINE_PAYMENT_DELETED]: { bg: "bg-red-50", icon: "text-red-600" },
+  // Offline Payments -> Emerald
+  [TimelineEvent.OFFLINE_PAYMENT_ADDED]: { bg: "bg-emerald-50", icon: "text-emerald-600" },
+  [TimelineEvent.OFFLINE_PAYMENT_UPDATED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   // Default
   DEFAULT: { bg: "bg-gray-100", icon: "text-gray-600" },
 };
@@ -68,6 +73,9 @@ export const eventIcons: { [key in TimelineEvent]?: React.ElementType } = {
   [TimelineEvent.LEAD_FOLLOWUP_COMPLETED]: CheckCircle,
   [TimelineEvent.LEAD_FOLLOWUP_COMMENT_ADDED]: MessageSquare,
   [TimelineEvent.LEAD_FOLLOWUP_COMMENT_DELETED]: Trash2,
+  [TimelineEvent.OFFLINE_PAYMENT_ADDED]: DollarSign,
+  [TimelineEvent.OFFLINE_PAYMENT_UPDATED]: DollarSign,
+  [TimelineEvent.OFFLINE_PAYMENT_DELETED]: Trash2,
 };
 
 // 3. Function to render the human-readable action string
@@ -112,6 +120,12 @@ export const renderEventAction = (event: Timeline, leadName: string) => {
       return <>added a comment: <Quote>{new_state}</Quote></>;
     case TimelineEvent.LEAD_FOLLOWUP_COMMENT_DELETED:
       return <>deleted all comments from a follow up.</>;
+    case TimelineEvent.OFFLINE_PAYMENT_ADDED:
+      return <>recorded an offline payment of <NewValue>{new_state}</NewValue>.</>;
+    case TimelineEvent.OFFLINE_PAYMENT_UPDATED:
+      return <>updated an offline payment from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
+    case TimelineEvent.OFFLINE_PAYMENT_DELETED:
+      return <>deleted an offline payment of <OldValue>{old_state}</OldValue>.</>;
     default:
       return <>{event_type.replace(/_/g, " ").toLowerCase()}.</>;
   }

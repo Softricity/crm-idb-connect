@@ -135,7 +135,7 @@ export default function LeadDetailPage() {
                         <div className="text-sm">
                             <p className="text-gray-500">Lead Owner</p>
                             <p className="text-blue-600 font-medium">
-                                {lead.assigned_partner?.name || "Unassigned"}
+                                {lead.partners_leads_assigned_toTopartners?.name || "Unassigned"}
                             </p>
                         </div>
                         <Button
@@ -185,7 +185,7 @@ export default function LeadDetailPage() {
                                 <InfoRow label="UTM Source" value={lead.utm_source} />
                                 <InfoRow label="UTM Medium" value={lead.utm_medium} />
                                 <InfoRow label="UTM Campaign" value={lead.utm_campaign} />
-                                <InfoRow label="Assigned To" value={lead.assigned_partner?.name || "Unassigned"} />
+                                <InfoRow label="Assigned To" value={lead.partners_leads_assigned_toTopartners?.name || "Unassigned"} />
                                 <InfoRow
                                     label="Created At"
                                     value={

@@ -1,8 +1,6 @@
 // store/partner.ts
 import { create } from "zustand";
-import { createClient } from "@/lib/supabase/client";
-
-const supabase = createClient();
+import api from "@/lib/api";
 
 export interface Partner {
   id?: string;
@@ -45,27 +43,24 @@ export const usePartnerStore = create<PartnerState>((set) => ({
 
   fetchPartners: async () => {
     set({ loading: true });
-    const { data, error } = await supabase.from("partners").select("*");
-    if (error) {
-      console.error("Error fetching partners:", error.message);
-      throw error;
-    } else {
+    try {
+      const data = await api.PartnersAPI.fetchPartners();
       set({ partners: data as Partner[] });
+    } catch (error: any) {
+      console.error("Error fetching partners:", error.message || error);
+      throw error;
     }
     set({ loading: false });
   },
 
   fetchPartnerById: async (id) => {
-    const { data, error } = await supabase
-      .from("partners")
-      .select("*")
-      .eq("id", id)
-      .single();
-    if (error) {
-      console.error("Error fetching partner by id:", error.message);
+    try {
+      const data = await api.PartnersAPI.fetchPartnerById(id);
+      return data as Partner;
+    } catch (error) {
+      console.error("Error fetching partner by id:", error);
       throw error;
     }
-    return data as Partner;
   },
 
   addPartner: async (partner) => {
@@ -75,57 +70,47 @@ export const usePartnerStore = create<PartnerState>((set) => ({
         value === "" ? null : value,
       ])
     );
-    const { data, error } = await supabase
-      .from("partners")
-      .insert([sanitizedPartner])
-      .select();
-    if (error) {
-      console.error("Error adding partner:", error.message);
+    try {
+      const newPartner = await api.PartnersAPI.createPartner(sanitizedPartner);
+      set((state) => ({ partners: [...state.partners, newPartner] }));
+    } catch (error) {
+      console.error("Error adding partner:", error);
       throw error;
     }
-    set((state) => ({ partners: [...state.partners, ...(data as Partner[])] }));
   },
 
   updatePartner: async (id, updates) => {
-    const { data, error } = await supabase
-      .from("partners")
-      .update(updates)
-      .eq("id", id)
-      .select();
-    if (error) {
-      console.error("Error updating partner:", error.message);
+    try {
+      const updatedPartner = await api.PartnersAPI.updatePartner(id, updates);
+      set((state) => ({
+        partners: state.partners.map((partner) =>
+          partner.id === id ? { ...partner, ...updatedPartner } : partner
+        ),
+      }));
+    } catch (error) {
+      console.error("Error updating partner:", error);
       throw error;
     }
-    set((state) => ({
-      partners: state.partners.map((partner) =>
-        partner.id === id ? { ...partner, ...(data?.[0] as Partner) } : partner
-      ),
-    }));
   },
 
   deletePartner: async (id) => {
-    const { error } = await supabase.from("partners").delete().eq("id", id);
-    if (error) {
-      console.error("Error deleting partner:", error.message);
+    try {
+      await api.PartnersAPI.deletePartner(id);
+      set((state) => ({
+        partners: state.partners.filter((partner) => partner.id !== id),
+      }));
+    } catch (error) {
+      console.error("Error deleting partner:", error);
       throw error;
     }
-    set((state) => ({
-      partners: state.partners.filter((partner) => partner.id !== id),
-    }));
   },
 
   loadCurrentPartner: async (id) => {
-    const { data, error } = await supabase
-      .from("partners")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (error) {
-      console.error("Failed to load partner:", error.message);
-      return;
+    try {
+      const data = await api.PartnersAPI.fetchPartnerById(id);
+      set({ currentPartner: data });
+    } catch (error) {
+      console.error("Failed to load partner:", error);
     }
-
-    set({ currentPartner: data });
   },
 }));

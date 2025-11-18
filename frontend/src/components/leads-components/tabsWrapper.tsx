@@ -69,7 +69,7 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
 
     return {
       types: uniq(leads.map((l) => l.purpose ?? "")),
-      owners: uniq(leads.map((l) => l.assigned_partner?.name ?? "Unassigned")),
+      owners: uniq(leads.map((l) => l.partners_leads_assigned_toTopartners?.name ?? "Unassigned")),
       statuses: uniq(leads.map((l) => (l.status ?? "").toLowerCase())).map(
         (s) => (s.charAt(0).toUpperCase() + s.slice(1)) || ""
       ),

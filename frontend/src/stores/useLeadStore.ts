@@ -1,8 +1,5 @@
 import { create } from "zustand";
-import { createClient } from "@/lib/supabase/client";
-import { TimelineEvent } from "@/lib/utils";
-
-const supabase = createClient();
+import api from "@/lib/api";
 
 export interface Lead {
   id?: string;
@@ -19,7 +16,7 @@ export interface Lead {
   utm_medium?: string | null;
   utm_campaign?: string | null;
   assigned_to?: string | null;
-  assigned_partner?: {
+  partners_leads_assigned_toTopartners?: {
     name: string;
     email?: string;
   } | null;
@@ -50,106 +47,69 @@ export const useLeadStore = create<LeadState>((set, get) => ({
 
   fetchLeads: async () => {
     set({ loading: true });
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*, assigned_partner:assigned_to(name, email)")
-      .eq("type", "lead")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching leads:", error.message);
-    } else {
+    try {
+      const data = await api.LeadsAPI.fetchLeads();
       set({ leads: data as Lead[] });
+    } catch (error: any) {
+      console.error("Error fetching leads:", error.message || error);
     }
     set({ loading: false });
   },
 
   fetchApplications: async () => {
     set({ loading: true });
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*, assigned_partner:assigned_to(name, email)")
-      .eq("type", "application")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching leads:", error.message);
-    } else {
+    try {
+      const data = await api.LeadsAPI.fetchApplications();
       set({ applications: data as Lead[] });
+    } catch (error: any) {
+      console.error("Error fetching leads:", error.message || error);
     }
     set({ loading: false });
   },
 
   fetchLeadById: async (id) => {
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*, assigned_partner:assigned_to(name, email)")
-      .eq("id", id)
-      .single();
-    if (error) {
-      console.error("Error fetching lead by id:", error.message);
+    try {
+      const data = await api.LeadsAPI.fetchLeadById(id);
+      return data as Lead;
+    } catch (error) {
+      console.error("Error fetching lead by id:", error);
       throw error;
     }
-    return data as Lead;
   },
 
   getAgentLeads: async (agentId: string) => {
     set({ loading: true });
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*, assigned_partner:assigned_to(name, email)")
-      .eq("created_by", agentId);
-    if (error) {
-      console.error("Error fetching agent leads:", error.message);
-      throw error;
-    } else {
+    try {
+      const data = await api.LeadsAPI.getAgentLeads(agentId);
       set({ leads: data as Lead[] });
+    } catch (error) {
+      console.error("Error fetching agent leads:", error);
+      throw error;
     }
     set({ loading: false });
   },
 
   getCounsellorLeads: async (counsellorId: string) => {
     set({ loading: true });
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*, assigned_partner:assigned_to(name, email)")
-      .eq("assigned_to", counsellorId)
-      .eq("type", "lead")
-      .order("created_at", { ascending: false });
-    if (error) {
-      console.error("Error fetching counsellor leads:", error.message);
-      throw error;
-    } else {
+    try {
+      const data = await api.LeadsAPI.getCounsellorLeads(counsellorId);
       set({ leads: data as Lead[] });
+    } catch (error) {
+      console.error("Error fetching counsellor leads:", error);
+      throw error;
     }
     set({ loading: false });
   },
 
   addLead: async (lead) => {
-    const response = await fetch("/api/internal/create-lead", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(lead),
-    });
-
-    if (!response.ok) {
-      const { error } = await response.json();
-      console.error("Error adding lead:", error);
-      throw new Error(error || "Failed to add lead");
+    try {
+      const newLead = await api.LeadsAPI.createLead(lead);
+      set((state) => ({ leads: [...state.leads, newLead] }));
+      // timeline logging will be handled by the backend
+    } catch (err) {
+      console.error("Error adding lead:", err);
+      throw err;
     }
-
-    const newLead = await response.json() as Lead;
-    set((state) => ({ leads: [...state.leads, newLead] }));
-
-    // log timeline
-    await supabase.from("timeline").insert({
-      lead_id: newLead.id,
-      event_type: TimelineEvent.LEAD_CREATED,
-      new_state: `Lead created for ${newLead.name}`,
-      created_by: newLead.created_by,
-    });
   },
 
   getLeadIds: () => {
@@ -158,72 +118,19 @@ export const useLeadStore = create<LeadState>((set, get) => ({
   },
 
   updateLead: async (id, updates) => {
-    // 1. Fetch the state of the lead before the update
-    const { data: oldData } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("id", id)
-      .single();
-
-    if (!oldData) {
-      console.error("Could not find lead to update.");
-      return;
-    }
-
-    // 2. Perform the update
-    const { data, error } = await supabase
-      .from("leads")
-      .update(updates)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("Error updating lead:", error.message);
+    try {
+      // Backend API handles both the update and timeline logging
+      const updatedLead = await api.LeadsAPI.updateLead(id, updates);
+      
+      // Update the local Zustand state
+      set((state) => ({
+        leads: state.leads.map((lead) =>
+          lead.id === id ? { ...lead, ...updatedLead } : lead
+        ),
+      }));
+    } catch (error) {
+      console.error("Error updating lead:", error);
       throw error;
-    }
-
-    const updatedLead = data as Lead;
-
-    // 3. Update the local Zustand state
-    set((state) => ({
-      leads: state.leads.map((lead) =>
-        lead.id === id ? { ...lead, ...updatedLead } : lead
-      ),
-    }));
-
-    // 4. *** MODIFIED SECTION: Log specific changes to the timeline ***
-    const fieldsToTrack = [
-      { key: "name", eventType: TimelineEvent.LEAD_NAME_CHANGED },
-      { key: "mobile", eventType: TimelineEvent.LEAD_PHONE_CHANGED },
-      { key: "email", eventType: TimelineEvent.LEAD_EMAIL_CHANGED },
-      { key: "purpose", eventType: TimelineEvent.LEAD_PURPOSE_CHANGED },
-      { key: "assigned_to", eventType: TimelineEvent.LEAD_OWNER_CHANGED },
-      { key: "status", eventType: TimelineEvent.LEAD_STATUS_CHANGED },
-    ] as const; // `as const` provides better type safety
-
-    const timelineEvents = [];
-
-    for (const field of fieldsToTrack) {
-      const key = field.key;
-      const newValue = updates[key];
-      const oldValue = oldData[key];
-
-      // Check if the field is in the updates and its value has actually changed
-      if (newValue !== undefined && newValue !== oldValue) {
-        timelineEvents.push({
-          lead_id: updatedLead.id!,
-          event_type: field.eventType,
-          old_state: oldValue ?? "N/A", // Store old value as string
-          new_state: newValue, // Store new value as string
-          created_by: updatedLead.created_by,
-        });
-      }
-    }
-
-    // Insert all detected change events into the timeline in a single call
-    if (timelineEvents.length > 0) {
-      await supabase.from("timeline").insert(timelineEvents);
     }
   },
 }));

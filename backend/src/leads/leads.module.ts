@@ -1,10 +1,9 @@
 import { Module } from '@nestjs/common';
-import { LeadsService } from './leads.service';
 import { LeadsController } from './leads.controller';
-import { PrismaService } from '../prisma/prisma.service';
+import { LeadsService } from './leads.service';
+
 @Module({
-  imports: [],
   controllers: [LeadsController],
-  providers: [LeadsService, PrismaService],
+  providers: [LeadsService],
 })
 export class LeadsModule {}

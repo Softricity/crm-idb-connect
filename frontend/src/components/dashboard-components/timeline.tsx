@@ -194,6 +194,15 @@ export const renderEventAction = (event: Timeline) => {
         case TimelineEvent.LEAD_FOLLOWUP_COMMENT_DELETED:
             return <>deleted all comments from a follow up.</>;
 
+        case TimelineEvent.OFFLINE_PAYMENT_ADDED:
+            return <>recorded an offline payment of <NewValue>{new_state}</NewValue>.</>;
+
+        case TimelineEvent.OFFLINE_PAYMENT_UPDATED:
+            return <>updated an offline payment from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
+
+        case TimelineEvent.OFFLINE_PAYMENT_DELETED:
+            return <>deleted an offline payment of <OldValue>{old_state}</OldValue>.</>;
+
         default:
             return <>{event_type.replace(/_/g, " ").toLowerCase()}.</>;
     }

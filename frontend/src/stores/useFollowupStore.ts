@@ -1,9 +1,6 @@
 import { create } from "zustand";
-import { createClient } from "@/lib/supabase/client";
-import { TimelineEvent } from "@/lib/utils";
-import { useAuthStore } from "@/stores/useAuthStore"; // ⬅️ Import auth store
-
-const supabase = createClient();
+import api from "@/lib/api";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export interface FollowupComment {
   id?: string;
@@ -24,7 +21,7 @@ export interface Followup {
   partner?: {
     name: string;
   };
-  comments?: FollowupComment[];
+  followup_comments?: FollowupComment[];
 }
 
 interface FollowupState {
@@ -48,162 +45,105 @@ export const useFollowupStore = create<FollowupState>((set, get) => ({
 
   fetchFollowupsByLeadId: async (leadId) => {
     set({ loading: true });
-    const { data, error } = await supabase
-      .from("followups")
-      .select("*, partner:created_by(name), comments:followup_comments(*)")
-      .eq("lead_id", leadId)
-      .order("created_at", { ascending: false });
-
-    if (error) console.error("Error fetching followups:", error.message);
-    else set({ followups: data as Followup[] });
+    try {
+      const data = await api.FollowupsAPI.fetchFollowupsByLeadId(leadId);
+      set({ followups: data as Followup[] });
+    } catch (error: any) {
+      console.error("Error fetching followups:", error.message || error);
+    }
     set({ loading: false });
   },
 
   addFollowup: async (followup) => {
-    const { data, error } = await supabase
-      .from("followups")
-      .insert(followup)
-      .select("*, partner:created_by(name)")
-      .single();
-
-    if (error) throw error;
-    
-    set((state) => ({ followups: [data, ...state.followups] }));
-
-    await supabase.from("timeline").insert({
-      lead_id: data.lead_id,
-      event_type: TimelineEvent.LEAD_FOLLOWUP_ADDED,
-      new_state: data.title,
-      created_by: data.created_by,
-    });
+    try {
+      const data = await api.FollowupsAPI.createFollowup(followup);
+      set((state) => ({ followups: [data, ...state.followups] }));
+      // Timeline logging handled by backend
+    } catch (error) {
+      throw error;
+    }
   },
 
   updateFollowup: async (id, updates) => {
-    const { data: oldData } = await supabase.from("followups").select("title, lead_id, created_by").eq("id", id).single();
-    if (!oldData) throw new Error("Followup not found");
-    
-    const { data, error } = await supabase.from("followups").update(updates).eq("id", id).select("*, partner:created_by(name)").single();
-    if (error) throw error;
-
-    set((state) => ({ followups: state.followups.map((f) => (f.id === id ? data : f)) }));
-
-    if (updates.title && updates.title !== oldData.title) {
-        await supabase.from("timeline").insert({
-            lead_id: data.lead_id,
-            event_type: TimelineEvent.LEAD_FOLLOWUP_UPDATED,
-            old_state: oldData.title,
-            new_state: data.title,
-            created_by: data.created_by,
-        });
+    try {
+      const data = await api.FollowupsAPI.updateFollowup(id, updates);
+      set((state) => ({ followups: state.followups.map((f) => (f.id === id ? data : f)) }));
+      // Timeline logging handled by backend
+    } catch (error) {
+      throw error;
     }
   },
 
   deleteFollowup: async (id) => {
-    const { data: oldData } = await supabase.from("followups").select("title, lead_id, created_by").eq("id", id).single();
-    if (!oldData) throw new Error("Followup not found");
-
-    const { error } = await supabase.from("followups").delete().eq("id", id);
-    if (error) throw error;
-    
-    set((state) => ({ followups: state.followups.filter((f) => f.id !== id) }));
-
-    await supabase.from("timeline").insert({
-        lead_id: oldData.lead_id,
-        event_type: TimelineEvent.LEAD_FOLLOWUP_DELETED,
-        old_state: oldData.title,
-        created_by: oldData.created_by,
-    });
+    try {
+      await api.FollowupsAPI.deleteFollowup(id);
+      set((state) => ({ followups: state.followups.filter((f) => f.id !== id) }));
+      // Timeline logging handled by backend
+    } catch (error) {
+      throw error;
+    }
   },
 
   addComment: async (comment) => {
     const { user } = useAuthStore.getState();
     if (!user) throw new Error("User not authenticated");
 
-    const { data: followup } = await supabase.from("followups").select("lead_id").eq("id", comment.followup_id).single();
-    if (!followup) throw new Error("Parent followup not found.");
-    
-    const commentToInsert = { ...comment, created_by: user.id };
-    const { data, error } = await supabase.from("followup_comments").insert(commentToInsert).select().single();
-    if (error) throw error;
-    
-    set((state) => ({
-      followups: state.followups.map((f) =>
-        f.id === comment.followup_id
-          ? { ...f, comments: [...(f.comments || []), data] }
-          : f
-      ),
-    }));
-
-    await supabase.from("timeline").insert({
-      lead_id: followup.lead_id, // ✅ Correct lead_id
-      event_type: TimelineEvent.LEAD_FOLLOWUP_COMMENT_ADDED,
-      new_state: data.text,
-      created_by: comment.created_by,
-    });
+    try {
+      const commentToInsert = { ...comment, created_by: user.id };
+      const data = await api.FollowupsAPI.createComment(commentToInsert);
+      
+      set((state) => ({
+        followups: state.followups.map((f) =>
+          f.id === comment.followup_id
+            ? { ...f, followup_comments: [...(f.followup_comments || []), data] }
+            : f
+        ),
+      }));
+      // Timeline logging handled by backend
+    } catch (error) {
+      throw error;
+    }
   },
 
   deleteAllCommentsForFollowup: async (followupId) => {
     const { user } = useAuthStore.getState();
     if (!user) throw new Error("User not authenticated");
 
-    const { data: followup } = await supabase.from("followups").select("lead_id").eq("id", followupId).single();
-    if (!followup) throw new Error("Parent followup not found.");
-
-    const { error } = await supabase.from("followup_comments").delete().eq("followup_id", followupId);
-    if (error) throw error;
-    
-    set((state) => ({ followups: state.followups.map((f) => f.id === followupId ? { ...f, comments: [] } : f) }));
-    
-    await supabase.from("timeline").insert({
-        lead_id: followup.lead_id, // ✅ Correct lead_id
-        event_type: TimelineEvent.LEAD_FOLLOWUP_COMMENT_DELETED,
-        old_state: `All comments deleted for followup`,
-        created_by: user.id,
-    });
+    try {
+      await api.FollowupsAPI.deleteAllComments(followupId);
+      set((state) => ({ followups: state.followups.map((f) => f.id === followupId ? { ...f, comments: [] } : f) }));
+      // Timeline logging handled by backend
+    } catch (error) {
+      throw error;
+    }
   },
 
   markComplete: async (id) => {
-    const { data, error } = await supabase.from("followups").update({ completed: true }).eq("id", id).select("*, partner:created_by(name)").single();
-    if (error) throw error;
-
-    set((state) => ({ followups: state.followups.map((f) => f.id === id ? data : f) }));
-    
-    await supabase.from("timeline").insert({
-        lead_id: data.lead_id,
-        event_type: TimelineEvent.LEAD_FOLLOWUP_COMPLETED,
-        new_state: data.title,
-        created_by: data.created_by,
-    });
+    try {
+      const data = await api.FollowupsAPI.markComplete(id);
+      set((state) => ({ followups: state.followups.map((f) => f.id === id ? data : f) }));
+      // Timeline logging handled by backend
+    } catch (error) {
+      throw error;
+    }
   },
 
   extendDueDate: async (id, newDate) => {
-    const { data: oldData } = await supabase.from("followups").select("due_date, lead_id, created_by").eq("id", id).single();
-    if (!oldData) throw new Error("Followup not found");
-
-    const { data, error } = await supabase.from("followups").update({ due_date: newDate }).eq("id", id).select("*, partner:created_by(name)").single();
-    if (error) throw error;
-
-    set((state) => ({ followups: state.followups.map((f) => f.id === id ? data : f) }));
-    
-    await supabase.from("timeline").insert({
-        lead_id: data.lead_id,
-        event_type: TimelineEvent.LEAD_FOLLOWUP_DATE_EXTENDED,
-        old_state: oldData.due_date,
-        new_state: data.due_date,
-        created_by: data.created_by,
-    });
+    try {
+      const data = await api.FollowupsAPI.extendDueDate(id, newDate);
+      set((state) => ({ followups: state.followups.map((f) => f.id === id ? data : f) }));
+      // Timeline logging handled by backend
+    } catch (error) {
+      throw error;
+    }
   },
   fetchCommentsByFollowupId: async (followupId) => {
-    const { data, error } = await supabase
-      .from("followup_comments")
-      .select("*")
-      .eq("followup_id", followupId)
-      .order("created_at", { ascending: true });
-
-    if (error) {
-      console.error("Error fetching comments:", error.message);
+    try {
+      const data = await api.FollowupsAPI.fetchCommentsByFollowupId(followupId);
+      return data as FollowupComment[];
+    } catch (error: any) {
+      console.error("Error fetching comments:", error.message || error);
       return [];
     }
-    return data as FollowupComment[];
   },
 }));

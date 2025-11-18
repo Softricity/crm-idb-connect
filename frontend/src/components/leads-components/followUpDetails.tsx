@@ -76,8 +76,8 @@ export default function FollowupDetails({
             </div>
 
             <div className="flex-grow overflow-y-auto py-4 space-y-4">
-                {followup.comments && followup.comments.length > 0 ? (
-                    followup.comments.map((comment) => (
+                {followup.followup_comments && followup.followup_comments.length > 0 ? (
+                    followup.followup_comments.map((comment) => (
                         <div key={comment.id} className="p-3 bg-white rounded-lg shadow-sm border">
                             <p className="text-sm">{comment.text}</p>
                             <p className="text-xs text-gray-500 mt-1 text-right">

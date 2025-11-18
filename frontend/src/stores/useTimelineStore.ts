@@ -1,8 +1,6 @@
 // store/timeline.ts
 import { create } from "zustand";
-import { createClient } from "@/lib/supabase/client";
-
-const supabase = createClient();
+import api from "@/lib/api";
 
 export interface Timeline {
   id?: string;
@@ -36,82 +34,45 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 
   fetchTimelineByLeadId: async (leadId) => {
     set({ loading: true });
-
-    const { data, error } = await supabase
-      .from("timeline")
-      .select(
-        `
-        *,
-        partner:created_by(name)
-      `
-      )
-      .eq("lead_id", leadId)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching timeline:", error.message);
-    } else {
+    try {
+      const data = await api.TimelineAPI.fetchTimelineByLeadId(leadId);
       set({ timeline: data as Timeline[] });
+    } catch (error: any) {
+      console.error("Error fetching timeline:", error.message || error);
     }
     set({ loading: false });
   },
 
   addTimelineEvent: async (event) => {
-    const { data, error } = await supabase
-      .from("timeline")
-      .insert(event)
-      .select("*, partner:created_by(name)");
-
-    if (error) {
-      console.error("Error adding timeline event:", error.message);
+    try {
+      const data = await api.TimelineAPI.createTimelineEvent(event);
+      set((state) => ({
+        timeline: [data, ...state.timeline],
+      }));
+    } catch (error) {
+      console.error("Error adding timeline event:", error);
       throw error;
     }
-
-    set((state) => ({
-      timeline: [...(data as Timeline[]), ...state.timeline],
-    }));
   },
   fetchAllTimelines: async (leadIds: string[]) => {
     if (!leadIds?.length) return;
 
     set({ loading: true });
 
-    const { data, error } = await supabase
-      .from("timeline")
-      .select(
-        `
-        id,
-        lead_id,
-        event_type,
-        old_state,
-        new_state,
-        created_by,
-        created_at,
-        partner:created_by(name)
-      `
-      )
-      .in("lead_id", leadIds)
-      .order("created_at", { ascending: false });
+    try {
+      const data = await api.TimelineAPI.fetchAllTimelines(leadIds);
+      
+      const byLead: Record<string, Timeline[]> = {};
+      for (const id of leadIds) byLead[id] = [];
+      for (const row of data) {
+        if (!byLead[row.lead_id]) byLead[row.lead_id] = [];
+        byLead[row.lead_id].push(row);
+      }
 
-    if (error) {
+      set({ timelineByLead: byLead, loading: false });
+    } catch (error: any) {
       set({ loading: false });
-      throw new Error(error.message);
+      throw new Error(error.message || error);
     }
-
-    const rows = (data ?? []).map((row: any) => ({
-      ...row,
-      partner:
-        Array.isArray(row.partner) && row.partner.length > 0
-          ? row.partner[0]
-          : row.partner,
-    })) as Timeline[];
-    const byLead: Record<string, Timeline[]> = {};
-    for (const id of leadIds) byLead[id] = [];
-    for (const row of rows) {
-      if (!byLead[row.lead_id]) byLead[row.lead_id] = [];
-      byLead[row.lead_id].push(row);
-    }
-
-    set({ timelineByLead: byLead, loading: false });
   },
 }));

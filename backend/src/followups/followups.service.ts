@@ -43,7 +43,7 @@ export class FollowupsService {
   }
 
   async findAllForLead(leadId: string) {
-    return this.prisma.followups.findMany({
+    const followups = await this.prisma.followups.findMany({
       where: { lead_id: leadId },
       include: {
         // Include partner who created it
@@ -66,6 +66,15 @@ export class FollowupsService {
         created_at: 'desc',
       },
     });
+
+    // Convert BigInt comment IDs to strings
+    return followups.map(followup => ({
+      ...followup,
+      followup_comments: followup.followup_comments.map(comment => ({
+        ...comment,
+        id: comment.id.toString(),
+      })),
+    }));
   }
 
   async updateFollowup(id: string, updateFollowupDto: UpdateFollowupDto, user: any) {
@@ -127,9 +136,11 @@ export class FollowupsService {
       },
     });
 
-    const parentFollowup = await this.findFollowupOrThrow(followupId);
-
-    return comment;
+    // Convert BigInt to string for JSON serialization
+    return {
+      ...comment,
+      id: comment.id.toString(),
+    };
   }
 
   async updateComment(
@@ -144,12 +155,18 @@ export class FollowupsService {
       throw new ForbiddenException('You do not have permission to edit this comment.');
     }
 
-    return this.prisma.followup_comments.update({
+    const updated = await this.prisma.followup_comments.update({
       where: { id: commentId },
       data: {
         text: updateCommentDto.text,
       },
     });
+
+    // Convert BigInt to string for JSON serialization
+    return {
+      ...updated,
+      id: updated.id.toString(),
+    };
   }
 
   async deleteComment(commentId: bigint, user: any) {

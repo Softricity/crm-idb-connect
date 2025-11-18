@@ -1,13 +1,11 @@
 import { create } from "zustand";
-import { createClient } from "@/lib/supabase/client";
+import api from "@/lib/api";
 import {
   startOfTodayLocal,
   endOfTodayLocal,
   lastNDaysLocal,
 } from "@/lib/dates";
 import { Lead } from "./useLeadStore";
-
-const supabase = createClient();
 
 type StatusBuckets = Record<string, number>;
 type SourceBuckets = Record<string, number>;
@@ -42,19 +40,9 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   fetchDashboardLeads: async () => {
     set({ loading: true, error: undefined });
 
-    const { data, error } = await supabase
-      .from("leads")
-      .select("*")
-      .eq("type", "lead")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("[Dashboard] fetchLeads error:", error.message);
-      set({ loading: false, error: error.message });
-      return;
-    }
-
-    const leads = (data ?? []) as Lead[];
+    try {
+      const data = await api.DashboardAPI.fetchDashboardLeads();
+      const leads = (data ?? []) as Lead[];
 
     // === Metrics ===
     const start = startOfTodayLocal();
@@ -101,14 +89,18 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
       };
     });
 
-    set({
-      leads,
-      metrics: { todaysLeads, converted, rejected, total },
-      byStatus,
-      bySource,
-      last7Days,
-      loading: false,
-    });
+      set({
+        leads,
+        metrics: { todaysLeads, converted, rejected, total },
+        byStatus,
+        bySource,
+        last7Days,
+        loading: false,
+      });
+    } catch (error: any) {
+      console.error("[Dashboard] fetchLeads error:", error.message || error);
+      set({ loading: false, error: error.message || "Failed to fetch dashboard data" });
+    }
   },
 
   refresh: async () => {

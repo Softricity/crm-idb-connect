@@ -1,12 +1,11 @@
 // store/auth.ts
 import { create } from "zustand";
-import { createClient } from "@/lib/supabase/client";
-
-const supabase = createClient();
+import api from "@/lib/api";
 
 export interface AuthUser {
   id: string;
   email: string;
+  name: string;
   type: "partner"; // all auth based on partner table
   role: "agent" | "counsellor" | "admin";
 }
@@ -14,14 +13,39 @@ export interface AuthUser {
 interface AuthState {
   isAuthenticated: boolean;
   user: AuthUser | null;
+  token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
-  setUser: (user: AuthUser | null) => void;
+  setUser: (user: AuthUser | null, token?: string | null) => void;
   initAuth: () => Promise<void>;
+  getToken: () => string | null;
 }
 
-// Cookie helpers
+// Token and session helpers
+const setAuthToken = (token: string) => {
+  document.cookie = `auth-token=${encodeURIComponent(
+    token
+  )}; path=/; max-age=${60 * 60 * 24 * 7}; secure; samesite=strict`;
+};
+
+const getAuthToken = (): string | null => {
+  if (typeof document === "undefined") return null;
+  const cookies = document.cookie.split(";");
+  const tokenCookie = cookies.find((c) => c.trim().startsWith("auth-token="));
+  if (!tokenCookie) return null;
+  try {
+    const value = tokenCookie.split("=")[1];
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+};
+
+const clearAuthToken = () => {
+  document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+};
+
 const setPartnerCookie = (user: AuthUser) => {
   document.cookie = `partner-session=${encodeURIComponent(
     JSON.stringify(user)
@@ -54,101 +78,90 @@ const getPartnerCookie = (): AuthUser | null => {
 export const useAuthStore = create<AuthState>((set, get) => ({
   isAuthenticated: false,
   user: null,
+  token: null,
   loading: false,
+
+  getToken: () => {
+    return get().token || getAuthToken();
+  },
 
   initAuth: async () => {
     set({ loading: true });
 
-    // Check Supabase session
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (session?.user?.email) {
-      // Lookup partner entry
-      const { data: partner } = await supabase
-        .from("partners")
-        .select("*")
-        .eq("email", session.user.email)
-        .single();
-
-      if (partner) {
-        const partnerUser: AuthUser = {
-          id: partner.id,
-          email: partner.email,
-          type: "partner",
-          role: partner.role,
-        };
-
-        set({
-          isAuthenticated: true,
-          user: partnerUser,
-          loading: false,
-        });
-        setPartnerCookie(partnerUser);
-        return;
-      }
-    }
-
-    // Cookie fallback
+    // Try to restore from cookies
+    const token = getAuthToken();
     const partnerUser = getPartnerCookie();
-    if (partnerUser) {
+    
+    if (token && partnerUser) {
       set({
         isAuthenticated: true,
         user: partnerUser,
+        token,
         loading: false,
       });
       return;
     }
 
+    // Clear invalid session
+    clearAuthToken();
+    clearPartnerCookie();
     set({ loading: false });
   },
 
   login: async (email, password) => {
     set({ loading: true });
 
-    // Partner login only
-    const { data: partner, error: partnerError } = await supabase
-      .from("partners")
-      .select("*")
-      .eq("email", email)
-      .eq("password", password) // ⚠️ plaintext, hash in production
-      .single();
+    try {
+      // Backend returns { access_token, partner: { id, name, role, email } }
+      const response = await api.AuthAPI.login(email, password);
+      const { access_token, partner } = response;
 
-    if (partnerError || !partner) {
+      const partnerUser: AuthUser = {
+        id: partner.id,
+        email: partner.email,
+        name: partner.name,
+        type: "partner",
+        role: partner.role,
+      };
+
+      // Store token and user info in cookies
+      setAuthToken(access_token);
+      setPartnerCookie(partnerUser);
+
+      set({
+        isAuthenticated: true,
+        user: partnerUser,
+        token: access_token,
+        loading: false,
+      });
+    } catch (error) {
       set({ loading: false });
-      console.error("Partner login failed:", partnerError);
-      throw partnerError || new Error("Invalid credentials");
+      console.error("Partner login failed:", error);
+      throw error;
     }
-
-    const partnerUser: AuthUser = {
-      id: partner.id,
-      email: partner.email,
-      type: "partner",
-      role: partner.role,
-    };
-
-    setPartnerCookie(partnerUser);
-
-    set({
-      isAuthenticated: true,
-      user: partnerUser,
-      loading: false,
-    });
   },
 
   logout: async () => {
-    await supabase.auth.signOut();
+    try {
+      await api.AuthAPI.logout();
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+    clearAuthToken();
     clearPartnerCookie();
-    set({ isAuthenticated: false, user: null, loading: false });
+    set({ isAuthenticated: false, user: null, token: null, loading: false });
   },
 
-  setUser: (user) => {
+  setUser: (user, token = null) => {
     if (user && user.type === "partner") {
       setPartnerCookie(user);
+      if (token) {
+        setAuthToken(token);
+      }
     } else if (!user) {
+      clearAuthToken();
       clearPartnerCookie();
     }
-    set({ isAuthenticated: !!user, user, loading: false });
+    set({ isAuthenticated: !!user, user, token, loading: false });
   },
 }));

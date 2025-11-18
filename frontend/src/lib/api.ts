@@ -1,0 +1,252 @@
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
+
+// Helper to get auth token from cookies
+function getAuthToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  const cookies = document.cookie.split(';');
+  const tokenCookie = cookies.find(c => c.trim().startsWith('auth-token='));
+  if (!tokenCookie) return null;
+  try {
+    const value = tokenCookie.split('=')[1];
+    return decodeURIComponent(value);
+  } catch {
+    return null;
+  }
+}
+
+// Helper to create headers with auth token
+function getHeaders(includeAuth = true): HeadersInit {
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  
+  if (includeAuth) {
+    const token = getAuthToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+  }
+  
+  return headers;
+}
+
+async function handleResponse(res: Response) {
+  const text = await res.text();
+  let data: any = null;
+  try { data = text ? JSON.parse(text) : null; } catch { data = text; }
+  if (!res.ok) {
+    const err: any = new Error(data?.error || res.statusText || 'API Error');
+    err.status = res.status;
+    err.statusCode = res.status;
+    err.body = data;
+    // Preserve field-level errors for duplicate validation
+    if (data?.field) {
+      err.field = data.field;
+    }
+    throw err;
+  }
+  return data;
+}
+
+// --- Leads ---
+export const LeadsAPI = {
+  fetchLeads: async () => {
+    const res = await fetch(`${API_BASE}/leads`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  fetchApplications: async () => {
+    const res = await fetch(`${API_BASE}/leads?type=application`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  fetchLeadById: async (id: string) => {
+    const res = await fetch(`${API_BASE}/leads/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getAgentLeads: async (agentId: string) => {
+    const res = await fetch(`${API_BASE}/leads?created_by=${agentId}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getCounsellorLeads: async (counsellorId: string) => {
+    const res = await fetch(`${API_BASE}/leads?assigned_to=${counsellorId}&type=lead`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createLead: async (lead: any) => {
+    // POST /leads is public according to API_DOC, but we'll include auth if available
+    const res = await fetch(`${API_BASE}/leads`, { method: 'POST', headers: getHeaders(false), body: JSON.stringify(lead) });
+    return handleResponse(res);
+  },
+  updateLead: async (id: string, updates: any) => {
+    const res = await fetch(`${API_BASE}/leads/${id}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify(updates) });
+    return handleResponse(res);
+  },
+  deleteLead: async (id: string) => {
+    const res = await fetch(`${API_BASE}/leads/${id}`, { method: 'DELETE', headers: getHeaders() });
+    return handleResponse(res);
+  }
+};
+
+// --- Partners (agents/counsellors) ---
+export const PartnersAPI = {
+  fetchPartners: async (role?: string) => {
+    const url = role ? `${API_BASE}/partners?role=${role}` : `${API_BASE}/partners`;
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  fetchPartnerById: async (id: string) => {
+    const res = await fetch(`${API_BASE}/partners/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createPartner: async (partner: any) => {
+    const res = await fetch(`${API_BASE}/partners`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(partner) });
+    return handleResponse(res);
+  },
+  updatePartner: async (id: string, updates: any) => {
+    const res = await fetch(`${API_BASE}/partners/${id}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify(updates) });
+    return handleResponse(res);
+  },
+  deletePartner: async (id: string) => {
+    const res = await fetch(`${API_BASE}/partners/${id}`, { method: 'DELETE', headers: getHeaders() });
+    return handleResponse(res);
+  }
+};
+
+// --- Auth ---
+export const AuthAPI = {
+  login: async (email: string, password: string) => {
+    // Login is public - no auth header needed
+    const res = await fetch(`${API_BASE}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+    return handleResponse(res);
+  },
+  logout: async () => {
+    const res = await fetch(`${API_BASE}/auth/logout`, { method: 'POST', headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getSessionPartner: async (email: string) => {
+    // Backend provides /partners lookup; frontend can call partners?email=...
+    const res = await fetch(`${API_BASE}/partners?email=${encodeURIComponent(email)}`);
+    return handleResponse(res);
+  }
+};
+
+// --- Followups & Comments ---
+export const FollowupsAPI = {
+  createFollowup: async (payload: any) => {
+    const res = await fetch(`${API_BASE}/followups`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) });
+    return handleResponse(res);
+  },
+  fetchFollowupsByLeadId: async (leadId: string) => {
+    const res = await fetch(`${API_BASE}/leads/${leadId}/followups`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  updateFollowup: async (id: string, updates: any) => {
+    const res = await fetch(`${API_BASE}/followups/${id}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify(updates) });
+    return handleResponse(res);
+  },
+  deleteFollowup: async (id: string) => {
+    const res = await fetch(`${API_BASE}/followups/${id}`, { method: 'DELETE', headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createComment: async (comment: any) => {
+    const res = await fetch(`${API_BASE}/followups/${comment.followup_id}/comments`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(comment) });
+    return handleResponse(res);
+  },
+  fetchCommentsByFollowupId: async (followupId: string) => {
+    const res = await fetch(`${API_BASE}/followups/${followupId}/comments`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  deleteAllComments: async (followupId: string) => {
+    const res = await fetch(`${API_BASE}/followups/${followupId}/comments`, { method: 'DELETE', headers: getHeaders() });
+    return handleResponse(res);
+  },
+  markComplete: async (id: string) => {
+    const res = await fetch(`${API_BASE}/followups/${id}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ completed: true }) });
+    return handleResponse(res);
+  },
+  extendDueDate: async (id: string, newDate: string) => {
+    const res = await fetch(`${API_BASE}/followups/${id}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify({ due_date: newDate }) });
+    return handleResponse(res);
+  }
+};
+
+// --- Notes ---
+export const NotesAPI = {
+  fetchNotesByLeadId: async (leadId: string) => {
+    const res = await fetch(`${API_BASE}/leads/${leadId}/notes`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createNote: async (payload: any) => {
+    const res = await fetch(`${API_BASE}/notes`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) });
+    return handleResponse(res);
+  },
+  updateNote: async (id: string, updates: any) => {
+    const res = await fetch(`${API_BASE}/notes/${id}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify(updates) });
+    return handleResponse(res);
+  },
+  deleteNote: async (id: string) => {
+    const res = await fetch(`${API_BASE}/notes/${id}`, { method: 'DELETE', headers: getHeaders() });
+    return handleResponse(res);
+  }
+};
+
+// --- Timeline ---
+export const TimelineAPI = {
+  fetchTimelineByLeadId: async (leadId: string) => {
+    const res = await fetch(`${API_BASE}/timeline/${leadId}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createTimelineEvent: async (payload: any) => {
+    const res = await fetch(`${API_BASE}/timeline`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) });
+    return handleResponse(res);
+  },
+  fetchAllTimelines: async (leadIds: string[]) => {
+    const res = await fetch(`${API_BASE}/timeline?leadIds=${encodeURIComponent(leadIds.join(','))}`, { headers: getHeaders() });
+    return handleResponse(res);
+  }
+};
+
+// --- Dashboard ---
+export const DashboardAPI = {
+  getStats: async () => {
+    const res = await fetch(`${API_BASE}/dashboard/stats`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  fetchDashboardLeads: async () => {
+    const res = await fetch(`${API_BASE}/leads?type=lead`, { headers: getHeaders() });
+    return handleResponse(res);
+  }
+};
+
+// --- Applications ---
+export const ApplicationsAPI = {
+  getApplication: async (leadId: string) => {
+    const res = await fetch(`${API_BASE}/applications/${leadId}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  fetchApplicationByLeadId: async (leadId: string) => {
+    const res = await fetch(`${API_BASE}/applications/${leadId}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createApplication: async (application: any) => {
+    const res = await fetch(`${API_BASE}/applications`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(application) });
+    return handleResponse(res);
+  },
+  updateApplication: async (id: string, updates: any) => {
+    const res = await fetch(`${API_BASE}/applications/${id}`, { method: 'PUT', headers: getHeaders(), body: JSON.stringify(updates) });
+    return handleResponse(res);
+  },
+  patchSection: async (leadId: string, section: string, body: any) => {
+    const res = await fetch(`${API_BASE}/applications/${leadId}/${section}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify(body) });
+    return handleResponse(res);
+  }
+};
+
+export default {
+  LeadsAPI,
+  PartnersAPI,
+  AuthAPI,
+  FollowupsAPI,
+  NotesAPI,
+  TimelineAPI,
+  DashboardAPI,
+  ApplicationsAPI,
+};

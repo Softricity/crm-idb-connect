@@ -37,7 +37,7 @@ export class AuthService {
   /**
    * Generates a JWT for a validated user.
    * @param partner The user object returned from validateUser
-   * @returns An object containing the access_token
+   * @returns An object containing the access_token and partner info
    */
   async login(partner: any) {
     const payload = {
@@ -47,6 +47,12 @@ export class AuthService {
     };
     return {
       access_token: this.jwtService.sign(payload),
+      partner: {
+        id: partner.id,
+        name: partner.name,
+        email: partner.email,
+        role: partner.role,
+      },
     };
   }
 }

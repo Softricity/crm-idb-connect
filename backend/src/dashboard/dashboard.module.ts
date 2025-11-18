@@ -1,11 +1,11 @@
 // src/dashboard/dashboard.module.ts
 import { Module } from '@nestjs/common';
-import { DashboardService } from './dashboard.service';
 import { DashboardController } from './dashboard.controller';
-import { PrismaService } from '../prisma/prisma.service';
+import { DashboardService } from './dashboard.service';
+import { LeadsModule } from '../leads/leads.module';
 
 @Module({
   controllers: [DashboardController],
-  providers: [DashboardService, PrismaService],
+  providers: [DashboardService],
 })
 export class DashboardModule {}

@@ -131,7 +131,7 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
           );
 
         case "owner":
-          return <span className="text-sm">{lead.assigned_partner?.name || "Unassigned"}</span>;
+          return <span className="text-sm">{lead.partners_leads_assigned_toTopartners?.name || "Unassigned"}</span>;
 
         case "type":
           return (
