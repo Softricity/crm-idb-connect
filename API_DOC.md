@@ -284,18 +284,18 @@ Manages universities linked to countries.
     ```json
     {
       "name": "University of Helsinki",
-      "country_id": "uuid-of-country",
+      "countryId": "uuid-of-country",
       "city": "Helsinki",
       "logo": "[https://example.com/logo.png](https://example.com/logo.png)"
     }
     ```
--   **Validation:** `country_id` must be a valid UUID of an existing country.
+-   **Validation:** `countryId` must be a valid UUID of an existing country.
 
 ### Get All Universities
 -   **Route:** `GET /universities`
 -   **Authentication:** **None (Public)**
 -   **Query Params:**
-    -   `?country_id=uuid` (Optional: Filter universities by a specific country).
+    -   `?countryId=uuid` (Optional: Filter universities by a specific country).
 -   **Description:** Retrieves a list of universities.
 -   **Returns:** Array of university objects with their associated `country` data.
 
@@ -311,7 +311,7 @@ Manages universities linked to countries.
     ```json
     {
       "city": "Espoo",
-      "logo": "[https://new-logo-url.com](https://new-logo-url.com)"
+      "logo": "https://new-logo-url.com"
     }
     ```
 
