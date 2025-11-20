@@ -232,11 +232,12 @@ This module handles lead creation, management, and bulk operations.
 ### 1. Get Full Application
 -   **Route:** `GET /applications/:leadId`
 -   **Authentication:** **JWT Required**
--   **Description:** Returns the complete application tree with all nested relations (Education, Work Experience, Documents, etc.).
+-   **Description:** Returns the complete application tree with all nested relations.
 -   **Returns:** `null` if the application has not been started, otherwise the full object.
 
 ### 2. Update Personal Details
 -   **Route:** `PATCH /applications/:leadId/personal`
+-   **Content-Type:** `application/json`
 -   **Description:** Updates the applicant's basic profile and family details.
 -   **Request Body:**
     ```json
@@ -244,7 +245,7 @@ This module handles lead creation, management, and bulk operations.
       "given_name": "John",
       "surname": "Doe",
       "gender": "Male",
-      "dob": "1999-05-15T00:00:00.000Z", // ISO Date
+      "dob": "1999-05-15T00:00:00.000Z",
       "marital_status": "Single",
       "phone": "9876543210",
       "alternate_phone": "9800000000",
@@ -259,7 +260,6 @@ This module handles lead creation, management, and bulk operations.
       "gap_years": 1,
       "referral_source": "Facebook",
       
-      // Family Details (Merged into this endpoint)
       "father_name": "Robert Doe",
       "mother_name": "Mary Doe",
       "emergency_contact_name": "Robert Doe",
@@ -269,16 +269,17 @@ This module handles lead creation, management, and bulk operations.
 
 ### 3. Update Education History
 -   **Route:** `PATCH /applications/:leadId/education`
+-   **Content-Type:** `application/json`
 -   **Description:** Handles the list of educational qualifications.
--   **Behavior:** This is an **array** update.
-    -   If an item has an `id`, it updates that existing record.
-    -   If an item has no `id`, it creates a new record.
+-   **Behavior:**
+    -   Include `id` to update an existing record.
+    -   Omit `id` to create a new record.
 -   **Request Body:**
     ```json
     {
       "records": [
         {
-          "id": "uuid-existing-record", // Optional: Include to update existing
+          "id": "uuid-existing-record", // Optional
           "level": "Bachelor",
           "institution_name": "Tribhuvan University",
           "board_university": "TU",
@@ -288,7 +289,7 @@ This module handles lead creation, management, and bulk operations.
           "year_of_passing": "2023",
           "medium_of_instruction": "English",
           "backlogs": 0,
-          "certificate_url": "[https://s3.aws.com/cert.pdf](https://s3.aws.com/cert.pdf)"
+          "certificate_url": "[https://s3.aws.com/cert.pdf](https://s3.aws.com/cert.pdf)" // URL from a previous upload
         }
       ]
     }
@@ -296,6 +297,7 @@ This module handles lead creation, management, and bulk operations.
 
 ### 4. Update Preferences
 -   **Route:** `PATCH /applications/:leadId/preferences`
+-   **Content-Type:** `application/json`
 -   **Description:** Updates study abroad preferences and financial info.
 -   **Request Body:**
     ```json
@@ -315,13 +317,13 @@ This module handles lead creation, management, and bulk operations.
 
 ### 5. Update Language & Aptitude Tests
 -   **Route:** `PATCH /applications/:leadId/tests`
+-   **Content-Type:** `application/json`
 -   **Description:** Handles test scores (IELTS, PTE, TOEFL, etc.).
 -   **Request Body:**
     ```json
     {
       "records": [
         {
-          "id": "optional-uuid",
           "test_type": "IELTS",
           "test_date": "2024-01-10T00:00:00.000Z",
           "overall_score": 7.5,
@@ -337,13 +339,13 @@ This module handles lead creation, management, and bulk operations.
 
 ### 6. Update Work Experience
 -   **Route:** `PATCH /applications/:leadId/work-experience`
+-   **Content-Type:** `application/json`
 -   **Description:** Handles employment history.
 -   **Request Body:**
     ```json
     {
       "records": [
         {
-          "id": "optional-uuid",
           "company_name": "Tech Solutions Ltd",
           "designation": "Junior Developer",
           "start_date": "2023-06-01T00:00:00.000Z",
@@ -357,6 +359,7 @@ This module handles lead creation, management, and bulk operations.
 
 ### 7. Update Visa & Passport Details
 -   **Route:** `PATCH /applications/:leadId/visa`
+-   **Content-Type:** `application/json`
 -   **Description:** Updates passport information and previous visa history.
 -   **Request Body:**
     ```json
@@ -375,26 +378,20 @@ This module handles lead creation, management, and bulk operations.
     }
     ```
 
-### 8. Update Documents (Uploads)
+### 8. Update Documents (File Upload)
 -   **Route:** `PATCH /applications/:leadId/documents`
--   **Description:** Stores URLs of uploaded files.
--   **Note:** This endpoint expects **Strings (URLs)**, not binary files. File upload to S3/Cloudinary must happen *before* calling this API.
--   **Request Body:**
-    ```json
-    {
-      "profile_photo_url": "https://...",
-      "passport_copy_url": "https://...",
-      "english_test_cert_url": "https://...",
-      "sop_url": "https://...",
-      "cv_resume_url": "https://...",
-      "financial_documents_url": "https://...",
-      "other_documents_url": "https://...",
-      
-      // Arrays for multi-file sections
-      "academic_documents_urls": ["[https://doc1.pdf](https://doc1.pdf)", "[https://doc2.pdf](https://doc2.pdf)"],
-      "recommendation_letters_url": ["[https://lor1.pdf](https://lor1.pdf)", "[https://lor2.pdf](https://lor2.pdf)"]
-    }
-    ```
+-   **Content-Type:** `multipart/form-data`
+-   **Description:** Uploads files directly. The server uploads them to Supabase Storage and saves the returned URLs in the database.
+-   **Form Data Fields:**
+    * `profile_photo` (File)
+    * `passport_copy` (File)
+    * `academic_documents` (Files - Max 10)
+    * `english_test_cert` (File)
+    * `sop` (File)
+    * `cv_resume` (File)
+    * `recommendation_letters` (Files - Max 5)
+    * `financial_documents` (File)
+    * `other_documents` (File)
 
 ---
 

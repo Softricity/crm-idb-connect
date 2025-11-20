@@ -1,6 +1,6 @@
 // src/applications/applications.controller.ts
-import { Controller, Get, Patch, Body, Param, UseGuards } from '@nestjs/common';
-import { ApplicationsService } from './applications.service';
+import { Controller, Get, Patch, Body, Param, UseGuards, 
+  UseInterceptors, UploadedFiles } from '@nestjs/common';
 import {
   UpdatePersonalDetailsDto,
   UpdateEducationDto,
@@ -10,6 +10,8 @@ import {
   UpdateVisaDetailsDto,
   UpdateDocumentsDto,
 } from './dto/update-sections.dto';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { ApplicationsService } from './applications.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @UseGuards(JwtAuthGuard)
@@ -53,7 +55,35 @@ export class ApplicationsController {
   }
 
   @Patch(':leadId/documents')
-  updateDocuments(@Param('leadId') leadId: string, @Body() dto: UpdateDocumentsDto) {
-    return this.applicationsService.updateDocuments(leadId, dto);
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'profile_photo', maxCount: 1 },
+      { name: 'passport_copy', maxCount: 1 },
+      { name: 'academic_documents', maxCount: 10 },
+      { name: 'english_test_cert', maxCount: 1 },
+      { name: 'sop', maxCount: 1 },
+      { name: 'cv_resume', maxCount: 1 },
+      { name: 'recommendation_letters', maxCount: 5 },
+      { name: 'financial_documents', maxCount: 1 },
+      { name: 'other_documents', maxCount: 1 },
+    ]),
+  )
+  updateDocuments(
+    @Param('leadId') leadId: string,
+    @UploadedFiles()
+    files: {
+      profile_photo?: Express.Multer.File[];
+      passport_copy?: Express.Multer.File[];
+      academic_documents?: Express.Multer.File[];
+      english_test_cert?: Express.Multer.File[];
+      sop?: Express.Multer.File[];
+      cv_resume?: Express.Multer.File[];
+      recommendation_letters?: Express.Multer.File[];
+      financial_documents?: Express.Multer.File[];
+      other_documents?: Express.Multer.File[];
+    },
+  ) {
+    // We pass the files object directly to the service
+    return this.applicationsService.updateDocuments(leadId, files);
   }
 }
