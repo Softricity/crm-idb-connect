@@ -163,21 +163,63 @@ This module handles lead creation, management, and bulk operations.
 ### Create Partner
 -   **Route:** `POST /partners`
 -   **Authentication:** **JWT Required (Admin Only)**
--   **Request Body:** `{ "role": "agent", "name": "...", "email": "...", "password": "..." }`
+-   **Description:** Creates a new partner user (Admin, Counsellor, or Agent) and links them to a specific Role ID.
+-   **Request Body:**
+    ```json
+    {
+      "role_id": "uuid-of-role", // ⚠️ Changed from "role" string to "role_id" UUID
+      "name": "Agent Smith",
+      "email": "agent@example.com",
+      "mobile": "9876543210",
+      "password": "securePassword123",
+      "address": "123 Agent St",
+      "city": "New York",
+      "state": "NY",
+      "area": "Manhattan",
+      "zone": "East",
+      "agency_name": "Smith Agencies" // Optional
+    }
+    ```
+-   **Returns:** Created partner object (excluding password), including the `role` object.
+-   **Errors:** - `400 Bad Request`: Invalid Role ID.
+    - `409 Conflict`: Email or mobile already exists.
 
 ### Get All Partners
 -   **Route:** `GET /partners`
--   **Query Params:** `?role=agent` or `?role=counsellor`
+-   **Query Params:** `?role=agent` or `?role=counsellor` (Filters by Role Name)
 -   **Authentication:** **JWT Required**
+-   **Returns:** Array of partner objects with nested role details.
+    ```json
+    [
+      {
+        "id": "uuid...",
+        "name": "Agent Smith",
+        "email": "agent@example.com",
+        "role_id": "uuid-of-role",
+        "role": {
+          "id": "uuid-of-role",
+          "name": "agent"
+        },
+        // ... other fields
+      }
+    ]
+    ```
 
 ### Get Single Partner
 -   **Route:** `GET /partners/:id`
 -   **Authentication:** **JWT Required (Admin Only)**
+-   **Returns:** Single partner object with full nested `role` details.
 
 ### Update Partner
 -   **Route:** `PATCH /partners/:id`
 -   **Authentication:** **JWT Required (Admin Only)**
--   **Note:** Sending `password` will re-hash and update it.
+-   **Request Body:** (Partial update)
+    ```json
+    {
+      "name": "Agent Smith Jr.",
+      "role_id": "new-uuid-role" // Can re-assign role
+    }
+    ```
 
 ### Delete Partner
 -   **Route:** `DELETE /partners/:id`
@@ -186,7 +228,7 @@ This module handles lead creation, management, and bulk operations.
 ### Bulk Delete Partners
 -   **Route:** `POST /partners/bulk/delete`
 -   **Authentication:** **JWT Required (Admin Only)**
--   **Body:** `{ "partnerIds": ["uuid"] }`
+-   **Body:** `{ "partnerIds": ["uuid-1", "uuid-2"] }`
 
 ---
 

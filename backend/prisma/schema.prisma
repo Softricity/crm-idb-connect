@@ -265,7 +265,8 @@ model offline_payments {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model partners {
   id                                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  role                              String
+  role_id        String   @db.Uuid
+  role           role     @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   name                              String
   email                             String               @unique
   mobile                            String               @unique
@@ -387,6 +388,7 @@ model role {
   name        String   @unique
   description String?
   role_permissions role_permission[]
+  partners         partners[]
 }
 
 model role_permission {
