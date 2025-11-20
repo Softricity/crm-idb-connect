@@ -40,10 +40,17 @@ export class AuthService {
    * @returns An object containing the access_token and partner info
    */
   async login(partner: any) {
+    // Extract permissions from role_permissions
+    const permissions = partner.role?.role_permissions?.map(
+      (rp: any) => rp.permission.name
+    ) || [];
+
     const payload = {
       email: partner.email,
       sub: partner.id,
+      name: partner.name,
       role: partner.role.name,
+      permissions: permissions,
     };
     return {
       access_token: this.jwtService.sign(payload),

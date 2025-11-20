@@ -14,14 +14,14 @@ export class OfflinePaymentsService {
     if (createDto.receiver) {
       const receiver = await this.prisma.partners.findUnique({
         where: { id: createDto.receiver },
-        select: { id: true, role: true },
+        select: { id: true, role: { select: { name: true } } },
       });
 
       if (!receiver) {
         throw new NotFoundException('Receiver partner not found');
       }
 
-      if (receiver.role === 'agent') {
+      if (receiver.role.name === 'agent') {
         throw new BadRequestException('Receiver cannot be an agent for offline payments');
       }
     }

@@ -23,7 +23,13 @@ export class RolesGuard implements CanActivate {
     // Get the user object from the request (attached by JwtAuthGuard)
     const { user } = context.switchToHttp().getRequest();
 
-    // Check if the user's role is included in the required roles
-    return requiredRoles.some((role) => user.role === role);
+    // Check if the user's role matches any of the required roles
+    // Support both exact matches and partial matches (e.g., "super admin" contains "admin")
+    const userRole = user.role?.toLowerCase() || '';
+    return requiredRoles.some((role) => {
+      const requiredRole = role.toLowerCase();
+      // Check exact match or if user role contains the required role
+      return userRole === requiredRole || userRole.includes(requiredRole);
+    });
   }
 }

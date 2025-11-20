@@ -68,7 +68,7 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
       Array.from(new Set(arr.filter(Boolean))) as string[];
 
     return {
-      types: uniq(leads.map((l) => l.purpose ?? "")),
+      types: uniq(leads.map((l) => l.type ?? "")),
       owners: uniq(leads.map((l) => l.partners_leads_assigned_toTopartners?.name ?? "Unassigned")),
       statuses: uniq(leads.map((l) => (l.status ?? "").toLowerCase())).map(
         (s) => (s.charAt(0).toUpperCase() + s.slice(1)) || ""

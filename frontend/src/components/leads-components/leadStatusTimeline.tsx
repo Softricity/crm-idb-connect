@@ -187,8 +187,8 @@ export default function StatusTimeline({
                         <Button variant="light" onPress={handleDialogClose}>
                             Cancel
                         </Button>
-                        <Button color="primary" onPress={handleConfirmReason} disabled={isConfirmDisabled}>
-                            Confirm
+                        <Button color="primary" onPress={handleConfirmReason} disabled={isConfirmDisabled} className="text-white">
+                          Confirm
                         </Button>
                     </ModalFooter>
                 </ModalContent>

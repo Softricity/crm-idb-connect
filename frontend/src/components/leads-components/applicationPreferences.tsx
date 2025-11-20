@@ -12,6 +12,7 @@ import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePartnerStore } from "@/stores/usePartnerStore";
 import { Label } from "../ui/label";
+import { isRestrictedToOwnLeads, hasAnyPermission, LeadPermission } from "@/lib/utils";
 
 interface ApplicationPreferencesProps {
   formData: Omit<Lead, "id" | "created_at">;
@@ -32,7 +33,8 @@ export default function ApplicationPreferences({
     fetchPartners();
   }, [fetchPartners]);
 
-  const counsellors = partners.filter((p) => p.role === "counsellor");
+  // Get all internal team members (not external agents)
+  const counsellors = partners.filter((p) => p.role?.toLowerCase() !== "agent");
 
   const handleUtmChange = (value: string) => {
     if (value === "Other") {
@@ -49,44 +51,33 @@ export default function ApplicationPreferences({
       <h3 className="text-lg font-semibold">Application Preferences</h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 border rounded-xl p-5 shadow-sm bg-card">
         <div className="space-y-2">
-          <Label className="text-sm font-medium">Applying for</Label>
+          <Label className="text-sm font-medium">Preferred Course</Label>
+          <Input
+            placeholder="Enter preferred course"
+            value={formData.preferred_course || ""}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, preferred_course: e.target.value }))
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Preferred Country</Label>
           <Select
-            placeholder="Select IELTS, PTE, or Study Abroad"
-            selectedKeys={new Set([formData.purpose])}
-            onChange={(e) => {
-              const value = e.target.value;
-              setFormData((prev) => ({
-                ...prev,
-                purpose: value,
-                preferred_country: value === "Study Abroad" ? prev.preferred_country : "",
-              }));
-            }}
+            placeholder="Select Country"
+            selectedKeys={new Set([formData.preferred_country ?? ""])}
+            className="max-h-64"
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, preferred_country: e.target.value }))
+            }
           >
-            <SelectItem key="IELTS">IELTS</SelectItem>
-            <SelectItem key="PTE">PTE</SelectItem>
-            <SelectItem key="Study Abroad">Study Abroad</SelectItem>
+            {countryOptions.map((country : any) => (
+              <SelectItem key={country.label}>{country.label}</SelectItem>
+            ))}
           </Select>
         </div>
 
-        {formData.purpose === "Study Abroad" && (
-          <div className="space-y-2">
-            <Label className="text-sm font-medium">Preferred Country</Label>
-            <Select
-              placeholder="Select Country"
-              selectedKeys={new Set([formData.preferred_country ?? ""])}
-              className="max-h-64"
-              onChange={(e) =>
-                setFormData((prev) => ({ ...prev, preferred_country: e.target.value }))
-              }
-            >
-              {countryOptions.map((country : any) => (
-                <SelectItem key={country.label}>{country.label}</SelectItem>
-              ))}
-            </Select>
-          </div>
-        )}
-
-        {user?.role === "admin" && (
+        {!isRestrictedToOwnLeads(user?.permissions || []) && (
           <div className="space-y-2">
             <Label className="text-sm font-medium">Assign to Counsellor</Label>
             <Select
@@ -108,7 +99,7 @@ export default function ApplicationPreferences({
           </div>
         )}
 
-        {user?.role === "agent" && (
+        {isRestrictedToOwnLeads(user?.permissions || []) && (
           <div className="space-y-2">
             <Label className="text-sm font-medium">Source</Label>
             <Select
@@ -136,7 +127,7 @@ export default function ApplicationPreferences({
           </div>
         )}
 
-        {user?.role === "agent" && isOther && (
+        {isRestrictedToOwnLeads(user?.permissions || []) && isOther && (
           <div className="space-y-2">
             <Label className="text-sm font-medium">Other Source</Label>
             <Input

@@ -136,7 +136,7 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
         case "type":
           return (
             <Chip radius="sm" size="sm" variant="flat" className="capitalize">
-              {lead?.purpose ?? "-"}
+              {lead?.type ?? "-"}
             </Chip>
           );
 
@@ -207,7 +207,7 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
                   <LeadActionsMenu
                     leadId={lead.id || ""}
                     lead={lead}
-                    showAssign={user?.role === "admin"}
+                    showAssign={(user?.permissions || []).includes("Lead Assignment")}
                     userRole={user?.role}
                     onAssignClick={() => {
                       setSelectedLeadForAssignment(lead);
@@ -225,7 +225,8 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
                   className="cursor-pointer text-lg text-gray-500 active:opacity-50 border-none bg-transparent p-0"
                   onClick={(e) => {
                     e.stopPropagation();
-                    const basePath = user?.role === "counsellor" ? "/counsellor/leads" : "/leads";
+                    // All users use /leads path (B2B users are handled by middleware)
+                    const basePath = "/leads";
                     router.push(`${basePath}/${lead.id}`);
                   }}
                 >

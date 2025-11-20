@@ -120,9 +120,10 @@ export class LeadsService {
     // Optional: Check if counsellorId is valid
     if (counsellorId) {
       const counsellor = await this.prisma.partners.findUnique({
-        where: { id: counsellorId, role: 'counsellor' },
+        where: { id: counsellorId },
+        include: { role: true },
       });
-      if (!counsellor) {
+      if (!counsellor || counsellor.role.name !== 'counsellor') {
         throw new NotFoundException(`Counsellor with ID ${counsellorId} not found.`);
       }
     }
@@ -200,10 +201,25 @@ export class LeadsService {
     };
   }
 
-  async findAll() {
-    // Replaces fetchLeads() (FIX: changed .lead to .leads)
+  async findAll(assignedTo?: string, createdBy?: string, type?: string) {
+    // Build where clause dynamically based on query parameters
+    const where: any = {};
+    
+    // Filter by type (default to 'lead' if not specified)
+    where.type = type || 'lead';
+    
+    // Filter by assigned_to if provided
+    if (assignedTo) {
+      where.assigned_to = assignedTo;
+    }
+    
+    // Filter by created_by if provided
+    if (createdBy) {
+      where.created_by = createdBy;
+    }
+    
     return this.prisma.leads.findMany({
-      where: { type: 'lead' },
+      where,
       include: {
         // Use the relation name from your schema
         partners_leads_assigned_toTopartners: {

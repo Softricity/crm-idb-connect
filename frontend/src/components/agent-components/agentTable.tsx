@@ -21,10 +21,19 @@ import {
 import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 import { usePartnerStore, Partner } from "@/stores/usePartnerStore";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { hasAnyPermission, AgentsPermission } from "@/lib/utils";
 import { AgentForm } from "./agentCreateUpdate";
 
 export function AgentTable() {
     const { partners, fetchPartners, deletePartner, loading } = usePartnerStore();
+    const { user } = useAuthStore();
+    const userPermissions = user?.permissions || [];
+    
+    const canCreate = hasAnyPermission(userPermissions, [AgentsPermission.AGENTS_CREATE]);
+    const canUpdate = hasAnyPermission(userPermissions, [AgentsPermission.AGENTS_UPDATE]);
+    const canDelete = hasAnyPermission(userPermissions, [AgentsPermission.AGENTS_DELETE]);
+    
     const { isOpen, onOpen, onOpenChange } = useDisclosure(); // For delete modal
 
     const [isSheetOpen, setIsSheetOpen] = React.useState(false);
@@ -43,7 +52,7 @@ export function AgentTable() {
     const agents = React.useMemo(
         () =>
             partners.filter(
-                (p) => p.role === "agent" && p.name?.toLowerCase().includes(search.toLowerCase())
+                (p) => p.role?.toLowerCase() === "agent" && p.name?.toLowerCase().includes(search.toLowerCase())
             ),
         [partners, search]
     );
@@ -92,9 +101,11 @@ export function AgentTable() {
                     onValueChange={setSearch}
                     className="max-w-sm"
                 />
-                <Button className="shadow-sm bg-[#AC32EF] text-white hover:cursor-pointer" endContent={<PlusCircle className="h-4 w-4" />} onPress={handleAddNew}>
-                    Add New Agent
-                </Button>
+                {canCreate && (
+                    <Button className="shadow-sm bg-[#AC32EF] text-white hover:cursor-pointer" endContent={<PlusCircle className="h-4 w-4" />} onPress={handleAddNew}>
+                        Add New Agent
+                    </Button>
+                )}
             </div>
 
             <Table

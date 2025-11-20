@@ -8,7 +8,9 @@ import {
   Param,
   Delete,
   Query,
-  UseGuards
+  UseGuards,
+  Request,
+  ForbiddenException
 } from '@nestjs/common';
 import { PartnersService } from './partners.service';
 import { CreatePartnerDto } from './dto/create-partner.dto';
@@ -30,6 +32,12 @@ export class PartnersController {
     return this.partnersService.create(createPartnerDto);
   }
 
+  // GET /partners/me - Get current user's profile
+  @Get('me')
+  async getCurrentUser(@Request() req) {
+    return this.partnersService.findOne(req.user.id);
+  }
+
   // GET /partners
   // GET /partners?role=agent
   // GET /partners?role=counsellor
@@ -41,8 +49,11 @@ export class PartnersController {
 
   // GET /partners/:id
   @Get(':id')
-  @Roles(Role.Admin, Role.Counsellor)
-  findOne(@Param('id') id: string) {
+  async findOne(@Param('id') id: string, @Request() req) {
+    // Users can access their own data, or Admin/Counsellor can access any partner's data
+    if (req.user.id !== id && req.user.role !== Role.Admin && req.user.role !== Role.Counsellor) {
+      throw new ForbiddenException('You can only access your own profile');
+    }
     return this.partnersService.findOne(id);
   }
 

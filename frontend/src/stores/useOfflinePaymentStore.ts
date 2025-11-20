@@ -82,9 +82,7 @@ export const useOfflinePaymentStore = create<OfflinePaymentState>((set, get) => 
         .single();
 
       if (receiverError) throw receiverError;
-      if (receiver?.role === "agent") {
-        throw new Error("Receiver cannot be an agent for offline payments.");
-      }
+      // Agent check removed - will use separate agent table in future
     }
 
     const { data, error } = await supabase

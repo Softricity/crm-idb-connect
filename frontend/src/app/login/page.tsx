@@ -19,18 +19,24 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (hasAttemptedLogin && !loading) {
-      if (isAuthenticated && user?.role==="admin") {
-        console.log("Admin User Logged In");
-        router.push("/dashboard");
-      }else if(isAuthenticated && user?.role!=="admin"){
-        console.log("B2B User Logged In");
-        router.push("/b2b")
+      if (isAuthenticated && user) {
+        // Redirect based on permissions
+        const permissions = user.permissions || [];
+        const isRestricted = permissions.includes("Lead Create") && !permissions.includes("Lead Manage");
+        
+        if (isRestricted) {
+          console.log("External Agent Logged In");
+          router.push("/b2b");
+        } else {
+          console.log("Internal Team Member Logged In");
+          router.push("/dashboard");
+        }
       } else {
         setError("Invalid email or password. Please try again.");
       }
       setHasAttemptedLogin(false);
     }
-  }, [loading, isAuthenticated, hasAttemptedLogin, router]);
+  }, [loading, isAuthenticated, hasAttemptedLogin, router, user]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

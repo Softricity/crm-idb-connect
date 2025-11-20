@@ -168,13 +168,12 @@ export default function LeadDetailPage() {
                                 <InfoRow label="Full Name" value={lead.name} />
                                 <InfoRow label="Mobile" value={lead.mobile} />
                                 <InfoRow label="Email" value={lead.email} />
-                                <InfoRow label="City" value={lead.city} />
                                 <InfoRow label="Lead Status" value={lead.status} />
                                 {(lead.status === "cold" || lead.status === "rejected") && (
                                     <InfoRow label="Reason for Status" value={lead.reason} />
                                 )}
                                 <InfoRow label="Lead Type" value={lead.type} />
-                                <InfoRow label="Lead Purpose" value={lead.purpose} />
+                                <InfoRow label="Lead Prefered Course" value={lead.preferred_course} />
                                 <InfoRow label="Preferred Country" value={lead.preferred_country} />
                             </div>
 

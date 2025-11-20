@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { Partner, usePartnerStore } from "@/stores/usePartnerStore"; 
+import { useAuthStore } from "@/stores/useAuthStore";
+import { hasAnyPermission, AgentsPermission } from "@/lib/utils";
 
 interface CellActionsProps {
     agent: Partner; 
@@ -32,6 +34,15 @@ interface CellActionsProps {
 
 function CellActions({ agent, onEdit }: CellActionsProps) {
     const { deletePartner } = usePartnerStore(); 
+    const { user } = useAuthStore();
+    const userPermissions = user?.permissions || [];
+    
+    const canUpdate = hasAnyPermission(userPermissions, [AgentsPermission.AGENTS_UPDATE]);
+    const canDelete = hasAnyPermission(userPermissions, [AgentsPermission.AGENTS_DELETE]);
+
+    if (!canUpdate && !canDelete) {
+        return null; // Don't show menu if no permissions
+    } 
 
     const handleDelete = async () => {
         if (!agent.id) return;
@@ -53,15 +64,19 @@ function CellActions({ agent, onEdit }: CellActionsProps) {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => onEdit(agent)}>
-                        Edit Agent
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <AlertDialogTrigger asChild>
-                        <DropdownMenuItem className="text-red-600">
-                            Delete Agent
+                    {canUpdate && (
+                        <DropdownMenuItem onClick={() => onEdit(agent)}>
+                            Edit Agent
                         </DropdownMenuItem>
-                    </AlertDialogTrigger>
+                    )}
+                    {canUpdate && canDelete && <DropdownMenuSeparator />}
+                    {canDelete && (
+                        <AlertDialogTrigger asChild>
+                            <DropdownMenuItem className="text-red-600">
+                                Delete Agent
+                            </DropdownMenuItem>
+                        </AlertDialogTrigger>
+                    )}
                 </DropdownMenuContent>
             </DropdownMenu>
             <AlertDialogContent>

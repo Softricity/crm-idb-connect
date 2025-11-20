@@ -41,18 +41,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       loadCurrentPartner(user.id).catch(() => {});
     }
 
-    if (user.role !== "agent") {
-      if (user.role === "counsellor") {
-        router.replace("/counsellor");
-      } else if (user.role === "admin") {
-        router.replace("/dashboard");
-      } else {
-        router.replace("/login");
-      }
+    // Check if user should access B2B panel (external agent)
+    const permissions = user.permissions || [];
+    const isRestricted = permissions.includes("Lead Create") && !permissions.includes("Lead Manage");
+    
+    if (!isRestricted) {
+      // Internal team members go to dashboard
+      router.replace("/dashboard");
     }
   }, [loading, user, router, loadCurrentPartner]);
 
-  if (loading || !user || user.role !== "agent") {
+  const permissions = user?.permissions || [];
+  const isRestricted = permissions.includes("Lead Create") && !permissions.includes("Lead Manage");
+  
+  if (loading || !user || !isRestricted) {
     return <FullPageLoader />;
   }
 

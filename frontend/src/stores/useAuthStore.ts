@@ -7,7 +7,8 @@ export interface AuthUser {
   email: string;
   name: string;
   type: "partner"; // all auth based on partner table
-  role: "agent" | "counsellor" | "admin";
+  role: string; // "agent" for external agents, other custom roles for internal team
+  permissions: string[]; // Array of permission names from role_permissions
 }
 
 interface AuthState {
@@ -112,16 +113,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: true });
 
     try {
-      // Backend returns { access_token, partner: { id, name, role, email } }
+      // Backend returns { access_token, payload: { sub, email, name, role, permissions } }
       const response = await api.AuthAPI.login(email, password);
-      const { access_token, partner } = response;
+      const { access_token, payload } = response;
 
       const partnerUser: AuthUser = {
-        id: partner.id,
-        email: partner.email,
-        name: partner.name,
+        id: payload.sub,
+        email: payload.email,
+        name: payload.name || email.split('@')[0], // Fallback to email username if name not provided
         type: "partner",
-        role: partner.role,
+        role: payload.role,
+        permissions: payload.permissions || [], // Store permissions from backend
       };
 
       // Store token and user info in cookies

@@ -58,8 +58,11 @@ export class PartnersService {
         },
       });
 
-      const { password, ...result } = newPartner;
-      return result;
+      const { password, role, ...result } = newPartner;
+      return {
+        ...result,
+        role: role.name, // Return role name as string
+      };
     } catch (error) {
       throw new InternalServerErrorException('Could not create partner.');
     }
@@ -69,29 +72,23 @@ export class PartnersService {
     // Filter by related role name if provided
     const whereClause = roleName ? { role: { name: roleName } } : {};
 
-    return this.prisma.partners.findMany({
+    const partners = await this.prisma.partners.findMany({
       where: whereClause,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        mobile: true,
-        address: true,
-        city: true,
-        state: true,
-        area: true,
-        zone: true,
-        remarks: true,
-        agency_name: true,
-        created_at: true,
-        role_id: true,
-        role: {
-          select: { id: true, name: true }
-        }
+      include: {
+        role: true,
       },
       orderBy: {
         created_at: 'desc',
       },
+    });
+
+    // Map to return role.name as string and exclude password
+    return partners.map((partner) => {
+      const { password, role, ...rest } = partner;
+      return {
+        ...rest,
+        role: role.name,
+      };
     });
   }
 
@@ -99,7 +96,7 @@ export class PartnersService {
     const partner = await this.prisma.partners.findUnique({
       where: { id },
       include: {
-        role: true, // Return full role object
+        role: true, // Fetch role object
       },
     });
 
@@ -107,8 +104,11 @@ export class PartnersService {
       throw new NotFoundException(`Partner with ID ${id} not found.`);
     }
 
-    const { password, ...result } = partner;
-    return result;
+    const { password, role, ...result } = partner;
+    return {
+      ...result,
+      role: role.name, // Return role name as string
+    };
   }
 
   async update(id: string, updatePartnerDto: UpdatePartnerDto) {
@@ -123,8 +123,11 @@ export class PartnersService {
         include: { role: true }
       });
 
-      const { password, ...result } = updatedPartner;
-      return result;
+      const { password, role, ...result } = updatedPartner;
+      return {
+        ...result,
+        role: role.name, // Return role name as string
+      };
     } catch (error) {
       if (error.code === 'P2025') throw new NotFoundException(`Partner with ID ${id} not found.`);
       if (error.code === 'P2002') throw new ConflictException('Email or mobile number already in use.');
@@ -151,7 +154,17 @@ export class PartnersService {
   async findOneByEmail(email: string) {
     return this.prisma.partners.findUnique({
       where: { email },
-      include: { role: true }
+      include: {
+        role: {
+          include: {
+            role_permissions: {
+              include: {
+                permission: true
+              }
+            }
+          }
+        }
+      }
     });
   }
 }

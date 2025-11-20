@@ -71,7 +71,7 @@ export default function FollowupModal({
                 </ModalBody>
                 <ModalFooter>
                     <Button variant="flat" onPress={()=>onOpenChange(false)}>Cancel</Button>
-                    <Button color="primary" onPress={onSubmit} isDisabled={!followupTitle.trim() || !dueDate}>{mode==="create" ? "Create" : "Save Changes"}</Button>
+                    <Button color="primary" onPress={onSubmit} isDisabled={!followupTitle.trim() || !dueDate} className="text-white">{mode==="create" ? "Create" : "Save Changes"}</Button>
                 </ModalFooter>
             </ModalContent>
         </Modal>

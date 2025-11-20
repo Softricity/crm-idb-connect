@@ -4,6 +4,8 @@ import { Tooltip } from "@heroui/react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MenuItem } from "@/config/menus";
+import useUserPermissions from '@/hooks/usePermissions';
+import { hasAnyPermission } from '@/lib/utils';
 
 export default function SidebarMenus({
   menus,
@@ -14,10 +16,19 @@ export default function SidebarMenus({
 }) {
   const currentMenu = usePathname();
 
+  const userPermissions = useUserPermissions();
+
   return (
     <div className="flex flex-col gap-2">
-      {menus.map((menu, index) =>
-        menu.type === "link" ? (
+      {menus.map((menu, index) => {
+        // If menu has requiredPermissions, hide it when user lacks them
+        if (menu.requiredPermissions && menu.requiredPermissions.length > 0) {
+          if (!hasAnyPermission(userPermissions, menu.requiredPermissions)) {
+            return null;
+          }
+        }
+
+        return menu.type === "link" ? (
           <Tooltip
             key={index}
             content={menu.title}
@@ -51,8 +62,8 @@ export default function SidebarMenus({
             </span>
             <hr className="flex-1 border-dotted border-t-4 mx-2 mb-2 mt-3 border-gray-300" />
           </div>
-        )
-      )}
+        );
+      })}
     </div>
   );
 }

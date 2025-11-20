@@ -28,14 +28,14 @@ interface LeadActionsMenuProps {
     lead?: Lead;
     onAssignClick?: () => void;
     showAssign?: boolean;
-    userRole?: "admin" | "counsellor" | "agent";
+    userRole?: string;
 }
 
 export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssign = false, userRole = "admin" }: LeadActionsMenuProps) {
     const router = useRouter();
     
-    // Determine the base path based on user role
-    const basePath = userRole === "counsellor" ? "/counsellor/leads" : "/leads";
+    // All users use /leads path (B2B users are handled by middleware)
+    const basePath = "/leads";
     
     return (
         <Dropdown>

@@ -1,0 +1,81 @@
+"use client";
+
+import { useAuthStore } from "@/stores/useAuthStore";
+import { hasAnyPermission, hasAllPermissions } from "@/lib/utils";
+import { redirect } from "next/navigation";
+import { useEffect } from "react";
+
+interface PermissionGuardProps {
+  children: React.ReactNode;
+  requiredPermissions: string[];
+  requireAll?: boolean; // If true, user must have ALL permissions; if false, user must have ANY permission
+  fallbackUrl?: string;
+  showUnauthorized?: boolean; // If true, show unauthorized message instead of redirecting
+}
+
+export function PermissionGuard({
+  children,
+  requiredPermissions,
+  requireAll = false,
+  fallbackUrl = "/dashboard",
+  showUnauthorized = false,
+}: PermissionGuardProps) {
+  const { user } = useAuthStore();
+  const userPermissions = user?.permissions || [];
+
+  const hasAccess = requireAll
+    ? hasAllPermissions(userPermissions, requiredPermissions)
+    : hasAnyPermission(userPermissions, requiredPermissions);
+
+  useEffect(() => {
+    if (!hasAccess && !showUnauthorized) {
+      redirect(fallbackUrl);
+    }
+  }, [hasAccess, showUnauthorized, fallbackUrl]);
+
+  if (!hasAccess) {
+    if (showUnauthorized) {
+      return (
+        <div className="flex items-center justify-center min-h-[400px]">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+            <p className="text-gray-600">
+              You don't have permission to view this content.
+            </p>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  }
+
+  return <>{children}</>;
+}
+
+// Component-level permission wrapper (for conditional rendering)
+interface ConditionalPermissionProps {
+  children: React.ReactNode;
+  requiredPermissions: string[];
+  requireAll?: boolean;
+  fallback?: React.ReactNode;
+}
+
+export function ConditionalPermission({
+  children,
+  requiredPermissions,
+  requireAll = false,
+  fallback = null,
+}: ConditionalPermissionProps) {
+  const { user } = useAuthStore();
+  const userPermissions = user?.permissions || [];
+
+  const hasAccess = requireAll
+    ? hasAllPermissions(userPermissions, requiredPermissions)
+    : hasAnyPermission(userPermissions, requiredPermissions);
+
+  if (!hasAccess) {
+    return <>{fallback}</>;
+  }
+
+  return <>{children}</>;
+}

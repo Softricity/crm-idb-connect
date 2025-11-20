@@ -9,6 +9,7 @@ import ContactInformation, { ContactFormErrors } from "./contactInformation";
 import ApplicationPreferences from "./applicationPreferences";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePartnerStore } from "@/stores/usePartnerStore";
+import { isRestrictedToOwnLeads } from "@/lib/utils";
 import {
   Drawer,
   DrawerContent,
@@ -20,19 +21,20 @@ import {
 
 const initialState: Omit<Lead, "id" | "created_at"> = {
   name: "",
-  mobile: "",
   email: "",
-  alternate_mobile: "",
-  city: "",
-  purpose: "",
-  preferred_country: "",
-  status: "new",
+  mobile: "",
   type: "lead",
+  preferred_country: "",
+  preferred_course: "",
+  status: "new",
   utm_source: "walkin",
   utm_medium: "",
   utm_campaign: "",
   assigned_to: null,
   created_by: null,
+  reason: null,
+  password: null,
+  is_flagged: false,
 };
 
 interface LeadFormSheetProps {
@@ -54,19 +56,20 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
     if (isEditMode && lead) {
       setFormData({
         name: lead.name || "",
-        mobile: lead.mobile || "",
         email: lead.email || "",
-        alternate_mobile: lead.alternate_mobile || "",
-        city: lead.city || "",
-        purpose: lead.purpose || "",
-        preferred_country: lead.preferred_country || "",
-        status: lead.status || "new",
+        mobile: lead.mobile || "",
         type: lead.type || "lead",
+        preferred_country: lead.preferred_country || "",
+        preferred_course: lead.preferred_course || "",
+        status: lead.status || "new",
         utm_source: lead.utm_source || "walkin",
-        utm_medium: user?.role !== "agent" ? "walkin" : partnerDetails?.name,
-        utm_campaign: user?.role !== "agent" ? "walkin" : partnerDetails?.agency_name,
+        utm_medium: isRestrictedToOwnLeads(user?.permissions || []) ? partnerDetails?.name : "walkin",
+        utm_campaign: isRestrictedToOwnLeads(user?.permissions || []) ? partnerDetails?.agency_name : "walkin",
         assigned_to: lead.assigned_to || null,
         created_by: user?.id,
+        reason: lead.reason || null,
+        password: lead.password || null,
+        is_flagged: lead.is_flagged || false,
       });
     } else {
       setFormData(initialState);
@@ -96,8 +99,8 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
         const leadData = {
           ...formData,
           created_by: user?.id,
-          utm_medium: user?.role !== "agent" ? "walkin" : partnerDetails?.name,
-          utm_campaign: user?.role !== "agent" ? "walkin" : partnerDetails?.agency_name,
+          utm_medium: isRestrictedToOwnLeads(user?.permissions || []) ? partnerDetails?.name : "walkin",
+          utm_campaign: isRestrictedToOwnLeads(user?.permissions || []) ? partnerDetails?.agency_name : "walkin",
         };
         await addLead(leadData);
         toast.success("Lead created successfully!");

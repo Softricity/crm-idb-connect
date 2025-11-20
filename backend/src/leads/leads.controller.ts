@@ -6,7 +6,8 @@ import {
   Patch,
   Param,
   Delete,
-  UseGuards, // <-- Make sure this is imported
+  UseGuards,
+  Query, // <-- For query parameters
 } from '@nestjs/common';
 import { LeadsService } from './leads.service';
 // ✅ 1. Import new DTOs
@@ -37,10 +38,14 @@ export class LeadsController {
   }
 
   // Get All Leads
-  // GET /leads
+  // GET /leads?assigned_to=userId&created_by=userId&type=lead
   @Get()
-  findAll() {
-    return this.leadsService.findAll();
+  findAll(
+    @Query('assigned_to') assignedTo?: string,
+    @Query('created_by') createdBy?: string,
+    @Query('type') type?: string,
+  ) {
+    return this.leadsService.findAll(assignedTo, createdBy, type);
   }  
 
   // Get Single Lead

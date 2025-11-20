@@ -21,7 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       initAuth();
     }, [initAuth]);
 
-    // enforce role-based access for main/admin layout
+    // enforce permission-based access for main/admin layout
     useEffect(() => {
       if (loading) return;
 
@@ -34,21 +34,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         loadCurrentPartner(user.id).catch(() => {});
       }
 
-      // only admin should access main layout
-      if (user.role !== "admin") {
-        if (user.role === "agent") {
-          router.replace("/b2b");
-        } else if (user.role === "counsellor") {
-          router.replace("/counsellor");
-        } else {
-          router.replace("/login");
-        }
+      // Check if user has restricted access (external agent)
+      const permissions = user.permissions || [];
+      const isRestricted = permissions.includes("Lead Create") && !permissions.includes("Lead Manage");
+      
+      if (isRestricted) {
+        router.replace("/b2b");
+        return;
       }
+      // All other users (internal team) can access main panel
     }, [loading, user, router, loadCurrentPartner]);
   return (
     <div className="min-h-screen">
       <Toaster richColors position="top-right" />
-      {loading || !user || user.role !== "admin" ? (
+      {loading || !user || ((user.permissions || []).includes("Lead Create") && !(user.permissions || []).includes("Lead Manage")) ? (
         <div className="flex h-screen w-screen items-center justify-center">
           <Loader2 className="animate-spin h-8 w-8 text-slate-600" />
         </div>

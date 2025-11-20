@@ -18,10 +18,12 @@ import { CoursesModule } from './courses/courses.module';
 import { UniversitiesModule } from './universities/universities.module';
 import { TimelineModule } from './timeline/timeline.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
     PrismaModule,
+    StorageModule,
     MailModule,
     LeadsModule,
     PartnersModule,

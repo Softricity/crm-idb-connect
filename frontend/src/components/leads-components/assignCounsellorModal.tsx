@@ -40,7 +40,8 @@ export function AssignCounsellorModal({ isOpen, onOpenChange, lead }: AssignCoun
     }
   }, [lead]);
 
-  const counsellors = partners.filter((p) => p.role === "counsellor");
+  // Get all internal team members (not external agents)
+  const counsellors = partners.filter((p) => p.role?.toLowerCase() !== "agent");
 
   const handleAssign = async () => {
     if (!lead?.id) return;

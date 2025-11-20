@@ -11,6 +11,7 @@ import { useRouter } from "next/navigation";
 import { Lead } from "@/stores/useLeadStore";
 import LeadActionsMenu from "./tableActionCell";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { hasAnyPermission, LeadPermission } from "@/lib/utils";
 
 interface LeadsTableRowProps {
     lead: Lead;
@@ -49,7 +50,7 @@ export default function LeadsTableRow({ lead, isSelected, onSelect }: LeadsTable
             </TableCell>
             <TableCell>
                 <Badge variant="outline" className="capitalize">
-                    {lead?.purpose ?? "-"}
+                    {lead?.type ?? "-"}
                 </Badge>
             </TableCell>
             <TableCell>
@@ -64,7 +65,7 @@ export default function LeadsTableRow({ lead, isSelected, onSelect }: LeadsTable
                 <Badge className="capitalize" variant={"outline"}>{lead.status}</Badge>
             </TableCell>
             <TableCell>
-                {user?.role === "admin" && (
+                {hasAnyPermission(user?.permissions || [], [LeadPermission.LEAD_MANAGE, LeadPermission.LEAD_UPDATE]) && (
                     <div className="flex justify-end gap-1">
                         <TooltipProvider>
                             <Tooltip>

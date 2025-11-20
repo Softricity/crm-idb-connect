@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Lead } from "@/stores/useLeadStore";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { hasAnyPermission, hasPermission, LeadPermission } from "@/lib/utils";
 import ColumnVisibilitySelector, { ColumnConfig } from "./columnVisibilitySelector";
 import { useState } from "react";
 import BulkChangeStatusModal from "./bulkChangeStatusModal";
@@ -45,6 +46,10 @@ export default function LeadsTableToolbar({
 }: LeadsTableToolbarProps) {
 
   const { user } = useAuthStore();
+  const userPermissions = user?.permissions || [];
+  const canManageLeads = hasAnyPermission(userPermissions, [LeadPermission.LEAD_MANAGE, LeadPermission.LEAD_ASSIGNMENT]);
+  const canDownloadLeads = hasAnyPermission(userPermissions, [LeadPermission.LEAD_DOWNLOAD]);
+  
   const [isBulkStatusOpen, setIsBulkStatusOpen] = useState(false);
   const [isBulkCommunicationModalOpen, setIsBulkCommunicationModalOpen] = useState(false);
 
@@ -63,9 +68,9 @@ export default function LeadsTableToolbar({
     }
 
     const headers: (keyof Lead)[] = [
-      "id", "name", "mobile", "email", "alternate_mobile", "type", "city",
-      "purpose", "preferred_country", "status", "utm_source", "utm_medium",
-      "utm_campaign", "assigned_to", "created_at",
+      "id", "name", "mobile", "email", "type", "preferred_course",
+      "preferred_country", "status", "utm_source", "utm_medium",
+      "utm_campaign", "assigned_to", "created_at", "reason", "is_flagged",
     ];
 
     const csvContent = [
@@ -91,7 +96,7 @@ export default function LeadsTableToolbar({
 
   return (
     <div className="mt-5 flex flex-col sm:flex-row justify-between items-center gap-3 ">
-      {user?.role === "admin" && (<div className="flex items-center gap-2">
+      {canManageLeads && (<div className="flex items-center gap-2">
         <Button
           variant={showOnlyFlagged ? "default" : "secondary"}
           size="sm"
@@ -101,7 +106,7 @@ export default function LeadsTableToolbar({
           <Flag className={`h-4 w-4 mr-2 ${showOnlyFlagged ? 'fill-white' : 'fill-red-500 text-red-500'}`} />
           {showOnlyFlagged ? 'Show All' : `Flagged (${flaggedCount})`}
         </Button>
-        {selectedLeadIds.length > 0 && onBulkAssign && (
+        {selectedLeadIds.length > 0 && onBulkAssign && hasPermission(user?.permissions ?? [], LeadPermission.LEAD_ASSIGNMENT) && (
           <Button
             variant="secondary"
             size="sm"
@@ -149,10 +154,12 @@ export default function LeadsTableToolbar({
           onColumnsChange={onColumnsChange}
           storageKey="leads_column_visibility"
         />
-        <Button variant="outline" size="sm" onClick={handleDownloadCSV}>
-          <Download className="h-4 w-4 mr-2" />
-          {selectedLeadIds.length > 0 ? `Download (${selectedLeadIds.length}) Selected` : 'Download CSV'}
-        </Button>
+        {canDownloadLeads && (
+          <Button variant="outline" size="sm" onClick={handleDownloadCSV}>
+            <Download className="h-4 w-4 mr-2" />
+            {selectedLeadIds.length > 0 ? `Download (${selectedLeadIds.length}) Selected` : 'Download CSV'}
+          </Button>
+        )}
       </div>
 
       <BulkChangeStatusModal

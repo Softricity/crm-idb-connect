@@ -72,7 +72,7 @@ export default function Referral() {
 
         {/* Buttons */}
         <div className="flex gap-2">
-          <Button color="primary" onPress={handleGenerate}>
+          <Button color="primary" onPress={handleGenerate} className="text-white">
             Generate Link
           </Button>
           {generatedUrl && (

@@ -40,7 +40,8 @@ export function BulkAssignCounsellorModal({
     fetchPartners();
   }, [fetchPartners]);
 
-  const counsellors = partners.filter((p) => p.role === "counsellor");
+  // Get all internal team members (not external agents)
+  const counsellors = partners.filter((p) => p.role?.toLowerCase() !== "agent");
   const selectedLeads = allLeads.filter(lead => selectedLeadIds.includes(lead.id || ""));
 
   const handleBulkAssign = async () => {

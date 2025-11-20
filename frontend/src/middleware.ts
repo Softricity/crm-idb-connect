@@ -45,42 +45,42 @@ export async function middleware(request: NextRequest) {
   }
 
   if (isAuthenticated && (currentPath === "/login" || currentPath === "/")) {
-    // Redirect based on role
-    if (partnerUser?.role === "agent") {
+    // Redirect based on permissions: external agents go to B2B, internal team goes to dashboard
+    const userPermissions = partnerUser?.permissions || [];
+    
+    // Check if user is restricted to own leads (external agent behavior)
+    const hasLeadCreate = userPermissions.includes("Lead Create");
+    const hasLeadManage = userPermissions.includes("Lead Manage");
+    const isRestrictedToOwnLeads = hasLeadCreate && !hasLeadManage;
+    
+    if (isRestrictedToOwnLeads) {
       return NextResponse.redirect(new URL("/b2b", request.url));
-    } else if (partnerUser?.role === "counsellor") {
-      return NextResponse.redirect(new URL("/counsellor", request.url));
     }
+    // All internal team members go to dashboard
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
   if (isAuthenticated && partnerUser) {
-    const userRole = partnerUser.role;
+    const userPermissions = partnerUser?.permissions || [];
+    
+    // Check if user is restricted to own leads (external agent behavior)
+    const hasLeadCreate = userPermissions.includes("Lead Create");
+    const hasLeadManage = userPermissions.includes("Lead Manage");
+    const isRestrictedToOwnLeads = hasLeadCreate && !hasLeadManage;
 
-    // Admin-only routes
-    if (currentPath.startsWith("/admin") && userRole !== "admin") {
-      return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
-
-    // Agent role - redirect to B2B panel
-    if (userRole === "agent") {
-      if (!(currentPath === "/b2b" || currentPath.startsWith("/b2b/"))) {
+    // Two-panel system: external agents vs internal team
+    if (isRestrictedToOwnLeads) {
+      // External agents can only access B2B panel
+      if (!currentPath.startsWith("/b2b")) {
         return NextResponse.redirect(new URL("/b2b", request.url));
       }
-    }
-
-    // Counsellor role - redirect to counsellor panel
-    if (userRole === "counsellor") {
-      if (!(currentPath === "/counsellor" || currentPath.startsWith("/counsellor/"))) {
-        return NextResponse.redirect(new URL("/counsellor", request.url));
+    } else {
+      // Internal team members cannot access B2B panel
+      if (currentPath.startsWith("/b2b")) {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
       }
-    }
-
-    // Prevent agents and counsellors from accessing admin routes
-    if (userRole !== "admin") {
-      if (currentPath.startsWith("/agents") || 
-          currentPath.startsWith("/counsellors") || 
-          currentPath.startsWith("/commissions")) {
+      // Redirect old counsellor routes to main panel
+      if (currentPath.startsWith("/counsellor")) {
         return NextResponse.redirect(new URL("/dashboard", request.url));
       }
     }

@@ -1,37 +1,36 @@
 import { create } from "zustand";
 import api from "@/lib/api";
+import { canViewAllLeads } from "@/lib/utils";
 
 export interface Lead {
   id?: string;
   name: string;
-  mobile: string;
   email: string;
-  alternate_mobile?: string | null;
+  mobile: string;
   type: string;
-  city: string;
-  purpose: string;
-  preferred_country?: string | null;
+  preferred_country: string;
+  preferred_course?: string | null;
   status: string;
   utm_source?: string | null;
   utm_medium?: string | null;
   utm_campaign?: string | null;
   assigned_to?: string | null;
+  created_at?: string;
+  created_by?: string | null;
+  reason?: string | null;
+  password?: string | null;
+  is_flagged?: boolean;
   partners_leads_assigned_toTopartners?: {
     name: string;
     email?: string;
   } | null;
-  created_at?: string;
-  created_by?: string | null;
-  reason?: string | null;
-  is_flagged?: boolean;
 }
 
 interface LeadState {
   leads: Lead[];
-  applications: Lead[];
   loading: boolean;
   fetchLeads: () => Promise<void>;
-  fetchApplications: () => Promise<void>;
+  fetchLeadsBasedOnPermission: (userId: string, permissions: string[]) => Promise<void>;
   fetchLeadById: (id: string) => Promise<Lead | null>;
   getAgentLeads: (agentId: string) => Promise<void>;
   getCounsellorLeads: (counsellorId: string) => Promise<void>;
@@ -42,7 +41,6 @@ interface LeadState {
 
 export const useLeadStore = create<LeadState>((set, get) => ({
   leads: [],
-  applications: [],
   loading: false,
 
   fetchLeads: async () => {
@@ -56,11 +54,20 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     set({ loading: false });
   },
 
-  fetchApplications: async () => {
+  fetchLeadsBasedOnPermission: async (userId: string, permissions: string[]) => {
     set({ loading: true });
     try {
-      const data = await api.LeadsAPI.fetchApplications();
-      set({ applications: data as Lead[] });
+      // If user has LEAD_VIEW permission, fetch all leads
+      if (canViewAllLeads(permissions)) {
+        console.log("User has permission to view all leads.", userId);
+        const data = await api.LeadsAPI.fetchLeads();
+        set({ leads: data as Lead[] });
+      } else {
+        // Otherwise, fetch only leads assigned to this user
+        console.log("User is restricted to their own leads.");
+        const data = await api.LeadsAPI.getCounsellorLeads(userId);
+        set({ leads: data as Lead[] });
+      }
     } catch (error: any) {
       console.error("Error fetching leads:", error.message || error);
     }

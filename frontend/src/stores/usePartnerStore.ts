@@ -4,7 +4,7 @@ import api from "@/lib/api";
 
 export interface Partner {
   id?: string;
-  role: "agent" | "counsellor";
+  role: string; // Role name: "agent" for external agents, other roles for internal team members
   name: string;
   email: string;
   mobile: string;
@@ -17,10 +17,6 @@ export interface Partner {
   remarks?: string | null;
   // Agent-specific fields
   agency_name?: string | null;
-  // association_type?: string | null;
-  // association_date?: string | null;
-  // agreement_start_date?: string | null;
-  // agreement_end_date?: string | null;
 
   created_at?: string;
 }

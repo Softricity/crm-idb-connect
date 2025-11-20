@@ -129,7 +129,7 @@ export default function GroupEditDialog({
         </ModalBody>
         <ModalFooter>
           <Button variant="light" onPress={onClose}>Cancel</Button>
-          <Button color="primary" onPress={handleSave}>Save All</Button>
+          <Button color="primary" onPress={handleSave} className="text-white">Save All</Button>
         </ModalFooter>
       </ModalContent>
     </Modal>

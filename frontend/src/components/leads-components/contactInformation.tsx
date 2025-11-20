@@ -10,10 +10,8 @@ import { Lead } from "@/stores/useLeadStore";
 
 export interface ContactFormErrors {
   name?: string;
-  mobile?: string;
-  alternate_mobile?: string;
   email?: string;
-  city?: string;
+  mobile?: string;
 }
 
 interface ContactInformationProps {
@@ -73,29 +71,6 @@ export default function ContactInformation({
           <ErrorText message={errors.mobile} />
         </div>
 
-        {/* Alternate Mobile */}
-        <div className="flex flex-col gap-1">
-          <Label>Alternate Mobile (Optional)</Label>
-          <PhoneInput
-            international
-            defaultCountry="IN"
-            value={formData.alternate_mobile as Value}
-            onChange={(value) => {
-              const newValue = value || "";
-              setFormData((prev) => ({ ...prev, alternate_mobile: newValue }));
-              setErrors((prev) => ({
-                ...prev,
-                alternate_mobile:
-                  newValue && !validateMobile(newValue)
-                    ? "Invalid alternate mobile number"
-                    : "",
-              }));
-            }}
-            className="border rounded-md p-2"
-          />
-          <ErrorText message={errors.alternate_mobile} />
-        </div>
-
         {/* Email */}
         <div className="flex flex-col gap-1">
           <Label>Email Address*</Label>
@@ -114,20 +89,6 @@ export default function ContactInformation({
             }}
           />
           <ErrorText message={errors.email} />
-        </div>
-
-        {/* City */}
-        <div className="sm:col-span-2 flex flex-col gap-1">
-          <Label>City*</Label>
-          <Input
-            id="city"
-            name="city"
-            value={formData.city || ""}
-            onChange={(e) =>
-              setFormData((prev) => ({ ...prev, city: e.target.value }))
-            }
-          />
-          <ErrorText message={errors.city} />
         </div>
       </div>
     </div>

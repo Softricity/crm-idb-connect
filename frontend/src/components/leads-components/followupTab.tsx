@@ -91,7 +91,7 @@ export default function FollowUpComponent({ leadId, leadName, leadPhone }: Follo
             <div className="w-1/3 border-r border-gray-200 p-4 overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
                     <h3 className="text-lg font-semibold">Follow Ups</h3>
-                    <Button startContent={<PlusIcon className="h-5 w-5"/>} onClick={openCreateModal} color="primary">Create</Button>
+                    <Button startContent={<PlusIcon className="h-5 w-5"/>} onClick={openCreateModal} color="primary" className="text-white">Create</Button>
                 </div>
                 <FollowupList followups={followups} loading={loading} selectedFollowup={selectedFollowup} setSelectedFollowup={setSelectedFollowup}/>
             </div>

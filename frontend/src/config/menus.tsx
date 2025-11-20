@@ -17,6 +17,17 @@ import {
   ShieldUser,
   Link,
 } from "lucide-react";
+import {
+  CoursesPermission,
+  AgentsPermission,
+  ApplicationPermission,
+  AgencyPermission,
+  CommissionPermission,
+  UniversityPermission,
+  LeadPermission,
+  AdministrativePermission,
+  EmployeePermission,
+} from "@/lib/utils";
 
 export interface MenuItem {
   title: string;
@@ -24,28 +35,30 @@ export interface MenuItem {
   link?: string;
   icon?: React.ReactNode;
   badge?: string;
+  // Optional list of required permission strings (use enums from utils)
+  requiredPermissions?: string[];
 }
 
 export const menus: MenuItem[] = [
   // Main
   { title: "Main", type: "title" },
   { title: "Dashboard", icon: <LayoutDashboard size={20} />, type: "link", link: "/dashboard" },
-  { title: "Reports", icon: <FileText size={20} />, type: "link", link: "/reports" },
-  { title: "Activity Logs", icon: <Activity size={20} />, type: "link", link: "/activity-logs" },
+  { title: "Reports", icon: <FileText size={20} />, type: "link", link: "/reports", requiredPermissions: [AdministrativePermission.REPORTS_VIEW] },
+  { title: "Activity Logs", icon: <Activity size={20} />, type: "link", link: "/activity-logs", requiredPermissions: [AdministrativePermission.ACTIVITY_LOGS] },
 
   // Study Abroad
   { title: "Study Abroad", type: "title" },
-  { title: "Course Wiz", icon: <GraduationCap size={20} />, type: "link", link: "/courses" },
+  { title: "Course Wiz", icon: <GraduationCap size={20} />, type: "link", link: "/courses", requiredPermissions: [CoursesPermission.COURSES_VIEW] },
   { title: "Announcements", icon: <Bell size={20} />, type: "link", link: "/announcements" },
-  { title: "Leads", icon: <Users size={20} />, type: "link", link: "/leads" },
-  { title: "Applications", icon: <School size={20} />, type: "link", link: "/applications" },
+  { title: "Leads", icon: <Users size={20} />, type: "link", link: "/leads", requiredPermissions: [LeadPermission.LEAD_MANAGE, LeadPermission.LEAD_UPDATE] },
+  { title: "Applications", icon: <School size={20} />, type: "link", link: "/applications", requiredPermissions: [ApplicationPermission.APPLICATION_MANAGE] },
   
   // Business
   { title: "Business", type: "title" },
-  { title: "Agents", icon: <ShieldUser size={20} />, type: "link", link: "/agents" },
-  { title: "Counsellors", icon: <Users size={20} />, type: "link", link: "/counsellors" },
-  { title: "Commissions", icon: <DollarSign size={20} />, type: "link", link: "/commissions" },
-  { title: "Referrals", icon: <Link size={20} />, type: "link", link: "/referrals" },
+  { title: "Agents", icon: <Users size={20} />, type: "link", link: "/agents", requiredPermissions: [AgentsPermission.AGENTS_CREATE, AgentsPermission.AGENTS_UPDATE] },
+  { title: "Internal Team", icon: <Users size={20} />, type: "link", link: "/team", requiredPermissions: [EmployeePermission.EMPLOYEE_MANAGE, EmployeePermission.EMPLOYEE_CREATE] },
+  { title: "Commissions", icon: <DollarSign size={20} />, type: "link", link: "/commissions", requiredPermissions: [CommissionPermission.COMMISSION_MANAGE] },
+  { title: "Referrals", icon: <Link size={20} />, type: "link", link: "/referrals", requiredPermissions: [AgencyPermission.AGENCY_MANAGE] },
 
   // Task Management
   { title: "Task Management", type: "title" },

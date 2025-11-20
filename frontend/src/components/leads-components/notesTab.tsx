@@ -83,8 +83,8 @@ const NoteCard = ({ note }: { note: Note }) => {
             </p>
             {isEditing && (
               <div className="flex gap-2 mt-3">
-                <Button size="sm" color="primary" onPress={handleUpdate}>
-                  Save Changes
+                                <Button size="sm" color="primary" onPress={handleUpdate} className="text-white">
+                  Update
                 </Button>
                 <Button
                   size="sm"
