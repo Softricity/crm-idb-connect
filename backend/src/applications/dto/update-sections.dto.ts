@@ -1,95 +1,130 @@
 // src/applications/dto/update-sections.dto.ts
-import { IsString, IsBoolean, IsOptional, IsDateString, IsEmail } from 'class-validator';
+import { IsString, IsOptional, IsDateString, IsBoolean, IsNumber, ValidateNested, IsArray, IsDecimal } from 'class-validator';
+import { Type } from 'class-transformer';
 
-export class UpdatePersonalDto {
-  @IsOptional() @IsString() program_discipline?: string;
-  @IsOptional() @IsString() program_course?: string;
-  @IsOptional() @IsString() title?: string;
-  @IsOptional() @IsDateString() dob?: string; // ISO Date
-  @IsOptional() @IsString() gender?: string; // Matches gender_enum
-  @IsOptional() @IsString() marital_status?: string; // Matches marital_status_enum
-  @IsOptional() @IsString() category?: string; // Matches category_enum
-  @IsOptional() @IsString() religion?: string;
-  @IsOptional() @IsString() nationality?: string;
-  @IsOptional() @IsString() blood_group?: string;
-}
-
-export class UpdateIdentificationsDto {
-  @IsOptional() @IsString() aadhaar_number?: string;
-  @IsOptional() @IsString() pan_card_number?: string;
-  @IsOptional() @IsString() passport_number?: string;
-  @IsOptional() @IsString() passport_issuing_country?: string;
-  @IsOptional() @IsDateString() passport_valid_upto?: string;
-}
-
-export class UpdatePreferencesDto {
-  @IsOptional() @IsBoolean() hostel_facility_required?: boolean;
-  @IsOptional() @IsString() hostel_type?: string;
-  @IsOptional() @IsBoolean() travel_accommodation_required?: boolean;
-  @IsOptional() @IsBoolean() has_given_exam?: boolean;
-  @IsOptional() @IsBoolean() has_work_experience?: boolean;
-}
-
-export class UpdateFamilyDto {
-  @IsOptional() @IsString() father_title?: string;
+// --- 1. Personal Details DTO ---
+export class UpdatePersonalDetailsDto {
+  @IsOptional() @IsString() given_name?: string;
+  @IsOptional() @IsString() surname?: string;
+  @IsOptional() @IsString() gender?: string;
+  @IsOptional() @IsDateString() dob?: string;
+  @IsOptional() @IsString() marital_status?: string;
+  @IsOptional() @IsString() phone?: string;
+  @IsOptional() @IsString() alternate_phone?: string;
+  @IsOptional() @IsString() email?: string;
+  @IsOptional() @IsString() address?: string;
+  @IsOptional() @IsString() city?: string;
+  @IsOptional() @IsString() state?: string;
+  @IsOptional() @IsString() country?: string;
+  @IsOptional() @IsString() citizenship?: string;
+  @IsOptional() @IsString() national_id?: string;
   @IsOptional() @IsString() father_name?: string;
-  @IsOptional() @IsEmail()  father_email?: string;
-  @IsOptional() @IsString() father_mobile?: string;
-  @IsOptional() @IsString() father_occupation?: string;
-  
-  @IsOptional() @IsString() mother_title?: string;
   @IsOptional() @IsString() mother_name?: string;
-  @IsOptional() @IsEmail()  mother_email?: string;
-  @IsOptional() @IsString() mother_mobile?: string;
-  @IsOptional() @IsString() mother_occupation?: string;
-
-  @IsOptional() @IsString() guardian_title?: string;
-  @IsOptional() @IsString() guardian_name?: string;
-  @IsOptional() @IsEmail()  guardian_email?: string;
-  @IsOptional() @IsString() guardian_mobile?: string;
-  @IsOptional() @IsString() guardian_occupation?: string;
-  @IsOptional() @IsString() guardian_relationship?: string;
-  @IsOptional() @IsString() family_annual_income?: string;
+  @IsOptional() @IsString() emergency_contact_name?: string;
+  @IsOptional() @IsString() emergency_contact_number?: string;
+  @IsOptional() @IsString() current_status?: string;
+  @IsOptional() @IsNumber() gap_years?: number;
+  @IsOptional() @IsString() referral_source?: string;
 }
 
-export class UpdateAddressDto {
-  @IsOptional() @IsBoolean() is_permanent_same_as_correspondence?: boolean;
-  
-  // Correspondence
-  @IsOptional() @IsString() correspondence_address_line_1?: string;
-  @IsOptional() @IsString() correspondence_address_line_2?: string;
-  @IsOptional() @IsString() correspondence_city?: string;
-  @IsOptional() @IsString() correspondence_district?: string;
-  @IsOptional() @IsString() correspondence_state?: string;
-  @IsOptional() @IsString() correspondence_country?: string;
-  @IsOptional() @IsString() correspondence_pincode?: string;
-
-  // Permanent
-  @IsOptional() @IsString() permanent_address_line_1?: string;
-  @IsOptional() @IsString() permanent_address_line_2?: string;
-  @IsOptional() @IsString() permanent_city?: string;
-  @IsOptional() @IsString() permanent_district?: string;
-  @IsOptional() @IsString() permanent_state?: string;
-  @IsOptional() @IsString() permanent_country?: string;
-  @IsOptional() @IsString() permanent_pincode?: string;
+// --- 2. Education Details DTO (Array) ---
+export class EducationRecordDto {
+  @IsOptional() @IsString() id?: string; // If ID exists, update; else create
+  @IsOptional() @IsString() level?: string;
+  @IsOptional() @IsString() institution_name?: string;
+  @IsOptional() @IsString() board_university?: string;
+  @IsOptional() @IsString() country_of_study?: string;
+  @IsOptional() @IsString() major_stream?: string;
+  @IsOptional() @IsString() percentage_gpa?: string;
+  @IsOptional() @IsString() year_of_passing?: string;
+  @IsOptional() @IsString() medium_of_instruction?: string;
+  @IsOptional() @IsNumber() backlogs?: number;
+  @IsOptional() @IsString() certificate_url?: string;
 }
 
+export class UpdateEducationDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => EducationRecordDto)
+  records: EducationRecordDto[];
+}
+
+// --- 3. Preference Details DTO ---
+export class UpdatePreferencesDto {
+  @IsOptional() @IsString() preferred_country?: string;
+  @IsOptional() @IsString() preferred_course_type?: string;
+  @IsOptional() @IsString() preferred_course_name?: string;
+  @IsOptional() @IsString() preferred_intake?: string;
+  @IsOptional() @IsString() preferred_university?: string;
+  @IsOptional() @IsString() backup_country?: string;
+  @IsOptional() @IsString() study_mode?: string;
+  @IsOptional() @IsString() budget_range?: string;
+  @IsOptional() @IsBoolean() scholarship_interest?: boolean;
+  @IsOptional() @IsString() travel_history?: string;
+}
+
+// --- 4. Language / Aptitude Tests DTO (Array) ---
+export class TestRecordDto {
+  @IsOptional() @IsString() id?: string;
+  @IsOptional() @IsString() test_type?: string;
+  @IsOptional() @IsDateString() test_date?: string;
+  @IsOptional() @IsNumber() overall_score?: number;
+  @IsOptional() @IsNumber() listening?: number;
+  @IsOptional() @IsNumber() reading?: number;
+  @IsOptional() @IsNumber() writing?: number;
+  @IsOptional() @IsNumber() speaking?: number;
+  @IsOptional() @IsString() trf_number?: string;
+}
+
+export class UpdateTestsDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TestRecordDto)
+  records: TestRecordDto[];
+}
+
+// --- 5. Work Experience DTO (Array) ---
+export class WorkExperienceRecordDto {
+  @IsOptional() @IsString() id?: string;
+  @IsOptional() @IsString() company_name?: string;
+  @IsOptional() @IsString() designation?: string;
+  @IsOptional() @IsDateString() start_date?: string;
+  @IsOptional() @IsDateString() end_date?: string;
+  @IsOptional() @IsString() job_duties?: string;
+  @IsOptional() @IsString() certificate_url?: string;
+}
+
+export class UpdateWorkExperienceDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => WorkExperienceRecordDto)
+  records: WorkExperienceRecordDto[];
+}
+
+// --- 6. Visa / Passport Details DTO ---
+export class UpdateVisaDetailsDto {
+  @IsOptional() @IsString() passport_number?: string;
+  @IsOptional() @IsDateString() passport_issue_date?: string;
+  @IsOptional() @IsDateString() passport_expiry_date?: string;
+  @IsOptional() @IsString() passport_place_of_issue?: string;
+  @IsOptional() @IsString() passport_nationality?: string;
+  @IsOptional() @IsString() country_applied_for?: string;
+  @IsOptional() @IsString() previous_visa_type?: string;
+  @IsOptional() @IsString() visa_status?: string;
+  @IsOptional() @IsString() visa_refusal_reason?: string;
+  @IsOptional() @IsString() travelled_countries?: string;
+  @IsOptional() @IsBoolean() is_visa_rejected_past?: boolean;
+}
+
+// --- 7. Documents DTO ---
 export class UpdateDocumentsDto {
-  // For now, we accept URLs. File upload logic can be added separately if needed.
-  @IsOptional() @IsString() passport_photo_url?: string;
-  @IsOptional() @IsString() class_x_marksheet_url?: string;
-  @IsOptional() @IsString() class_xii_marksheet_url?: string;
-  @IsOptional() @IsString() graduation_marksheet_url?: string;
-  @IsOptional() @IsString() aadhaar_card_url?: string;
-  @IsOptional() @IsString() entrance_exam_scorecard_url?: string;
-  @IsOptional() @IsString() work_experience_certificates_url?: string;
-  @IsOptional() @IsString() passport_url?: string;
-}
-
-export class UpdateDeclarationsDto {
-  @IsOptional() @IsBoolean() declaration_agreed?: boolean;
-  @IsOptional() @IsString() declaration_applicant_name?: string;
-  @IsOptional() @IsString() declaration_parent_name?: string;
-  @IsOptional() @IsDateString() declaration_date?: string;
-  @IsOptional() @IsString() declaration_place?: string;
+  @IsOptional() @IsString() profile_photo_url?: string;
+  @IsOptional() @IsString() passport_copy_url?: string;
+  @IsOptional() @IsArray() @IsString({ each: true }) academic_documents_urls?: string[];
+  @IsOptional() @IsString() english_test_cert_url?: string;
+  @IsOptional() @IsString() sop_url?: string;
+  @IsOptional() @IsString() cv_resume_url?: string;
+  @IsOptional() @IsArray() @IsString({ each: true }) recommendation_letters_url?: string[];
+  @IsOptional() @IsString() financial_documents_url?: string;
+  @IsOptional() @IsString() other_documents_url?: string;
 }

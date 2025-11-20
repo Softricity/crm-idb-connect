@@ -1,33 +1,35 @@
 // src/applications/applications.controller.ts
-import { Controller, Get, Patch, Body, Param } from '@nestjs/common';
+import { Controller, Get, Patch, Body, Param, UseGuards } from '@nestjs/common';
 import { ApplicationsService } from './applications.service';
 import {
-  UpdatePersonalDto,
-  UpdateIdentificationsDto,
+  UpdatePersonalDetailsDto,
+  UpdateEducationDto,
   UpdatePreferencesDto,
-  UpdateFamilyDto,
-  UpdateAddressDto,
+  UpdateTestsDto,
+  UpdateWorkExperienceDto,
+  UpdateVisaDetailsDto,
   UpdateDocumentsDto,
-  UpdateDeclarationsDto
 } from './dto/update-sections.dto';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
+@UseGuards(JwtAuthGuard)
 @Controller('applications')
 export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) {}
 
   @Get(':leadId')
-  getApplication(@Param('leadId') leadId: string) {
-    return this.applicationsService.getApplication(leadId);
+  getOne(@Param('leadId') leadId: string) {
+    return this.applicationsService.getFullApplication(leadId);
   }
 
   @Patch(':leadId/personal')
-  updatePersonal(@Param('leadId') leadId: string, @Body() dto: UpdatePersonalDto) {
-    return this.applicationsService.updatePersonal(leadId, dto);
+  updatePersonal(@Param('leadId') leadId: string, @Body() dto: UpdatePersonalDetailsDto) {
+    return this.applicationsService.updatePersonalDetails(leadId, dto);
   }
 
-  @Patch(':leadId/identifications')
-  updateIdentifications(@Param('leadId') leadId: string, @Body() dto: UpdateIdentificationsDto) {
-    return this.applicationsService.updateIdentifications(leadId, dto);
+  @Patch(':leadId/education')
+  updateEducation(@Param('leadId') leadId: string, @Body() dto: UpdateEducationDto) {
+    return this.applicationsService.updateEducation(leadId, dto);
   }
 
   @Patch(':leadId/preferences')
@@ -35,23 +37,23 @@ export class ApplicationsController {
     return this.applicationsService.updatePreferences(leadId, dto);
   }
 
-  @Patch(':leadId/family')
-  updateFamily(@Param('leadId') leadId: string, @Body() dto: UpdateFamilyDto) {
-    return this.applicationsService.updateFamily(leadId, dto);
+  @Patch(':leadId/tests')
+  updateTests(@Param('leadId') leadId: string, @Body() dto: UpdateTestsDto) {
+    return this.applicationsService.updateTests(leadId, dto);
   }
 
-  @Patch(':leadId/address')
-  updateAddress(@Param('leadId') leadId: string, @Body() dto: UpdateAddressDto) {
-    return this.applicationsService.updateAddress(leadId, dto);
+  @Patch(':leadId/work-experience')
+  updateWorkExperience(@Param('leadId') leadId: string, @Body() dto: UpdateWorkExperienceDto) {
+    return this.applicationsService.updateWorkExperience(leadId, dto);
+  }
+
+  @Patch(':leadId/visa')
+  updateVisa(@Param('leadId') leadId: string, @Body() dto: UpdateVisaDetailsDto) {
+    return this.applicationsService.updateVisaDetails(leadId, dto);
   }
 
   @Patch(':leadId/documents')
   updateDocuments(@Param('leadId') leadId: string, @Body() dto: UpdateDocumentsDto) {
     return this.applicationsService.updateDocuments(leadId, dto);
-  }
-
-  @Patch(':leadId/declarations')
-  updateDeclarations(@Param('leadId') leadId: string, @Body() dto: UpdateDeclarationsDto) {
-    return this.applicationsService.updateDeclarations(leadId, dto);
   }
 }

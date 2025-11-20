@@ -224,22 +224,180 @@ This module handles lead creation, management, and bulk operations.
 
 ## 📝 Applications API
 
-**Behavior:** All `PATCH` endpoints automatically create the parent `application` record if it does not exist (Upsert).
+**General Behavior:**
+* **Lead Driven:** All endpoints identify the application by the **`leadId`** (not the application ID).
+* **Upsert Logic:** If an application record does not exist for the given Lead ID, any `PATCH` request will automatically **create** it before updating the specific section.
+* **Returns:** All update endpoints return the **Full Application Object** (including all nested sections) after the update.
 
-### Get Full Application
+### 1. Get Full Application
 -   **Route:** `GET /applications/:leadId`
--   **Description:** Returns the full application tree. Returns `null` if not started.
+-   **Authentication:** **JWT Required**
+-   **Description:** Returns the complete application tree with all nested relations (Education, Work Experience, Documents, etc.).
+-   **Returns:** `null` if the application has not been started, otherwise the full object.
 
-### Update Sections
--   **Personal Info:** `PATCH /applications/:leadId/personal`
--   **Identifications:** `PATCH /applications/:leadId/identifications`
--   **Preferences:** `PATCH /applications/:leadId/preferences`
--   **Family Details:** `PATCH /applications/:leadId/family`
--   **Address:** `PATCH /applications/:leadId/address`
--   **Documents:** `PATCH /applications/:leadId/documents`
--   **Declarations:** `PATCH /applications/:leadId/declarations`
+### 2. Update Personal Details
+-   **Route:** `PATCH /applications/:leadId/personal`
+-   **Description:** Updates the applicant's basic profile and family details.
+-   **Request Body:**
+    ```json
+    {
+      "given_name": "John",
+      "surname": "Doe",
+      "gender": "Male",
+      "dob": "1999-05-15T00:00:00.000Z", // ISO Date
+      "marital_status": "Single",
+      "phone": "9876543210",
+      "alternate_phone": "9800000000",
+      "email": "john@example.com",
+      "address": "123 Main St, Downtown",
+      "city": "Kathmandu",
+      "state": "Bagmati",
+      "country": "Nepal",
+      "citizenship": "Nepal",
+      "national_id": "123-456-789",
+      "current_status": "Student",
+      "gap_years": 1,
+      "referral_source": "Facebook",
+      
+      // Family Details (Merged into this endpoint)
+      "father_name": "Robert Doe",
+      "mother_name": "Mary Doe",
+      "emergency_contact_name": "Robert Doe",
+      "emergency_contact_number": "9870000000"
+    }
+    ```
+
+### 3. Update Education History
+-   **Route:** `PATCH /applications/:leadId/education`
+-   **Description:** Handles the list of educational qualifications.
+-   **Behavior:** This is an **array** update.
+    -   If an item has an `id`, it updates that existing record.
+    -   If an item has no `id`, it creates a new record.
+-   **Request Body:**
+    ```json
+    {
+      "records": [
+        {
+          "id": "uuid-existing-record", // Optional: Include to update existing
+          "level": "Bachelor",
+          "institution_name": "Tribhuvan University",
+          "board_university": "TU",
+          "country_of_study": "Nepal",
+          "major_stream": "Computer Science",
+          "percentage_gpa": "3.8",
+          "year_of_passing": "2023",
+          "medium_of_instruction": "English",
+          "backlogs": 0,
+          "certificate_url": "[https://s3.aws.com/cert.pdf](https://s3.aws.com/cert.pdf)"
+        }
+      ]
+    }
+    ```
+
+### 4. Update Preferences
+-   **Route:** `PATCH /applications/:leadId/preferences`
+-   **Description:** Updates study abroad preferences and financial info.
+-   **Request Body:**
+    ```json
+    {
+      "preferred_country": "Canada",
+      "preferred_course_type": "Post-Graduate",
+      "preferred_course_name": "Data Science",
+      "preferred_intake": "Sept 2025",
+      "preferred_university": "University of Toronto",
+      "backup_country": "Australia",
+      "study_mode": "On-campus",
+      "budget_range": "20000-30000 USD",
+      "scholarship_interest": true,
+      "travel_history": "Visited Thailand in 2022 for tourism."
+    }
+    ```
+
+### 5. Update Language & Aptitude Tests
+-   **Route:** `PATCH /applications/:leadId/tests`
+-   **Description:** Handles test scores (IELTS, PTE, TOEFL, etc.).
+-   **Request Body:**
+    ```json
+    {
+      "records": [
+        {
+          "id": "optional-uuid",
+          "test_type": "IELTS",
+          "test_date": "2024-01-10T00:00:00.000Z",
+          "overall_score": 7.5,
+          "listening": 8.0,
+          "reading": 7.5,
+          "writing": 7.0,
+          "speaking": 7.5,
+          "trf_number": "12345ABC"
+        }
+      ]
+    }
+    ```
+
+### 6. Update Work Experience
+-   **Route:** `PATCH /applications/:leadId/work-experience`
+-   **Description:** Handles employment history.
+-   **Request Body:**
+    ```json
+    {
+      "records": [
+        {
+          "id": "optional-uuid",
+          "company_name": "Tech Solutions Ltd",
+          "designation": "Junior Developer",
+          "start_date": "2023-06-01T00:00:00.000Z",
+          "end_date": "2024-01-01T00:00:00.000Z",
+          "job_duties": "Developed backend APIs...",
+          "certificate_url": "[https://s3.aws.com/work-exp.pdf](https://s3.aws.com/work-exp.pdf)"
+        }
+      ]
+    }
+    ```
+
+### 7. Update Visa & Passport Details
+-   **Route:** `PATCH /applications/:leadId/visa`
+-   **Description:** Updates passport information and previous visa history.
+-   **Request Body:**
+    ```json
+    {
+      "passport_number": "A1234567",
+      "passport_issue_date": "2020-01-01T00:00:00.000Z",
+      "passport_expiry_date": "2030-01-01T00:00:00.000Z",
+      "passport_place_of_issue": "Kathmandu",
+      "passport_nationality": "Nepalese",
+      "country_applied_for": "USA",
+      "previous_visa_type": "Student",
+      "visa_status": "Refused",
+      "visa_refusal_reason": "Insufficient funds",
+      "travelled_countries": "India, Thailand",
+      "is_visa_rejected_past": true
+    }
+    ```
+
+### 8. Update Documents (Uploads)
+-   **Route:** `PATCH /applications/:leadId/documents`
+-   **Description:** Stores URLs of uploaded files.
+-   **Note:** This endpoint expects **Strings (URLs)**, not binary files. File upload to S3/Cloudinary must happen *before* calling this API.
+-   **Request Body:**
+    ```json
+    {
+      "profile_photo_url": "https://...",
+      "passport_copy_url": "https://...",
+      "english_test_cert_url": "https://...",
+      "sop_url": "https://...",
+      "cv_resume_url": "https://...",
+      "financial_documents_url": "https://...",
+      "other_documents_url": "https://...",
+      
+      // Arrays for multi-file sections
+      "academic_documents_urls": ["[https://doc1.pdf](https://doc1.pdf)", "[https://doc2.pdf](https://doc2.pdf)"],
+      "recommendation_letters_url": ["[https://lor1.pdf](https://lor1.pdf)", "[https://lor2.pdf](https://lor2.pdf)"]
+    }
+    ```
 
 ---
+
 
 ## 📊 Dashboard API
 

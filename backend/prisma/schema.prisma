@@ -35,118 +35,155 @@ model announcements {
   partners           partners?            @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-model application_addresses {
-  id                                  String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  application_id                      String       @db.Uuid
-  is_permanent_same_as_correspondence Boolean?
-  correspondence_address_line_1       String?
-  correspondence_address_line_2       String?
-  correspondence_city                 String?
-  correspondence_district             String?
-  correspondence_state                String?
-  correspondence_country              String?
-  correspondence_pincode              String?
-  permanent_address_line_1            String?
-  permanent_address_line_2            String?
-  permanent_city                      String?
-  permanent_district                  String?
-  permanent_state                     String?
-  permanent_country                   String?
-  permanent_pincode                   String?
-  applications                        applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
-model application_declarations {
-  id                         String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  application_id             String       @db.Uuid
-  declaration_agreed         Boolean?
-  declaration_applicant_name String?
-  declaration_parent_name    String?
-  declaration_date           DateTime?    @db.Date
-  declaration_place          String?
-  applications               applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
 model application_documents {
-  id                               String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  application_id                   String       @db.Uuid
-  passport_photo_url               String?
-  class_x_marksheet_url            String?
-  class_xii_marksheet_url          String?
-  graduation_marksheet_url         String?
-  aadhaar_card_url                 String?
-  entrance_exam_scorecard_url      String?
-  work_experience_certificates_url String?
-  passport_url                     String?
-  applications                     applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                        String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id            String       @db.Uuid
+  profile_photo_url         String?
+  passport_copy_url         String?
+  academic_documents_urls   String[]     @default([]) // Multi-file
+  english_test_cert_url     String?
+  sop_url                   String?
+  cv_resume_url             String?
+  recommendation_letters_url String[]    @default([]) // Multi-file
+  financial_documents_url   String?
+  other_documents_url       String?
+  
+  applications              applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
 model application_family_details {
-  id                    String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  application_id        String       @db.Uuid
-  father_title          String?
-  father_name           String?
-  father_email          String?
-  father_mobile         String?
-  father_occupation     String?
-  mother_title          String?
-  mother_name           String?
-  mother_email          String?
-  mother_mobile         String?
-  mother_occupation     String?
-  guardian_title        String?
-  guardian_name         String?
-  guardian_email        String?
-  guardian_mobile       String?
-  guardian_occupation   String?
-  guardian_relationship String?
-  family_annual_income  String?
-  applications          applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-}
-
-model application_identifications {
-  id                       String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  application_id           String       @db.Uuid
-  aadhaar_number           String?
-  pan_card_number          String?
-  passport_number          String?
-  passport_issuing_country String?
-  passport_valid_upto      DateTime?    @db.Date
-  applications             applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                        String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id            String       @db.Uuid
+  father_name               String?
+  mother_name               String?
+  emergency_contact_name    String?
+  emergency_contact_number  String?
+  
+  applications              applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
 model application_preferences {
-  id                            String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  application_id                String       @db.Uuid
-  hostel_facility_required      Boolean?
-  hostel_type                   String?
-  travel_accommodation_required Boolean?
-  has_given_exam                Boolean?
-  has_work_experience           Boolean?
-  applications                  applications @relation(fields: [application_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                    String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id        String       @db.Uuid
+  preferred_country     String?
+  preferred_course_type String?
+  preferred_course_name String?
+  preferred_intake      String?      // Jan/May/Sept + Year
+  preferred_university  String?
+  backup_country        String?
+  study_mode            String?      // On-campus/Online
+  budget_range          String?
+  scholarship_interest  Boolean?
+  travel_history        String?      // Text area
+  
+  applications          applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
 model applications {
-  id                          String                        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  lead_id                     String                        @db.Uuid
-  program_discipline          String?
-  program_course              String?
-  title                       String?
-  dob                         DateTime?                     @db.Date
-  gender                      gender_enum?
-  marital_status              marital_status_enum?
-  category                    category_enum?
-  religion                    String?
-  nationality                 String?
-  blood_group                 String?
-  created_at                  DateTime?                     @default(now()) @db.Timestamptz(6)
-  application_addresses       application_addresses[]
-  application_declarations    application_declarations[]
-  application_documents       application_documents[]
-  application_family_details  application_family_details[]
-  application_identifications application_identifications[]
-  application_preferences     application_preferences[]
-  leads                       leads                         @relation(fields: [lead_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  lead_id          String   @db.Uuid
+  student_id       String?  @unique 
+  
+  // --- Personal Details ---
+  given_name       String?
+  surname          String?
+  dob              DateTime? @db.Date
+  gender           String?   
+  marital_status   String?   
+  email            String?
+  phone            String?
+  alternate_phone  String?
+  address          String?   
+  city             String?
+  state            String?
+  country          String?
+  citizenship      String?
+  national_id      String?   
+  current_status   String?   
+  gap_years        Int?
+  referral_source  String?
+  
+  // --- CRM Tracking ---
+  application_stage String?
+  system_remarks    String?
+
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime? @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // --- Relations ---
+  leads            leads     @relation(fields: [lead_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  
+  // These match the models I provided in the previous step
+  family_details   application_family_details[]
+  education        application_education[]
+  preferences      application_preferences[]
+  tests            application_tests[]
+  work_experience  application_work_experience[]
+  visa_details     application_visa_details[]
+  documents        application_documents[]
+}
+
+model application_education {
+  id                    String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id        String       @db.Uuid
+  level                 String?      // 10th/12th/Bachelor...
+  institution_name      String?
+  board_university      String?
+  country_of_study      String?
+  major_stream          String?
+  percentage_gpa        String?
+  year_of_passing       String?      // Year
+  medium_of_instruction String?
+  backlogs              Int?
+  certificate_url       String?      // Checkbox/File URL
+  
+  applications          applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
+}
+
+model application_tests {
+  id              String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id  String       @db.Uuid
+  test_type       String?      // IELTS/PTE...
+  test_date       DateTime?    @db.Date
+  overall_score   Decimal?     @db.Decimal(4, 1)
+  listening       Decimal?     @db.Decimal(4, 1)
+  reading         Decimal?     @db.Decimal(4, 1)
+  writing         Decimal?     @db.Decimal(4, 1)
+  speaking        Decimal?     @db.Decimal(4, 1)
+  trf_number      String?      // Score Report No.
+  
+  applications    applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
+}
+
+model application_work_experience {
+  id              String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id  String       @db.Uuid
+  company_name    String?
+  designation     String?
+  start_date      DateTime?    @db.Date
+  end_date        DateTime?    @db.Date
+  job_duties      String?      // Text area
+  certificate_url String?
+  
+  applications    applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
+}
+
+model application_visa_details {
+  id                      String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id          String       @db.Uuid
+  passport_number         String?
+  passport_issue_date     DateTime?    @db.Date
+  passport_expiry_date    DateTime?    @db.Date
+  passport_place_of_issue String?
+  passport_nationality    String?
+  country_applied_for     String?
+  previous_visa_type      String?
+  visa_status             String?      // Approved/Refused/Pending
+  visa_refusal_reason     String?
+  travelled_countries     String?
+  is_visa_rejected_past   Boolean?
+  
+  applications            applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
 model followup_comments {

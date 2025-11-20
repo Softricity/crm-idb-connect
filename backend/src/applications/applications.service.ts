@@ -2,224 +2,174 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
-  UpdatePersonalDto,
-  UpdateIdentificationsDto,
+  UpdatePersonalDetailsDto,
+  UpdateEducationDto,
   UpdatePreferencesDto,
-  UpdateFamilyDto,
-  UpdateAddressDto,
+  UpdateTestsDto,
+  UpdateWorkExperienceDto,
+  UpdateVisaDetailsDto,
   UpdateDocumentsDto,
-  UpdateDeclarationsDto,
 } from './dto/update-sections.dto';
-// Import Enums from your generated client
-import {
-  gender_enum,
-  marital_status_enum,
-  category_enum,
-} from '../../generated/prisma/client';
 
 @Injectable()
 export class ApplicationsService {
   constructor(private prisma: PrismaService) {}
 
-  /**
-   * Helper: Ensure an application record exists for a lead.
-   * Returns the application ID.
-   */
-  private async ensureApplicationExists(leadId: string) {
-    // Use findFirst because 'lead_id' is not marked @unique in your DB
-    const lead = await this.prisma.leads.findFirst({ where: { id: leadId } });
-    if (!lead) throw new NotFoundException(`Lead ${leadId} not found`);
+  // Helper: Find or Create Application
+  private async getOrCreateApplication(leadId: string) {
+    let app = await this.prisma.applications.findFirst({ where: { lead_id: leadId } });
+    if (!app) {
+      // Generate a simple Student ID (Logic can be improved)
+      const studentId = `STU-${Date.now().toString().slice(-6)}`;
+      app = await this.prisma.applications.create({
+        data: { lead_id: leadId, student_id: studentId },
+      });
+    }
+    return app;
+  }
 
-    let application = await this.prisma.applications.findFirst({
-      where: { lead_id: leadId },
+  // 1. Personal Details
+  async updatePersonalDetails(leadId: string, dto: UpdatePersonalDetailsDto) {
+    const app = await this.getOrCreateApplication(leadId);
+
+    // Split data between 'applications' and 'family_details'
+    const { 
+      father_name, mother_name, emergency_contact_name, emergency_contact_number, 
+      ...appData 
+    } = dto;
+
+    // Update main app
+    await this.prisma.applications.update({
+      where: { id: app.id },
+      data: appData,
     });
 
-    if (!application) {
-      application = await this.prisma.applications.create({
-        data: {
-          lead_id: leadId,
-          // Removed 'status: draft' because the column doesn't exist in your DB
-        },
-      });
+    // Upsert Family Details
+    const familyData = { father_name, mother_name, emergency_contact_name, emergency_contact_number };
+    const existingFamily = await this.prisma.application_family_details.findFirst({ where: { application_id: app.id } });
 
-      // Also update lead type to 'application'
-      await this.prisma.leads.update({
-        where: { id: leadId },
-        data: { type: 'application' },
+    if (existingFamily) {
+      await this.prisma.application_family_details.update({
+        where: { id: existingFamily.id },
+        data: familyData,
+      });
+    } else {
+      await this.prisma.application_family_details.create({
+        data: { application_id: app.id, ...familyData },
       });
     }
 
-    return application.id;
+    return this.getFullApplication(leadId);
   }
 
-  async getApplication(leadId: string) {
-    // Changed findUnique -> findFirst
-    const application = await this.prisma.applications.findFirst({
+  // 2. Education (One-to-Many Handling)
+  async updateEducation(leadId: string, dto: UpdateEducationDto) {
+    const app = await this.getOrCreateApplication(leadId);
+    
+    // Strategy: We can delete all and re-create, OR update individually. 
+    // Here, we loop through records to upsert.
+    for (const record of dto.records) {
+      if (record.id) {
+        await this.prisma.application_education.update({
+          where: { id: record.id },
+          data: { ...record, id: undefined }, // don't update ID
+        });
+      } else {
+        await this.prisma.application_education.create({
+          data: { ...record, application_id: app.id },
+        });
+      }
+    }
+    return this.getFullApplication(leadId);
+  }
+
+  // 3. Preferences
+  async updatePreferences(leadId: string, dto: UpdatePreferencesDto) {
+    const app = await this.getOrCreateApplication(leadId);
+    const existing = await this.prisma.application_preferences.findFirst({ where: { application_id: app.id } });
+
+    if (existing) {
+      await this.prisma.application_preferences.update({ where: { id: existing.id }, data: dto });
+    } else {
+      await this.prisma.application_preferences.create({ data: { application_id: app.id, ...dto } });
+    }
+    return this.getFullApplication(leadId);
+  }
+
+  // 4. Tests (One-to-Many)
+  async updateTests(leadId: string, dto: UpdateTestsDto) {
+    const app = await this.getOrCreateApplication(leadId);
+    for (const record of dto.records) {
+      if (record.id) {
+        await this.prisma.application_tests.update({
+          where: { id: record.id },
+          data: { ...record, id: undefined },
+        });
+      } else {
+        await this.prisma.application_tests.create({
+          data: { ...record, application_id: app.id },
+        });
+      }
+    }
+    return this.getFullApplication(leadId);
+  }
+
+  // 5. Work Experience (One-to-Many)
+  async updateWorkExperience(leadId: string, dto: UpdateWorkExperienceDto) {
+    const app = await this.getOrCreateApplication(leadId);
+    for (const record of dto.records) {
+      if (record.id) {
+        await this.prisma.application_work_experience.update({
+          where: { id: record.id },
+          data: { ...record, id: undefined },
+        });
+      } else {
+        await this.prisma.application_work_experience.create({
+          data: { ...record, application_id: app.id },
+        });
+      }
+    }
+    return this.getFullApplication(leadId);
+  }
+
+  // 6. Visa / Passport Details
+  async updateVisaDetails(leadId: string, dto: UpdateVisaDetailsDto) {
+    const app = await this.getOrCreateApplication(leadId);
+    const existing = await this.prisma.application_visa_details.findFirst({ where: { application_id: app.id } });
+
+    if (existing) {
+      await this.prisma.application_visa_details.update({ where: { id: existing.id }, data: dto });
+    } else {
+      await this.prisma.application_visa_details.create({ data: { application_id: app.id, ...dto } });
+    }
+    return this.getFullApplication(leadId);
+  }
+
+  // 7. Documents
+  async updateDocuments(leadId: string, dto: UpdateDocumentsDto) {
+    const app = await this.getOrCreateApplication(leadId);
+    const existing = await this.prisma.application_documents.findFirst({ where: { application_id: app.id } });
+
+    if (existing) {
+      await this.prisma.application_documents.update({ where: { id: existing.id }, data: dto });
+    } else {
+      await this.prisma.application_documents.create({ data: { application_id: app.id, ...dto } });
+    }
+    return this.getFullApplication(leadId);
+  }
+
+  async getFullApplication(leadId: string) {
+    return this.prisma.applications.findFirst({
       where: { lead_id: leadId },
       include: {
-        application_identifications: true,
-        application_preferences: true,
-        application_family_details: true,
-        application_addresses: true,
-        application_documents: true,
-        application_declarations: true,
+        family_details: true,
+        education: true,
+        preferences: true,
+        tests: true,
+        work_experience: true,
+        visa_details: true,
+        documents: true,
       },
     });
-
-    if (!application) {
-      return null;
-    }
-    return application;
-  }
-
-  // --- SECTION UPDATERS ---
-
-  async updatePersonal(leadId: string, dto: UpdatePersonalDto) {
-    const appId = await this.ensureApplicationExists(leadId);
-
-    // Convert string inputs to Enums
-    const data: any = { ...dto };
-    if (dto.gender) data.gender = dto.gender as gender_enum;
-    if (dto.marital_status)
-      data.marital_status = dto.marital_status as marital_status_enum;
-    if (dto.category) data.category = dto.category as category_enum;
-
-    return this.prisma.applications.update({
-      where: { id: appId },
-      data: data,
-    });
-  }
-
-  async updateIdentifications(leadId: string, dto: UpdateIdentificationsDto) {
-    const appId = await this.ensureApplicationExists(leadId);
-
-    // Manual Upsert logic (Find -> Update or Create)
-    const existing = await this.prisma.application_identifications.findFirst({
-      where: { application_id: appId },
-    });
-
-    if (existing) {
-      return this.prisma.application_identifications.update({
-        where: { id: existing.id },
-        data: dto,
-      });
-    } else {
-      return this.prisma.application_identifications.create({
-        data: {
-          application_id: appId,
-          ...dto,
-        },
-      });
-    }
-  }
-
-  async updatePreferences(leadId: string, dto: UpdatePreferencesDto) {
-    const appId = await this.ensureApplicationExists(leadId);
-
-    const existing = await this.prisma.application_preferences.findFirst({
-      where: { application_id: appId },
-    });
-
-    if (existing) {
-      return this.prisma.application_preferences.update({
-        where: { id: existing.id },
-        data: dto,
-      });
-    } else {
-      return this.prisma.application_preferences.create({
-        data: {
-          application_id: appId,
-          ...dto,
-        },
-      });
-    }
-  }
-
-  async updateFamily(leadId: string, dto: UpdateFamilyDto) {
-    const appId = await this.ensureApplicationExists(leadId);
-
-    const existing = await this.prisma.application_family_details.findFirst({
-      where: { application_id: appId },
-    });
-
-    if (existing) {
-      return this.prisma.application_family_details.update({
-        where: { id: existing.id },
-        data: dto,
-      });
-    } else {
-      return this.prisma.application_family_details.create({
-        data: {
-          application_id: appId,
-          ...dto,
-        },
-      });
-    }
-  }
-
-  async updateAddress(leadId: string, dto: UpdateAddressDto) {
-    const appId = await this.ensureApplicationExists(leadId);
-
-    const existing = await this.prisma.application_addresses.findFirst({
-      where: { application_id: appId },
-    });
-
-    if (existing) {
-      return this.prisma.application_addresses.update({
-        where: { id: existing.id },
-        data: dto,
-      });
-    } else {
-      return this.prisma.application_addresses.create({
-        data: {
-          application_id: appId,
-          ...dto,
-        },
-      });
-    }
-  }
-
-  async updateDocuments(leadId: string, dto: UpdateDocumentsDto) {
-    const appId = await this.ensureApplicationExists(leadId);
-
-    const existing = await this.prisma.application_documents.findFirst({
-      where: { application_id: appId },
-    });
-
-    if (existing) {
-      return this.prisma.application_documents.update({
-        where: { id: existing.id },
-        data: dto,
-      });
-    } else {
-      return this.prisma.application_documents.create({
-        data: {
-          application_id: appId,
-          ...dto,
-        },
-      });
-    }
-  }
-
-  async updateDeclarations(leadId: string, dto: UpdateDeclarationsDto) {
-    const appId = await this.ensureApplicationExists(leadId);
-
-    const existing = await this.prisma.application_declarations.findFirst({
-      where: { application_id: appId },
-    });
-
-    if (existing) {
-      return this.prisma.application_declarations.update({
-        where: { id: existing.id },
-        data: dto,
-      });
-    } else {
-      return this.prisma.application_declarations.create({
-        data: {
-          application_id: appId,
-          ...dto,
-        },
-      });
-    }
   }
 }
