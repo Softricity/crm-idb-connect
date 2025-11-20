@@ -25,7 +25,10 @@ export class UniversitiesService {
   async findAll(countryId?: string) {
     return this.prisma.university.findMany({
       where: countryId ? { countryId } : undefined,
-      include: { country: true },
+      include: { 
+        country: true,
+        _count: { select: { courses: true } }
+      },
       orderBy: { name: 'asc' },
     });
   }

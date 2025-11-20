@@ -385,23 +385,34 @@ model University {
 }
 
 model Course {
-  id             String     @id @default(uuid())
-  name           String
-  description    String?    @db.Text
-  level          String?    // e.g., "Masters", "Bachelors"
-  category       String?    // e.g., "IT", "Business"
-  duration       Int?       // In months
-  feeType        String?    @map("fee_type") // e.g., "Per Year", "Total"
-  originalFee    Decimal?   @map("original_fee") @db.Decimal(10, 2)
-  fee            Decimal?   @db.Decimal(10, 2)
-  applicationFee Decimal?   @map("application_fee") @db.Decimal(10, 2)
-  intakeMonth    String?    @map("intake_month") // e.g., "Sep, Jan"
-  commission     String?    // e.g., "1000 USD" or "10%"
+  id                  String     @id @default(uuid())
+  name                String
+  description         String?    @db.Text
+  level               String?    // e.g., "Masters", "Bachelors"
+  category            String?    // e.g., "IT", "Business"
+  duration            Int?       // In months
+  feeType             String?    @map("fee_type") // e.g., "Per Year", "Total"
   
-  universityId   String     @map("university_id")
-  university     University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  // Fee fields with currencies
+  originalFee         Decimal?   @map("original_fee") @db.Decimal(10, 2)
+  feeCurrency         String?    @map("fee_currency") @default("PLN")
+  fee                 Decimal?   @map("fee") @db.Decimal(10, 2)
+  courseCurrency      String?    @map("course_currency") @default("PLN")
+  applicationFee      Decimal?   @map("application_fee") @db.Decimal(10, 2)
+  applicationCurrency String?    @map("application_currency") @default("PLN")
+  
+  // Intake and commission
+  intakeMonth         String?    @map("intake_month") // e.g., "Sep, Jan"
+  commissionType      String?    @map("commission_type") @default("%")
+  commissionValue     Decimal?   @map("commission_value") @db.Decimal(10, 2)
+  
+  // Course details (points)
+  details             Json?      // Array of detail points
+  
+  universityId        String     @map("university_id")
+  university          University @relation(fields: [universityId], references: [id], onDelete: Cascade)
 
-  createdAt      DateTime   @default(now()) @map("created_at")
+  createdAt           DateTime   @default(now()) @map("created_at")
 
   @@map("courses")
 }

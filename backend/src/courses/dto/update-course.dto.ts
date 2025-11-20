@@ -1,6 +1,6 @@
-export class CreateCourseDto {
+export class UpdateCourseDto {
   // Basic Course Fields
-  name: string;
+  name?: string;
   description?: string;
   level?: string;
   category?: string;
@@ -22,7 +22,4 @@ export class CreateCourseDto {
   
   // Course details (array of points)
   details?: string[];
-
-  // Relations
-  university_id: string;
 }

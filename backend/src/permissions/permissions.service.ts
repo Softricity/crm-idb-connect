@@ -180,8 +180,17 @@ export class PermissionsService {
   
   async createRole(createRoleDto: CreateRoleDto) {
     try {
+      const { permissionIds, ...roleData } = createRoleDto;
+      
       return await this.prisma.role.create({
-        data: createRoleDto,
+        data: {
+          ...roleData,
+          role_permissions: permissionIds?.length ? {
+            create: permissionIds.map(permissionId => ({
+              permission_id: permissionId,
+            })),
+          } : undefined,
+        },
         include: {
           role_permissions: {
             include: {
@@ -246,9 +255,39 @@ export class PermissionsService {
 
   async updateRole(id: string, updateRoleDto: UpdateRoleDto) {
     try {
+      const { permissionIds, ...roleData } = updateRoleDto;
+      
+      // If permissionIds are provided, we need to replace all role_permissions
+      if (permissionIds !== undefined) {
+        return await this.prisma.role.update({
+          where: { id },
+          data: {
+            ...roleData,
+            role_permissions: {
+              deleteMany: {}, // Delete all existing permissions
+              create: permissionIds.map(permissionId => ({
+                permission_id: permissionId,
+              })),
+            },
+          },
+          include: {
+            role_permissions: {
+              include: {
+                permission: {
+                  include: {
+                    permission_group: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+      
+      // If no permissionIds, just update role data
       return await this.prisma.role.update({
         where: { id },
-        data: updateRoleDto,
+        data: roleData,
         include: {
           role_permissions: {
             include: {

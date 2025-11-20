@@ -3,5 +3,6 @@ export class CourseFilterDto {
   country?: string[];    // Array of country names
   level?: string[];      // Array of levels (Masters, Bachelors)
   university?: string[]; // Array of university names
+  universityId?: string; // Filter by specific university ID
   intake?: string[];     // Array of months
 }

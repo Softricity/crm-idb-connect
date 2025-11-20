@@ -1,7 +1,8 @@
 // src/courses/courses.controller.ts
-import { Controller, Get, Post, Body, Param, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, UseGuards, Patch, Delete } from '@nestjs/common';
 import { CoursesService } from './courses.service';
 import { CreateCourseDto } from './dto/create-course.dto';
+import { UpdateCourseDto } from './dto/update-course.dto';
 import { CourseFilterDto } from './dto/course-filter.dto';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/roles.enum';
@@ -38,7 +39,7 @@ export class CoursesController {
         search: filters.search,
         country: normalizeArray(filters.country),
         level: normalizeArray(filters.level),
-        university: normalizeArray(filters.university),
+        universityId: filters.universityId,
         intake: normalizeArray(filters.intake),
     };
 
@@ -56,5 +57,19 @@ export class CoursesController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.coursesService.findOne(id);
+  }
+
+  // PATCH /courses/:id (Admin Only)
+  @Patch(':id')
+  @Roles(Role.Admin)
+  update(@Param('id') id: string, @Body() updateCourseDto: UpdateCourseDto) {
+    return this.coursesService.update(id, updateCourseDto);
+  }
+
+  // DELETE /courses/:id (Admin Only)
+  @Delete(':id')
+  @Roles(Role.Admin)
+  remove(@Param('id') id: string) {
+    return this.coursesService.remove(id);
   }
 }
