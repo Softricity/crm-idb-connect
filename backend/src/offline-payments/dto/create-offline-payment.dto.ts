@@ -1,5 +1,6 @@
 // src/offline-payments/dto/create-offline-payment.dto.ts
-import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
+import { IsString, IsOptional, IsNumber } from 'class-validator';
+import { Type } from 'class-transformer'; // Import Type
 
 export class CreateOfflinePaymentDto {
   @IsOptional()
@@ -11,6 +12,7 @@ export class CreateOfflinePaymentDto {
 
   @IsOptional()
   @IsNumber()
+  @Type(() => Number) // <--- ADD THIS: Converts string "100" to number 100
   amount?: number;
 
   @IsString()
@@ -32,6 +34,8 @@ export class CreateOfflinePaymentDto {
   @IsString()
   status?: string;
 
+  // 'file' will now be handled by the file interceptor, 
+  // but we keep this optional for flexibility
   @IsOptional()
   @IsString()
   file?: string;

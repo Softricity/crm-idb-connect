@@ -9,8 +9,10 @@ import {
   Delete,
   UseGuards,
   Request,
-  Query,
+  UseInterceptors, // Import
+  UploadedFile,    // Import
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express'; // Import
 import { OfflinePaymentsService } from './offline-payments.service';
 import { CreateOfflinePaymentDto } from './dto/create-offline-payment.dto';
 import { UpdateOfflinePaymentDto } from './dto/update-offline-payment.dto';
@@ -22,10 +24,17 @@ export class OfflinePaymentsController {
   constructor(private readonly offlinePaymentsService: OfflinePaymentsService) {}
 
   @Post('offline-payments')
-  create(@Body() createDto: CreateOfflinePaymentDto, @Request() req) {
-    return this.offlinePaymentsService.create(createDto, req.user.userId);
+  @UseInterceptors(FileInterceptor('file')) // Intercept field named 'file'
+  create(
+    @Body() createDto: CreateOfflinePaymentDto, 
+    @Request() req,
+    @UploadedFile() file: Express.Multer.File // Catch the file
+  ) {
+    // Pass file to service
+    return this.offlinePaymentsService.create(createDto, req.user.userId, file);
   }
 
+  // ... (Rest of the controller remains unchanged)
   @Get('leads/:leadId/offline-payments')
   findByLeadId(@Param('leadId') leadId: string) {
     return this.offlinePaymentsService.findByLeadId(leadId);

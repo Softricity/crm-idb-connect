@@ -5,7 +5,6 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 @Injectable()
 export class SupabaseService {
   private supabase: SupabaseClient;
-  private bucketName = 'documents';
 
   constructor() {
     this.supabase = createClient(
@@ -14,25 +13,24 @@ export class SupabaseService {
     );
   }
 
-  async uploadFile(file: Express.Multer.File, folder: string): Promise<string> {
+  async uploadFile(file: Express.Multer.File, folder: string, bucketName: string): Promise<string> {
     // Create a unique file path: folder/timestamp-filename
     const fileName = `${Date.now()}-${file.originalname.replace(/\s/g, '_')}`;
     const filePath = `${folder}/${fileName}`;
 
     const { data, error } = await this.supabase.storage
-      .from(this.bucketName)
+      .from(bucketName) // Use the dynamic bucket name
       .upload(filePath, file.buffer, {
         contentType: file.mimetype,
         upsert: true,
       });
 
     if (error) {
-      throw new InternalServerErrorException(`Upload failed: ${error.message}`);
+      throw new InternalServerErrorException(`Upload to ${bucketName} failed: ${error.message}`);
     }
 
-    // Get Public URL
     const { data: publicUrlData } = this.supabase.storage
-      .from(this.bucketName)
+      .from(bucketName)
       .getPublicUrl(filePath);
 
     return publicUrlData.publicUrl;

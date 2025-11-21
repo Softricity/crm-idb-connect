@@ -172,26 +172,37 @@ export class ApplicationsService {
 
     // Helper to process single file upload
     const processSingleFile = async (fileArray: Express.Multer.File[] | undefined, fieldName: string) => {
-      if (fileArray && fileArray.length > 0) {
-        const url = await this.supabaseService.uploadFile(fileArray[0], `applications/${leadId}`);
-        updateData[`${fieldName}_url`] = url;
-      }
-    };
+    if (fileArray && fileArray.length > 0) {
+      // ⚡ HERE: We explicitly pass 'documents'
+      const url = await this.supabaseService.uploadFile(
+        fileArray[0], 
+        'documents', // <--- Bucket Name
+        `applications/${leadId}`
+      );
+      updateData[`${fieldName}_url`] = url;
+    }
+  };
 
-    // Helper to process array file uploads (Append to existing)
-    const processArrayFiles = async (
-        fileArray: Express.Multer.File[] | undefined, 
-        fieldName: string, 
-        existingUrls: string[] = []
-    ) => {
-      if (fileArray && fileArray.length > 0) {
-        const newUrls = await Promise.all(
-          fileArray.map((file) => this.supabaseService.uploadFile(file, `applications/${leadId}`))
-        );
-        // Append new URLs to existing ones
-        updateData[`${fieldName}_url`] = [...existingUrls, ...newUrls];
-      }
-    };
+  // Helper to process array file uploads
+  const processArrayFiles = async (
+      fileArray: Express.Multer.File[] | undefined, 
+      fieldName: string, 
+      existingUrls: string[] = []
+  ) => {
+    if (fileArray && fileArray.length > 0) {
+      const newUrls = await Promise.all(
+        fileArray.map((file) => 
+          // ⚡ HERE: We explicitly pass 'documents'
+          this.supabaseService.uploadFile(
+            file, 
+            'idb-student-documents', // <--- Bucket Name
+            `applications/${leadId}`
+          )
+        )
+      );
+      updateData[`${fieldName}_url`] = [...existingUrls, ...newUrls];
+    }
+  };
 
     // Process Single Files
     await processSingleFile(files.profile_photo, 'profile_photo');

@@ -437,6 +437,60 @@ This module handles lead creation, management, and bulk operations.
 
 ---
 
+---
+
+## 💸 Offline Payments API
+
+Manages manual payment records (Cash, Bank Transfer, etc.) and stores proof of payment (slips) using Supabase Storage.
+
+### Create Payment (Upload Slip)
+-   **Route:** `POST /offline-payments`
+-   **Authentication:** **JWT Required**
+-   **Content-Type:** `multipart/form-data`
+-   **Description:** Creates a new payment record and uploads the payment slip (file) to the `payment-slips` bucket.
+-   **Form Data Fields:**
+    * `amount`: Number (Required) - e.g., `5000`
+    * `currency`: String (Required) - e.g., `USD`, `NPR`
+    * `payment_mode`: String (Optional) - e.g., `Cash`, `Bank Transfer`
+    * `payment_type`: String (Required) - e.g., `Application Fee`, `Tuition Fee`
+    * `receiver`: UUID (Required) - The Partner ID who received the money.
+    * `lead_id`: UUID (Optional) - The Lead associated with this payment.
+    * `reference_id`: String (Optional) - Bank transaction ID or Receipt No.
+    * `status`: String (Optional) - e.g., `Pending`, `Verified`.
+    * `file`: **File** (Optional) - The image/PDF of the payment slip.
+
+### Get Payments by Lead
+-   **Route:** `GET /leads/:leadId/offline-payments`
+-   **Authentication:** **JWT Required**
+-   **Description:** Retrieves a history of all offline payments made by a specific lead.
+-   **Returns:** Array of payment objects including `file` URL.
+
+### Get Payments by Receiver (Partner)
+-   **Route:** `GET /partners/:receiverId/offline-payments`
+-   **Authentication:** **JWT Required**
+-   **Description:** Retrieves all payments collected by a specific partner/counsellor.
+
+### Update Payment
+-   **Route:** `PATCH /offline-payments/:id`
+-   **Authentication:** **JWT Required**
+-   **Content-Type:** `application/json`
+-   **Request Body:** (Partial update)
+    ```json
+    {
+      "amount": 6000,
+      "status": "Verified",
+      "reference_id": "TXN-99999"
+    }
+    ```
+
+### Delete Payment
+-   **Route:** `DELETE /offline-payments/:id`
+-   **Authentication:** **JWT Required**
+-   **Description:** Deletes the payment record from the database.
+-   **Note:** Currently, this removes the database record. (Frontend may need to handle file deletion if strict cleanup is required).
+
+---
+
 ## 📊 Dashboard API
 
 ### Get Dashboard Stats

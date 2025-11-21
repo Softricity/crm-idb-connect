@@ -3,31 +3,45 @@ import { Injectable, BadRequestException, NotFoundException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOfflinePaymentDto } from './dto/create-offline-payment.dto';
 import { UpdateOfflinePaymentDto } from './dto/update-offline-payment.dto';
+import { SupabaseService } from '../storage/supabase.service';
 
 @Injectable()
 export class OfflinePaymentsService {
-  constructor(private prisma: PrismaService) {}
-
+  constructor(private prisma: PrismaService, private supabaseService: SupabaseService) { }
   // Create a new offline payment
-  async create(createDto: CreateOfflinePaymentDto, userId: string) {
-    // Verify receiver is not an agent if receiver is provided
+  async create(createDto: CreateOfflinePaymentDto, userId: string, file?: Express.Multer.File) {
     if (createDto.receiver) {
       const receiver = await this.prisma.partners.findUnique({
         where: { id: createDto.receiver },
-        select: { id: true, role: { select: { name: true } } },
+        include: { role: true }, // Fetch the Relation
       });
 
       if (!receiver) {
         throw new NotFoundException('Receiver partner not found');
       }
 
-      if (receiver.role.name === 'agent') {
+      // Access role.name instead of role directly
+      if (receiver.role?.name === 'agent') {
         throw new BadRequestException('Receiver cannot be an agent for offline payments');
       }
     }
+    // ---------------------------------------------------
+
+    let fileUrl = createDto.file; 
+    if (file) {
+      // ⚡ HERE: We specify 'payment-slips' as the bucket name
+      fileUrl = await this.supabaseService.uploadFile(
+        file, 
+        'idb-offline-payments',  // <--- Bucket Name
+        createDto.lead_id ? `leads/${createDto.lead_id}` : 'general' // Folder path
+      );
+    }
 
     const payment = await this.prisma.offline_payments.create({
-      data: createDto,
+      data: {
+        ...createDto,
+        file: fileUrl, // Save the Supabase URL
+      },
       include: {
         leads: { select: { name: true } },
         partners: { select: { name: true, role: true } },
@@ -75,14 +89,6 @@ export class OfflinePaymentsService {
 
   // Update an existing payment
   async update(id: string, updateDto: UpdateOfflinePaymentDto) {
-    const payment = await this.prisma.offline_payments.findUnique({
-      where: { id },
-    });
-
-    if (!payment) {
-      throw new NotFoundException('Payment not found');
-    }
-
     return this.prisma.offline_payments.update({
       where: { id },
       data: updateDto,
@@ -108,7 +114,6 @@ export class OfflinePaymentsService {
       where: { id },
     });
 
-    // Log timeline event
     if (payment.lead_id && userId) {
       await this.prisma.timeline.create({
         data: {
@@ -120,9 +125,9 @@ export class OfflinePaymentsService {
       });
     }
 
-    return { 
+    return {
       message: 'Payment deleted successfully',
-      fileUrl: payment.file, // Return file URL so frontend can delete from storage
+      fileUrl: payment.file,
     };
   }
 }
