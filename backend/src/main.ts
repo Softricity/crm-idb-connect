@@ -16,7 +16,7 @@ async function bootstrap() {
   app.useGlobalGuards(new JwtAuthGuard(reflector));
 
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://localhost:3000', "https://tw1lcrj1-3000.inc1.devtunnels.ms", "https://idbconnect.global"], // Your Next.js app's URL
+    origin: ['http://localhost:3001', 'http://localhost:3000', "https://tw1lcrj1-3000.inc1.devtunnels.ms", "https://idbconnect.global", "https://student.idbconnect.global"], // Your Next.js app's URL
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
