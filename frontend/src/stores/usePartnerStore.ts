@@ -4,7 +4,8 @@ import api from "@/lib/api";
 
 export interface Partner {
   id?: string;
-  role: string; // Role name: "agent" for external agents, other roles for internal team members
+  role_id: string; // UUID of the role (changed from role name string to role_id UUID)
+  role?: string; // Optional nested role object from backend
   name: string;
   email: string;
   mobile: string;
@@ -15,6 +16,7 @@ export interface Partner {
   area: string;
   zone: string;
   remarks?: string | null;
+  branch_id?: string | null; // Branch assignment
   // Agent-specific fields
   agency_name?: string | null;
 
@@ -25,7 +27,7 @@ interface PartnerState {
   partners: Partner[];
   loading: boolean;
   currentPartner?: Partner;
-  fetchPartners: () => Promise<void>;
+  fetchPartners: (branchId?: string) => Promise<void>;
   fetchPartnerById: (id: string) => Promise<Partner | null>;
   addPartner: (partner: Omit<Partner, "id" | "created_at">) => Promise<void>;
   updatePartner: (id: string, updates: Partial<Partner>) => Promise<void>;
@@ -37,10 +39,10 @@ export const usePartnerStore = create<PartnerState>((set) => ({
   partners: [],
   loading: false,
 
-  fetchPartners: async () => {
+  fetchPartners: async (branchId?: string) => {
     set({ loading: true });
     try {
-      const data = await api.PartnersAPI.fetchPartners();
+      const data = await api.PartnersAPI.fetchPartners(branchId);
       set({ partners: data as Partner[] });
     } catch (error: any) {
       console.error("Error fetching partners:", error.message || error);

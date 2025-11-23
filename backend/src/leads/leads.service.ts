@@ -14,7 +14,7 @@ import {
   BulkMessageDto,
   BulkDeleteDto,
 } from './dto/bulk-update.dto';
-import { Prisma } from '../../generated/prisma/client';
+import { Prisma } from '@prisma/client';
 import { TimelineService } from '../timeline/timeline.service';
 import * as bcrypt from 'bcrypt';
 import { getScope } from '../common/utils/scope.util';
@@ -62,6 +62,16 @@ export class LeadsService {
     try {
       // 3. Create Lead - EXPLICIT MAPPING
       // We map every field manually to ensure data integrity
+      // Determine branch for this lead if created_by is provided
+      let derivedBranchId: string | null = null;
+      if (createLeadDto.created_by) {
+        const creator = await this.prisma.partners.findUnique({
+          where: { id: createLeadDto.created_by },
+          select: { branch_id: true },
+        });
+        derivedBranchId = creator?.branch_id || null;
+      }
+
       const newLead = await this.prisma.leads.create({
         data: {
           // --- A. The 5 Core Fields (From Form) ---
@@ -88,6 +98,8 @@ export class LeadsService {
 
           // --- E. Unused/Future Fields ---
           reason: null,
+          // Branch association
+          branch_id: derivedBranchId,
         },
       });
 
@@ -201,17 +213,28 @@ export class LeadsService {
     };
   }
 
-  async findAll(user: any, assignedTo?: string, createdBy?: string, type?: string) {
-    const scope = getScope(user); // <--- GENERATE FILTER
+  async findAll(
+    user: any,
+    assignedTo?: string,
+    createdBy?: string,
+    type?: string,
+    branchId?: string,
+    email?: string,
+  ) {
+    // If branchId provided, override scope to that branch (authorized users only)
+    let where: any = { type: type || 'lead' };
 
-    const where: any = {
-      ...scope, // <--- APPLY FILTER (e.g. { branch_id: "..." })
-      type: type || 'lead',
-    };
-    
+    if (branchId) {
+      where.branch_id = branchId;
+    } else {
+      const scope = getScope(user);
+      where = { ...where, ...scope };
+    }
+
     if (assignedTo) where.assigned_to = assignedTo;
     if (createdBy) where.created_by = createdBy;
-    
+    if (email) where.email = email;
+
     return this.prisma.leads.findMany({
       where,
       include: {
@@ -221,6 +244,30 @@ export class LeadsService {
       },
       orderBy: { created_at: 'desc' },
     });
+  }
+
+  async login(email: string, password: string) {
+    try {
+      const lead = await this.prisma.leads.findUnique({
+        where: { email },
+      });
+
+      if (!lead) {
+        throw new NotFoundException('Lead not found with the provided email.');
+      }
+
+      const isPasswordValid = await bcrypt.compare(password, lead.password ?? "");
+      if (!isPasswordValid) {
+        throw new BadRequestException('Invalid password.');
+      }
+
+      // Return lead details excluding password
+      const { password: _, ...leadData } = lead;
+      return leadData;
+    } catch (error) {
+      console.error('Login error:', error);
+      throw error;
+    }
   }
 
   async findOne(id: string) {

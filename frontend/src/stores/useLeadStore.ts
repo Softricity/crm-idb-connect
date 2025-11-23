@@ -20,6 +20,7 @@ export interface Lead {
   reason?: string | null;
   password?: string | null;
   is_flagged?: boolean;
+  branch_id?: string | null;
   partners_leads_assigned_toTopartners?: {
     name: string;
     email?: string;
@@ -29,11 +30,11 @@ export interface Lead {
 interface LeadState {
   leads: Lead[];
   loading: boolean;
-  fetchLeads: () => Promise<void>;
-  fetchLeadsBasedOnPermission: (userId: string, permissions: string[]) => Promise<void>;
+  fetchLeads: (branchId?: string) => Promise<void>;
+  fetchLeadsBasedOnPermission: (userId: string, permissions: string[], branchId?: string) => Promise<void>;
   fetchLeadById: (id: string) => Promise<Lead | null>;
-  getAgentLeads: (agentId: string) => Promise<void>;
-  getCounsellorLeads: (counsellorId: string) => Promise<void>;
+  getAgentLeads: (agentId: string, branchId?: string) => Promise<void>;
+  getCounsellorLeads: (counsellorId: string, branchId?: string) => Promise<void>;
   addLead: (lead: Omit<Lead, "id" | "created_at">) => Promise<void>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
   getLeadIds: () => string[];
@@ -43,10 +44,10 @@ export const useLeadStore = create<LeadState>((set, get) => ({
   leads: [],
   loading: false,
 
-  fetchLeads: async () => {
+  fetchLeads: async (branchId) => {
     set({ loading: true });
     try {
-      const data = await api.LeadsAPI.fetchLeads();
+      const data = await api.LeadsAPI.fetchLeads(branchId);
       set({ leads: data as Lead[] });
     } catch (error: any) {
       console.error("Error fetching leads:", error.message || error);
@@ -54,18 +55,18 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     set({ loading: false });
   },
 
-  fetchLeadsBasedOnPermission: async (userId: string, permissions: string[]) => {
+  fetchLeadsBasedOnPermission: async (userId: string, permissions: string[], branchId?: string) => {
     set({ loading: true });
     try {
       // If user has LEAD_VIEW permission, fetch all leads
       if (canViewAllLeads(permissions)) {
         console.log("User has permission to view all leads.", userId);
-        const data = await api.LeadsAPI.fetchLeads();
+        const data = await api.LeadsAPI.fetchLeads(branchId);
         set({ leads: data as Lead[] });
       } else {
         // Otherwise, fetch only leads assigned to this user
         console.log("User is restricted to their own leads.");
-        const data = await api.LeadsAPI.getCounsellorLeads(userId);
+        const data = await api.LeadsAPI.getCounsellorLeads(userId, branchId);
         set({ leads: data as Lead[] });
       }
     } catch (error: any) {
@@ -84,10 +85,10 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     }
   },
 
-  getAgentLeads: async (agentId: string) => {
+  getAgentLeads: async (agentId: string, branchId?: string) => {
     set({ loading: true });
     try {
-      const data = await api.LeadsAPI.getAgentLeads(agentId);
+      const data = await api.LeadsAPI.getAgentLeads(agentId, branchId);
       set({ leads: data as Lead[] });
     } catch (error) {
       console.error("Error fetching agent leads:", error);
@@ -96,10 +97,10 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     set({ loading: false });
   },
 
-  getCounsellorLeads: async (counsellorId: string) => {
+  getCounsellorLeads: async (counsellorId: string, branchId?: string) => {
     set({ loading: true });
     try {
-      const data = await api.LeadsAPI.getCounsellorLeads(counsellorId);
+      const data = await api.LeadsAPI.getCounsellorLeads(counsellorId, branchId);
       set({ leads: data as Lead[] });
     } catch (error) {
       console.error("Error fetching counsellor leads:", error);

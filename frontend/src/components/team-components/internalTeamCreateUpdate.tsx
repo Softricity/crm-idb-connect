@@ -14,11 +14,14 @@ import {
     SelectItem,
 } from "@heroui/react";
 import { usePartnerStore, Partner } from "@/stores/usePartnerStore";
+import { useBranchStore } from "@/stores/useBranchStore";
+import { useAuthStore } from "@/stores/useAuthStore";
 import { toast } from "sonner";
 import PhoneInputWithCountrySelect, { Value } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { validateMobile } from "@/lib/validation";
 import { PartnersAPI, RolesAPI } from "@/lib/api";
+import { BranchPermission, hasPermission } from "@/lib/utils";
 import { Eye, EyeOff } from "lucide-react";
 
 interface InternalTeamCreateUpdateProps {
@@ -33,6 +36,7 @@ interface FormData {
     mobile: string;
     password: string;
     role_id: string;
+    branch_id: string;
     address: string;
     city: string;
     state: string;
@@ -47,9 +51,18 @@ export function InternalTeamCreateUpdate({
     member,
 }: InternalTeamCreateUpdateProps) {
     const { addPartner, updatePartner } = usePartnerStore();
+    const { branches, fetchBranches } = useBranchStore();
+    const { user } = useAuthStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [roles, setRoles] = useState<any[]>([]);
     const [loadingRoles, setLoadingRoles] = useState(false);
+    const currentUserRole = (user?.role || '').toLowerCase();
+    const isUserSuperAdmin = currentUserRole === 'super admin';
+    
+    // Check if user can manage branches
+    const canManageBranches = user?.permissions 
+        ? hasPermission(user.permissions, BranchPermission.BRANCH_MANAGE)
+        : false;
 
     const [formData, setFormData] = useState<FormData>({
         name: "",
@@ -57,6 +70,7 @@ export function InternalTeamCreateUpdate({
         mobile: "",
         password: "",
         role_id: "",
+        branch_id: user?.branch_id || "",
         address: "",
         city: "",
         state: "",
@@ -67,7 +81,7 @@ export function InternalTeamCreateUpdate({
 
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
 
-    // Fetch roles from backend
+    // Fetch roles and branches from backend
     useEffect(() => {
         const fetchRoles = async () => {
             setLoadingRoles(true);
@@ -90,8 +104,9 @@ export function InternalTeamCreateUpdate({
 
         if (isOpen) {
             fetchRoles();
+            fetchBranches();
         }
-    }, [isOpen]);
+    }, [isOpen, fetchBranches]);
 
     // Helper to get auth token
     const getAuthToken = () => {
@@ -114,7 +129,8 @@ export function InternalTeamCreateUpdate({
                     email: member.email || "",
                     mobile: member.mobile || "",
                     password: "",
-                    role_id: "", // Will need to get role_id from member if available
+                    role_id: member.role_id || "",
+                    branch_id: member.branch_id || user?.branch_id || "",
                     address: member.address || "",
                     city: member.city || "",
                     state: member.state || "",
@@ -129,6 +145,7 @@ export function InternalTeamCreateUpdate({
                     mobile: "",
                     password: "",
                     role_id: "",
+                    branch_id: user?.branch_id || "",
                     address: "",
                     city: "",
                     state: "",
@@ -139,7 +156,7 @@ export function InternalTeamCreateUpdate({
             }
             setErrors({});
         }
-    }, [member, isOpen]);
+    }, [member, isOpen, user?.branch_id]);
 
     const validateField = (field: keyof FormData, value: string): string => {
         switch (field) {
@@ -290,6 +307,25 @@ export function InternalTeamCreateUpdate({
                                     isRequired={!member}
                                 />
                                 <Select
+                                    label="Branch"
+                                    name="branch_id"
+                                    selectedKeys={formData.branch_id ? [formData.branch_id] : []}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setFormData(prev => ({ ...prev, branch_id: value }));
+                                        setErrors(prev => ({ ...prev, branch_id: "" }));
+                                    }}
+                                    isDisabled={!canManageBranches}
+                                    description={!canManageBranches ? `Assigned to ${user?.branch_name || 'your branch'}` : "Select branch for this team member"}
+                                    isRequired
+                                >
+                                    {branches.map((branch) => (
+                                        <SelectItem key={branch.id}>
+                                            {`${branch.name} (${branch.type})`}
+                                        </SelectItem>
+                                    ))}
+                                </Select>
+                                <Select
                                     label="Role"
                                     name="role_id"
                                     selectedKeys={formData.role_id ? [formData.role_id] : []}
@@ -303,11 +339,16 @@ export function InternalTeamCreateUpdate({
                                     isLoading={loadingRoles}
                                     isRequired
                                 >
-                                    {roles.map((role) => (
-                                        <SelectItem key={role.id}>
-                                            {role.name}
-                                        </SelectItem>
-                                    ))}
+                                    {roles.map((role) => {
+                                        const roleName = (role.name || '').toLowerCase();
+                                        // Only Super Admin can create Branch Manager or Super Admin
+                                        const disabled = !isUserSuperAdmin && (roleName === 'branch manager' || roleName === 'super admin');
+                                        return (
+                                            <SelectItem key={role.id} isDisabled={disabled}>
+                                                {role.name}
+                                            </SelectItem>
+                                        );
+                                    })}
                                 </Select>
                                 <Input
                                     label="Address"

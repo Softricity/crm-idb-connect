@@ -14,17 +14,20 @@ export class ApplicationsService {
 
   // 🔒 SECURITY HELPER
   private async validateLeadAccess(leadId: string, user: any) {
+    // If user is null (public access), only verify lead exists (no branch scope restriction)
+    if (!user) {
+      const lead = await this.prisma.leads.findUnique({ where: { id: leadId } });
+      if (!lead) throw new ForbiddenException('Lead not found or inaccessible.');
+      return;
+    }
     const scope = getScope(user);
     const lead = await this.prisma.leads.findFirst({
       where: {
         id: leadId,
-        ...scope // <--- Enforces Branch/User Scope
+        ...scope
       }
     });
-
-    if (!lead) {
-      throw new ForbiddenException('You do not have access to this Lead.');
-    }
+    if (!lead) throw new ForbiddenException('You do not have access to this Lead.');
   }
 
   // Helper: Find or Create Application
@@ -50,9 +53,32 @@ export class ApplicationsService {
       ...appData 
     } = dto;
 
+    // Normalize date and empty string values
+    const normalized: any = { ...appData };
+    // Handle dob (Date only string -> Date object)
+    if (typeof normalized.dob === 'string') {
+      const trimmed = normalized.dob.trim();
+      normalized.dob = trimmed ? new Date(trimmed) : null;
+    }
+    // Convert empty strings to null for scalar optional fields
+    Object.keys(normalized).forEach((key) => {
+      if (typeof normalized[key] === 'string' && normalized[key].trim() === '') {
+        normalized[key] = null;
+      }
+    });
+
+    // Whitelist only scalar columns belonging to applications table to prevent Prisma relation validation error
+    const allowedFields = [
+      'given_name','surname','dob','gender','marital_status','email','phone','alternate_phone','address','city','state','country','citizenship','national_id','current_status','gap_years','referral_source','application_stage','system_remarks'
+    ];
+    const updateData: Record<string, any> = {};
+    for (const key of allowedFields) {
+      if (key in normalized) updateData[key] = normalized[key];
+    }
+
     await this.prisma.applications.update({
       where: { id: app.id },
-      data: appData,
+      data: updateData,
     });
 
     const familyData = { father_name, mother_name, emergency_contact_name, emergency_contact_number };
@@ -69,6 +95,28 @@ export class ApplicationsService {
       });
     }
 
+    return this.getFullApplication(leadId, user);
+  }
+
+  // Family-only update (used by public /family route)
+  async updateFamilyDetails(leadId: string, body: any, user: any) {
+    await this.validateLeadAccess(leadId, user);
+    const app = await this.getOrCreateApplication(leadId);
+    // Support both flat body fields and nested body.family_details[0]
+    const source = body?.family_details?.[0] ? body.family_details[0] : body;
+    const { father_name, mother_name, emergency_contact_name, emergency_contact_number } = source;
+    const familyData = { father_name, mother_name, emergency_contact_name, emergency_contact_number };
+    const existingFamily = await this.prisma.application_family_details.findFirst({ where: { application_id: app.id } });
+    if (existingFamily) {
+      await this.prisma.application_family_details.update({
+        where: { id: existingFamily.id },
+        data: familyData,
+      });
+    } else {
+      await this.prisma.application_family_details.create({
+        data: { application_id: app.id, ...familyData },
+      });
+    }
     return this.getFullApplication(leadId, user);
   }
 
@@ -111,14 +159,20 @@ export class ApplicationsService {
     await this.validateLeadAccess(leadId, user);
     const app = await this.getOrCreateApplication(leadId);
     for (const record of dto.records) {
+      // Normalize date string for test_date
+      const payload: any = { ...record };
+      if (typeof payload.test_date === 'string') {
+        const trimmed = payload.test_date.trim();
+        payload.test_date = trimmed ? new Date(trimmed) : null;
+      }
       if (record.id) {
         await this.prisma.application_tests.update({
           where: { id: record.id },
-          data: { ...record, id: undefined },
+          data: { ...payload, id: undefined },
         });
       } else {
         await this.prisma.application_tests.create({
-          data: { ...record, application_id: app.id },
+          data: { ...payload, application_id: app.id },
         });
       }
     }
@@ -130,14 +184,21 @@ export class ApplicationsService {
     await this.validateLeadAccess(leadId, user);
     const app = await this.getOrCreateApplication(leadId);
     for (const record of dto.records) {
+      const payload: any = { ...record };
+      ['start_date','end_date'].forEach((field) => {
+        if (typeof payload[field] === 'string') {
+          const trimmed = payload[field].trim();
+          payload[field] = trimmed ? new Date(trimmed) : null;
+        }
+      });
       if (record.id) {
         await this.prisma.application_work_experience.update({
           where: { id: record.id },
-          data: { ...record, id: undefined },
+          data: { ...payload, id: undefined },
         });
       } else {
         await this.prisma.application_work_experience.create({
-          data: { ...record, application_id: app.id },
+          data: { ...payload, application_id: app.id },
         });
       }
     }
@@ -150,10 +211,18 @@ export class ApplicationsService {
     const app = await this.getOrCreateApplication(leadId);
     const existing = await this.prisma.application_visa_details.findFirst({ where: { application_id: app.id } });
 
+    const payload: any = { ...dto };
+    ['passport_issue_date','passport_expiry_date'].forEach((field) => {
+      if (typeof payload[field] === 'string') {
+        const trimmed = payload[field].trim();
+        payload[field] = trimmed ? new Date(trimmed) : null;
+      }
+    });
+
     if (existing) {
-      await this.prisma.application_visa_details.update({ where: { id: existing.id }, data: dto });
+      await this.prisma.application_visa_details.update({ where: { id: existing.id }, data: payload });
     } else {
-      await this.prisma.application_visa_details.create({ data: { application_id: app.id, ...dto } });
+      await this.prisma.application_visa_details.create({ data: { application_id: app.id, ...payload } });
     }
     return this.getFullApplication(leadId, user);
   }
@@ -166,33 +235,73 @@ export class ApplicationsService {
   ) {
     await this.validateLeadAccess(leadId, user);
     const app = await this.getOrCreateApplication(leadId);
-    
+    // Debug logging (can be switched to proper logger later)
+    try {
+      // Avoid logging full file buffers, just names & field keys
+      const summary: Record<string, any> = {};
+      Object.keys(files || {}).forEach((k) => {
+        const arr = files[k];
+        summary[k] = Array.isArray(arr) ? arr.map((f: any) => f.originalname) : arr?.originalname;
+      });
+      // eslint-disable-next-line no-console
+      console.log('[updateDocuments] leadId', leadId, 'fields', summary);
+    } catch (logErr) {
+      // eslint-disable-next-line no-console
+      console.warn('[updateDocuments] logging error', logErr);
+    }
+
     const existingDocs = await this.prisma.application_documents.findFirst({
       where: { application_id: app.id },
     });
 
     const updateData: any = {};
 
-    const processSingleFile = async (fileArray: Express.Multer.File[] | undefined, fieldName: string) => {
+    const processSingleFile = async (
+      fileArray: Express.Multer.File[] | undefined,
+      fieldName: string,
+    ) => {
       if (fileArray && fileArray.length > 0) {
-        const url = await this.supabaseService.uploadFile(
-          fileArray[0], 'idb-student-documents', `applications/${leadId}`
-        );
-        updateData[`${fieldName}_url`] = url;
+        try {
+          const url = await this.supabaseService.uploadFile(
+            fileArray[0],
+            `applications/${leadId}`,
+            'idb-student-documents',
+          );
+          updateData[`${fieldName}_url`] = url;
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('[updateDocuments] single upload failed', fieldName, err);
+          throw err; // propagate to return 500
+        }
       }
     };
 
     const processArrayFiles = async (
-        fileArray: Express.Multer.File[] | undefined, 
-        fieldName: string, existingUrls: string[] = []
+      fileArray: Express.Multer.File[] | undefined,
+      fieldName: string,
+      existingUrls: string[] = [],
     ) => {
       if (fileArray && fileArray.length > 0) {
-        const newUrls = await Promise.all(
-          fileArray.map((file) => 
-            this.supabaseService.uploadFile(file, 'idb-student-documents', `applications/${leadId}`)
-          )
-        );
-        updateData[`${fieldName}_url`] = [...existingUrls, ...newUrls];
+        try {
+          const newUrls = await Promise.all(
+            fileArray.map((file) =>
+              this.supabaseService.uploadFile(
+                file,
+                `applications/${leadId}`,
+                'idb-student-documents',
+              ),
+            ),
+          );
+          const targetKey =
+            fieldName === 'academic_documents'
+              ? 'academic_documents_urls'
+              : `${fieldName}_url`;
+          updateData[targetKey] = [...existingUrls, ...newUrls];
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('[updateDocuments] multi upload failed', fieldName, err);
+          throw err;
+        }
       }
     };
 
@@ -204,7 +313,11 @@ export class ApplicationsService {
     await processSingleFile(files.financial_documents, 'financial_documents');
     await processSingleFile(files.other_documents, 'other_documents');
 
-    await processArrayFiles(files.academic_documents, 'academic_documents', existingDocs?.academic_documents_urls || []);
+    await processArrayFiles(
+      files.academic_documents,
+      'academic_documents',
+      existingDocs?.academic_documents_urls || [],
+    );
     await processArrayFiles(files.recommendation_letters, 'recommendation_letters', existingDocs?.recommendation_letters_url || []);
 
     if (existingDocs) {
@@ -218,11 +331,14 @@ export class ApplicationsService {
       });
     }
 
+    // eslint-disable-next-line no-console
+    console.log('[updateDocuments] updateData applied keys:', Object.keys(updateData));
+
     return this.getFullApplication(leadId, user);
   }
 
   async getFullApplication(leadId: string, user: any) {
-    await this.validateLeadAccess(leadId, user); // <--- Security Check on GET too
+    await this.validateLeadAccess(leadId, user);
 
     return this.prisma.applications.findFirst({
       where: { lead_id: leadId },

@@ -14,6 +14,7 @@ export interface OfflinePayment {
   reference_id?: string;
   receiver?: string; // partner id
   lead_id?: string;
+  branch_id?: string; // Branch context for payment tracking
   created_at?: string;
   status?: string;
   file?: string;

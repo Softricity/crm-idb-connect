@@ -219,6 +219,27 @@ export const hasFullLeadAccess = (permissions: string[]): boolean => {
   ]);
 };
 
+// Check if user is super admin (can manage branches and has extensive permissions)
+export const isSuperAdmin = (permissions: string[]): boolean => {
+  // Super admin typically has multiple high-level manage permissions
+  const adminPermissions = [
+    LeadPermission.LEAD_MANAGE,
+    ApplicationPermission.APPLICATION_MANAGE,
+    EmployeePermission.EMPLOYEE_MANAGE,
+    AgentsPermission.AGENTS_DELETE,
+    PermissionPermission.ROLES_PERMISSION,
+    BranchPermission.BRANCH_MANAGE,
+  ];
+  
+  // Count how many admin-level permissions the user has
+  const adminPermCount = adminPermissions.filter(perm => 
+    hasPermission(permissions, perm)
+  ).length;
+  
+  // If user has 3 or more admin permissions, consider them super admin
+  return adminPermCount === 6;
+};
+
 // Check if user is restricted to their own leads (typically agent role)
 export const isRestrictedToOwnLeads = (permissions: string[]): boolean => {
   return hasPermission(permissions, LeadPermission.LEAD_CREATE) && 

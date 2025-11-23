@@ -30,6 +30,14 @@ export class PartnersService {
     });
     if (!roleExists) throw new BadRequestException('Invalid Role ID provided');
 
+    // Enforce: Only Super Admin can create Branch Manager or Super Admin
+    const targetRoleName = (roleExists.name || '').toLowerCase();
+    const creatorRoleName = (user?.role || '').toLowerCase();
+    const creatingPrivilegedRole = targetRoleName === 'branch manager' || targetRoleName === 'super admin';
+    if (creatingPrivilegedRole && creatorRoleName !== 'super admin') {
+      throw new BadRequestException('Only Super Admin can create Branch Manager or Super Admin');
+    }
+
     // Verify Duplicates
     const existingPartner = await this.prisma.partners.findFirst({
       where: {
@@ -70,13 +78,24 @@ export class PartnersService {
   }
 
   // 3. Update FindAll: Accept 'user' to apply Scope
-  async findAll(user: any, roleName?: string) {
-    const scope = getScope(user); // <--- GET SCOPE
-
-    const whereClause = {
-      ...scope, // Apply Branch Filter
-      ...(roleName ? { role: { name: roleName } } : {}),
-    };
+  async findAll(user: any, roleName?: string, branchId?: string) {
+    // If branchId is provided, use it; otherwise use scope based on user's branch
+    let whereClause: any;
+    
+    if (branchId) {
+      // Filter by specific branch
+      whereClause = {
+        branch_id: branchId,
+        ...(roleName ? { role: { name: roleName } } : {}),
+      };
+    } else {
+      // Use scope-based filtering
+      const scope = getScope(user);
+      whereClause = {
+        ...scope,
+        ...(roleName ? { role: { name: roleName } } : {}),
+      };
+    }
 
     const partners = await this.prisma.partners.findMany({
       where: whereClause,

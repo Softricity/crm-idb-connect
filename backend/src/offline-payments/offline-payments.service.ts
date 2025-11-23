@@ -36,11 +36,17 @@ export class OfflinePaymentsService {
     // C. Upload File
     let fileUrl = createDto.file; 
     if (file) {
-      fileUrl = await this.supabaseService.uploadFile(
-        file, 
-        'idb-offline-payments',
-        createDto.lead_id ? `leads/${createDto.lead_id}` : 'general'
-      );
+      try {
+        fileUrl = await this.supabaseService.uploadFile(
+          file,
+          createDto.lead_id ? `leads/${createDto.lead_id}` : 'general',
+          'idb-offline-payments',
+        );
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('[offline-payments] file upload failed', err);
+        throw err;
+      }
     }
 
     // D. Create Payment

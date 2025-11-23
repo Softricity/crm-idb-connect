@@ -27,20 +27,19 @@ export class PartnersController {
   constructor(private readonly partnersService: PartnersService) {}
 
   @Post()
-  @Roles(Role.Admin)
   create(@Body() createPartnerDto: CreatePartnerDto, @Request() req) {
     // Pass req.user so the service knows which branch to assign
     return this.partnersService.create(createPartnerDto, req.user);
   }
 
   @Get()
-  @Roles(Role.Admin, Role.Counsellor)
   findAll(
     @Request() req, 
-    @Query('role') role?: string
+    @Query('role') role?: string,
+    @Query('branch_id') branchId?: string
   ) {
     // Pass req.user so the service filters by branch
-    return this.partnersService.findAll(req.user, role);
+    return this.partnersService.findAll(req.user, role, branchId);
   }
 
   // GET /partners/me - Get current user's profile

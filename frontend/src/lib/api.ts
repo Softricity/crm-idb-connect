@@ -50,24 +50,32 @@ async function handleResponse(res: Response) {
 
 // --- Leads ---
 export const LeadsAPI = {
-  fetchLeads: async () => {
-    const res = await fetch(`${API_BASE}/leads?type=lead`, { headers: getHeaders() });
+  fetchLeads: async (branchId?: string) => {
+    const params = new URLSearchParams({ type: 'lead' });
+    if (branchId) params.append('branch_id', branchId);
+    const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  fetchApplications: async () => {
-    const res = await fetch(`${API_BASE}/leads?type=application`, { headers: getHeaders() });
+  fetchApplications: async (branchId?: string) => {
+    const params = new URLSearchParams({ type: 'application' });
+    if (branchId) params.append('branch_id', branchId);
+    const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
   fetchLeadById: async (id: string) => {
     const res = await fetch(`${API_BASE}/leads/${id}`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  getAgentLeads: async (agentId: string) => {
-    const res = await fetch(`${API_BASE}/leads?created_by=${agentId}`, { headers: getHeaders() });
+  getAgentLeads: async (agentId: string, branchId?: string) => {
+    const params = new URLSearchParams({ created_by: agentId });
+    if (branchId) params.append('branch_id', branchId);
+    const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  getCounsellorLeads: async (counsellorId: string) => {
-    const res = await fetch(`${API_BASE}/leads?assigned_to=${counsellorId}&type=lead`, { headers: getHeaders() });
+  getCounsellorLeads: async (counsellorId: string, branchId?: string) => {
+    const params = new URLSearchParams({ assigned_to: counsellorId, type: 'lead' });
+    if (branchId) params.append('branch_id', branchId);
+    const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
   createLead: async (lead: any) => {
@@ -91,8 +99,11 @@ export const PartnersAPI = {
     const res = await fetch(`${API_BASE}/partners/me`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  fetchPartners: async (role?: string) => {
-    const url = role ? `${API_BASE}/partners?role=${role}` : `${API_BASE}/partners`;
+  fetchPartners: async (branchId?: string, role?: string) => {
+    const params = new URLSearchParams();
+    if (branchId) params.append('branch_id', branchId);
+    if (role) params.append('role', role);
+    const url = params.toString() ? `${API_BASE}/partners?${params}` : `${API_BASE}/partners`;
     const res = await fetch(url, { headers: getHeaders() });
     return handleResponse(res);
   },
@@ -136,6 +147,14 @@ export const AuthAPI = {
 export const FollowupsAPI = {
   createFollowup: async (payload: any) => {
     const res = await fetch(`${API_BASE}/followups`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) });
+    return handleResponse(res);
+  },
+  fetchAllFollowups: async (params?: { date?: string; userId?: string }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.date) queryParams.append('date', params.date);
+    if (params?.userId) queryParams.append('userId', params.userId);
+    const url = queryParams.toString() ? `${API_BASE}/followups?${queryParams}` : `${API_BASE}/followups`;
+    const res = await fetch(url, { headers: getHeaders() });
     return handleResponse(res);
   },
   fetchFollowupsByLeadId: async (leadId: string) => {
@@ -391,6 +410,102 @@ export const RolesAPI = {
   },
 };
 
+// --- Branches ---
+export const BranchesAPI = {
+  fetchBranches: async () => {
+    const res = await fetch(`${API_BASE}/branches`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  fetchBranchById: async (id: string) => {
+    const res = await fetch(`${API_BASE}/branches/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createBranch: async (branch: any) => {
+    const res = await fetch(`${API_BASE}/branches`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(branch) });
+    return handleResponse(res);
+  },
+  updateBranch: async (id: string, updates: any) => {
+    const res = await fetch(`${API_BASE}/branches/${id}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify(updates) });
+    return handleResponse(res);
+  },
+  deleteBranch: async (id: string) => {
+    const res = await fetch(`${API_BASE}/branches/${id}`, { method: 'DELETE', headers: getHeaders() });
+    return handleResponse(res);
+  },
+};
+
+// --- Announcements ---
+export const AnnouncementsAPI = {
+  create: async (data: any) => {
+    const res = await fetch(`${API_BASE}/announcements`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(data) });
+    return handleResponse(res);
+  },
+  getAll: async (filters?: { target_audience?: string; branch_id?: string }) => {
+    const params = new URLSearchParams();
+    if (filters?.target_audience) params.append('target_audience', filters.target_audience);
+    if (filters?.branch_id) params.append('branch_id', filters.branch_id);
+    const url = params.toString() ? `${API_BASE}/announcements?${params}` : `${API_BASE}/announcements`;
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getById: async (id: string) => {
+    const res = await fetch(`${API_BASE}/announcements/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  update: async (id: string, data: any) => {
+    const res = await fetch(`${API_BASE}/announcements/${id}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify(data) });
+    return handleResponse(res);
+  },
+  delete: async (id: string) => {
+    const res = await fetch(`${API_BASE}/announcements/${id}`, { method: 'DELETE', headers: getHeaders() });
+    return handleResponse(res);
+  },
+  markAsRead: async (id: string) => {
+    const res = await fetch(`${API_BASE}/announcements/${id}/mark-read`, { method: 'POST', headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getUnreadCount: async () => {
+    const res = await fetch(`${API_BASE}/announcements/unread-count`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+};
+
+// --- Todos ---
+export const TodosAPI = {
+  create: async (data: any) => {
+    const res = await fetch(`${API_BASE}/todos`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(data) });
+    return handleResponse(res);
+  },
+  getAll: async (params?: { date?: string; completed?: boolean }) => {
+    const queryParams = new URLSearchParams();
+    if (params?.date) queryParams.append('date', params.date);
+    if (params?.completed !== undefined) queryParams.append('completed', params.completed.toString());
+    const url = queryParams.toString() ? `${API_BASE}/todos?${queryParams}` : `${API_BASE}/todos`;
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getById: async (id: string) => {
+    const res = await fetch(`${API_BASE}/todos/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  update: async (id: string, data: any) => {
+    const res = await fetch(`${API_BASE}/todos/${id}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify(data) });
+    return handleResponse(res);
+  },
+  delete: async (id: string) => {
+    const res = await fetch(`${API_BASE}/todos/${id}`, { method: 'DELETE', headers: getHeaders() });
+    return handleResponse(res);
+  },
+  markComplete: async (id: string) => {
+    const res = await fetch(`${API_BASE}/todos/${id}/complete`, { method: 'PATCH', headers: getHeaders() });
+    return handleResponse(res);
+  },
+  markIncomplete: async (id: string) => {
+    const res = await fetch(`${API_BASE}/todos/${id}/incomplete`, { method: 'PATCH', headers: getHeaders() });
+    return handleResponse(res);
+  },
+};
+
 export default {
   LeadsAPI,
   PartnersAPI,
@@ -406,4 +521,7 @@ export default {
   PermissionGroupsAPI,
   PermissionsAPI,
   RolesAPI,
+  BranchesAPI,
+  AnnouncementsAPI,
+  TodosAPI,
 };

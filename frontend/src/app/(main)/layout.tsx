@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "@/components/sidebar"; // desktop sidebar
 import Navbar from "@/components/navbar";   // mobile navbar
+import BranchSelector from "@/components/BranchSelector";
 import { menus } from "@/config/menus";    // unified menus
 import { Toaster } from "@/components/ui/sonner";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePartnerStore } from "@/stores/usePartnerStore";
+import { useBranchStore } from "@/stores/useBranchStore";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
 
@@ -15,11 +17,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     const loading = useAuthStore((s) => s.loading);
     const user = useAuthStore((s) => s.user);
     const loadCurrentPartner = usePartnerStore((s) => s.loadCurrentPartner);
+    const { selectedBranch, setSelectedBranch, fetchBranches } = useBranchStore();
     const router = useRouter();
+    const [selectedBranchId, setSelectedBranchId] = useState("");
 
     useEffect(() => {
       initAuth();
-    }, [initAuth]);
+      fetchBranches();
+    }, [initAuth, fetchBranches]);
 
     // enforce permission-based access for main/admin layout
     useEffect(() => {
@@ -61,6 +66,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {/* Mobile Navbar */}
             <div className="lg:hidden">
               <Navbar menus={menus} />
+            </div>
+
+            {/* Desktop Header with Branch Selector */}
+            <div className="hidden lg:flex items-center justify-end px-6 py-3 border-b border-gray-200 bg-white">
+              <div className="w-80">
+                <BranchSelector
+                  value={selectedBranchId}
+                  onChange={(branchId) => {
+                    setSelectedBranchId(branchId);
+                    const branch = useBranchStore.getState().getBranchById(branchId);
+                    setSelectedBranch(branch);
+                  }}
+                  label=""
+                  placeholder="Select branch"
+                />
+              </div>
             </div>
 
             {/* Page Content */}

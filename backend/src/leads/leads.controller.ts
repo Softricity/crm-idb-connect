@@ -45,9 +45,11 @@ export class LeadsController {
     @Query('assigned_to') assignedTo?: string,
     @Query('created_by') createdBy?: string,
     @Query('type') type?: string,
+    @Query('branch_id') branchId?: string,
+    @Query('email') email?: string,
   ) {
-    // Pass 'user' to the service
-    return this.leadsService.findAll(user, assignedTo, createdBy, type);
+    // Pass 'user' to the service along with optional branch override
+    return this.leadsService.findAll(user, assignedTo, createdBy, type, branchId, email);
   }
 
   // Get Single Lead
@@ -66,6 +68,12 @@ export class LeadsController {
   @Roles(Role.Admin) // Only Admins can bulk assign
   bulkAssign(@Body() bulkAssignDto: BulkAssignDto, @GetUser() user: any) {
     return this.leadsService.bulkAssign(bulkAssignDto, user);
+  }
+
+  @Post('login')
+  @Public()
+  login(@Body('email') email: string, @Body('password') password: string) {
+    return this.leadsService.login(email, password);
   }
 
   /**

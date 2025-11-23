@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { usePartnerStore, Partner } from "@/stores/usePartnerStore";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useBranchStore } from "@/stores/useBranchStore";
 import { hasAnyPermission, EmployeePermission } from "@/lib/utils";
 import {
     Table,
@@ -22,6 +23,7 @@ import { InternalTeamCreateUpdate } from "./internalTeamCreateUpdate";
 export function InternalTeamTable() {
     const { partners, fetchPartners, deletePartner, loading } = usePartnerStore();
     const { user } = useAuthStore();
+    const { selectedBranch } = useBranchStore();
     const userPermissions = user?.permissions || [];
     
     const canCreate = hasAnyPermission(userPermissions, [EmployeePermission.EMPLOYEE_CREATE]);
@@ -33,8 +35,8 @@ export function InternalTeamTable() {
     const [selectedMember, setSelectedMember] = useState<Partner | null>(null);
 
     useEffect(() => {
-        fetchPartners();
-    }, [fetchPartners]);
+        fetchPartners(selectedBranch?.id);
+    }, [fetchPartners, selectedBranch]);
 
     // Filter internal team members (exclude external agents)
     const internalTeam = React.useMemo(
@@ -115,7 +117,7 @@ export function InternalTeamTable() {
                                 <TableCell>{member.mobile}</TableCell>
                                 <TableCell>
                                     <Chip size="sm" variant="flat" color="primary">
-                                        {member.role}
+                                        {member?.role || "No Role"}
                                     </Chip>
                                 </TableCell>
                                 <TableCell>{member.city}</TableCell>

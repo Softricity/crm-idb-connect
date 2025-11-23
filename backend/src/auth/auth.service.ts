@@ -64,7 +64,8 @@ export class AuthService {
         email: partner.email,
         role: partner.role.name,
         branch_id: partner.branch_id,
-        branch_name: partner.branch?.name
+        branch_name: partner.branch?.name,
+        permissions: permissions,
       },
     };
   }

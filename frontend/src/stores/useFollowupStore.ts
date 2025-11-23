@@ -21,12 +21,17 @@ export interface Followup {
   partner?: {
     name: string;
   };
+  leads?: {
+    name: string;
+    email?: string;
+  };
   followup_comments?: FollowupComment[];
 }
 
 interface FollowupState {
   followups: Followup[];
   loading: boolean;
+  fetchAllFollowups: (params?: { date?: string; userId?: string }) => Promise<void>;
   fetchFollowupsByLeadId: (leadId: string) => Promise<void>;
   addFollowup: (followup: Omit<Followup, "id" | "partner" | "comments">) => Promise<void>;
   updateFollowup: (id: string, updates: Partial<Followup>) => Promise<void>;
@@ -42,6 +47,17 @@ interface FollowupState {
 export const useFollowupStore = create<FollowupState>((set, get) => ({
   followups: [],
   loading: false,
+
+  fetchAllFollowups: async (params) => {
+    set({ loading: true });
+    try {
+      const data = await api.FollowupsAPI.fetchAllFollowups(params);
+      set({ followups: data as Followup[] });
+    } catch (error: any) {
+      console.error("Error fetching all followups:", error.message || error);
+    }
+    set({ loading: false });
+  },
 
   fetchFollowupsByLeadId: async (leadId) => {
     set({ loading: true });

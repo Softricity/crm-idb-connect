@@ -9,6 +9,9 @@ export interface AuthUser {
   type: "partner"; // all auth based on partner table
   role: string; // "agent" for external agents, other custom roles for internal team
   permissions: string[]; // Array of permission names from role_permissions
+  branch_id?: string | null; // Branch ID
+  branch_name?: string | null; // Branch name
+  branch_type?: string | null; // Branch type: HeadOffice, Regional, Branch
 }
 
 interface AuthState {
@@ -113,19 +116,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ loading: true });
 
     try {
-      // Backend returns { access_token, payload: { sub, email, name, role, permissions } }
+      // Backend returns { access_token, payload: { sub, email, name, role, permissions, branch_id, branch_name, branch_type } }
       const response = await api.AuthAPI.login(email, password);
-      const { access_token, payload } = response;
-
+      const { access_token, partner:payload } = response;
+      
       const partnerUser: AuthUser = {
-        id: payload.sub,
+        id: payload.id,
         email: payload.email,
         name: payload.name || email.split('@')[0], // Fallback to email username if name not provided
         type: "partner",
         role: payload.role,
         permissions: payload.permissions || [], // Store permissions from backend
+        branch_id: payload.branch_id || null,
+        branch_name: payload.branch_name || null,
+        branch_type: payload.branch_type || null,
       };
-
+      
+      console.log("Login response payload:", partnerUser);
       // Store token and user info in cookies
       setAuthToken(access_token);
       setPartnerCookie(partnerUser);

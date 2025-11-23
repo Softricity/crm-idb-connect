@@ -32,6 +32,8 @@ export interface Application {
   // CRM Tracking
   application_stage?: string | null;
   system_remarks?: string | null;
+  // Derived / linkage (from lead)
+  branch_id?: string | null; // populate client-side from related lead if needed
   
   created_at?: string;
   updated_at?: string;
@@ -151,13 +153,11 @@ interface ApplicationState {
   applications: Application[];
   currentApplication: Application | null;
   loading: boolean;
-  
-  fetchApplications: () => Promise<void>;
-  fetchApplicationById: (id: string) => Promise<void>;
-  createApplication: (application: Partial<Application>) => Promise<Application>;
-  updateApplication: (id: string, updates: Partial<Application>) => Promise<void>;
-  deleteApplication: (id: string) => Promise<void>;
-  
+  fetchApplications: (leadIds?: string[]) => Promise<void>; // until backend list exists, fetch sequentially by lead ids
+  fetchApplicationByLeadId: (leadId: string) => Promise<void>;
+  createApplication: (leadId: string) => Promise<Application>; // create via minimal trigger (server auto-creates)
+  patchSection: (leadId: string, section: string, body: any) => Promise<void>;
+  deleteApplication: (id: string) => Promise<void>; // stub
   setCurrentApplication: (application: Application | null) => void;
 }
 
@@ -166,20 +166,33 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
   currentApplication: null,
   loading: false,
 
-  fetchApplications: async () => {
+  fetchApplications: async (leadIds) => {
     set({ loading: true });
     try {
-      const data = await api.ApplicationsAPI.fetchApplications();
-      set({ applications: data as Application[] });
+      if (!leadIds || leadIds.length === 0) {
+        set({ applications: [] });
+        return;
+      }
+      const results: Application[] = [];
+      for (const leadId of leadIds) {
+        try {
+          const data = await api.ApplicationsAPI.fetchApplicationByLeadId(leadId);
+          if (data) results.push(data as Application);
+        } catch (e) {
+          // swallow individual errors to continue
+          console.warn(`Failed to fetch application for lead ${leadId}`);
+        }
+      }
+      set({ applications: results });
     } catch (error) {
-      console.error("Error fetching applications:", error);
+      console.error("Error fetching applications collection:", error);
       throw error;
     } finally {
       set({ loading: false });
     }
   },
 
-  fetchApplicationById: async (leadId: string) => {
+  fetchApplicationByLeadId: async (leadId: string) => {
     set({ loading: true });
     try {
       const data = await api.ApplicationsAPI.fetchApplicationByLeadId(leadId);
@@ -192,37 +205,36 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
     }
   },
 
-  createApplication: async (application: Partial<Application>) => {
+  createApplication: async (leadId: string) => {
     set({ loading: true });
     try {
-      const data = await api.ApplicationsAPI.createApplication(application);
-      set((state) => ({
-        applications: [...state.applications, data as Application],
-      }));
+      // minimal create: server auto creates application record when updating sections; attempt GET to force creation routine
+      const data = await api.ApplicationsAPI.fetchApplicationByLeadId(leadId);
+      set((state) => ({ applications: [...state.applications, data as Application] }));
       return data as Application;
     } catch (error) {
-      console.error("Error creating application:", error);
+      console.error("Error initializing application:", error);
       throw error;
     } finally {
       set({ loading: false });
     }
   },
 
-  updateApplication: async (id: string, updates: Partial<Application>) => {
+  patchSection: async (leadId: string, section: string, body: any) => {
     set({ loading: true });
     try {
-      const data = await api.ApplicationsAPI.updateApplication(id, updates);
+      const data = await api.ApplicationsAPI.patchSection(leadId, section, body);
       set((state) => ({
         applications: state.applications.map((app) =>
-          app.id === id ? { ...app, ...(data as Application) } : app
+          app.lead_id === leadId ? { ...app, ...(data as Application) } : app
         ),
         currentApplication:
-          state.currentApplication?.id === id
+          state.currentApplication?.lead_id === leadId
             ? { ...state.currentApplication, ...(data as Application) }
             : state.currentApplication,
       }));
     } catch (error) {
-      console.error("Error updating application:", error);
+      console.error("Error patching application section:", error);
       throw error;
     } finally {
       set({ loading: false });

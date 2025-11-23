@@ -3,7 +3,7 @@ export type DateRange = { start?: Date | null; end?: Date | null };
 
 export interface LeadFilterState {
   search: string;
-  types: string[];        // maps to lead.purpose
+  courses: string[];        // maps to lead.preferred_course
   owners: string[];       // maps to lead.assigned_to
   statuses: string[];     // maps to lead.status
   sources: string[];      // maps to lead.utm_source
@@ -12,7 +12,7 @@ export interface LeadFilterState {
 }
 
 export interface LeadFilterOptions {
-  types: string[];
+  courses: string[];
   owners: string[];
   statuses: string[];
   sources: string[];

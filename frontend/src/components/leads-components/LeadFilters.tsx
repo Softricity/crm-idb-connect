@@ -88,7 +88,7 @@ export default function LeadFiltersDrawer({
   const resetDraft = useCallback(() => {
     setDraft({
       search: "",
-      types: [],
+      courses: [],
       owners: [],
       statuses: [],
       sources: [],
@@ -111,7 +111,7 @@ export default function LeadFiltersDrawer({
     () =>
       (draft.search ? 1 : 0) +
       (draft.dateRange?.start || draft.dateRange?.end ? 1 : 0) +
-      draft.types.length +
+      draft.courses.length +
       draft.owners.length +
       draft.statuses.length +
       draft.sources.length +
@@ -120,7 +120,7 @@ export default function LeadFiltersDrawer({
   );
 
   // Memoized selectedKey Sets (avoids Set re-allocations on each render)
-  const typesKeys = useMemo(() => new Set(draft.types), [draft.types]);
+  const coursesKeys = useMemo(() => new Set(draft.courses), [draft.courses]);
   const ownersKeys = useMemo(() => new Set(draft.owners), [draft.owners]);
   const statusesKeys = useMemo(() => new Set(draft.statuses), [draft.statuses]);
   const sourcesKeys = useMemo(() => new Set(draft.sources), [draft.sources]);
@@ -200,15 +200,15 @@ export default function LeadFiltersDrawer({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <Select
-                      label="Type"
+                      label="Course"
                       selectionMode="multiple"
-                      selectedKeys={typesKeys}
+                      selectedKeys={coursesKeys}
                       onSelectionChange={(keys) =>
-                        setDraftField("types", Array.from(keys as Set<string>))
+                        setDraftField("courses", Array.from(keys as Set<string>))
                       }
                       startContent={<Tags className="h-4 w-4 text-default-500" />}
                     >
-                      {options.types.map((t) => (
+                      {options.courses.map((t) => (
                         <SelectItem key={t} textValue={t}>
                           {t || "-"}
                         </SelectItem>
@@ -295,13 +295,13 @@ export default function LeadFiltersDrawer({
                         search
                       </Chip>
                     )}
-                    {draft.types.length > 0 && (
+                    {draft.courses.length > 0 && (
                       <Chip
                         variant="flat"
                         size="sm"
-                        onClose={() => setDraftField("types", [])}
+                        onClose={() => setDraftField("courses", [])}
                       >
-                        type
+                        courses
                       </Chip>
                     )}
                     {draft.owners.length > 0 && (

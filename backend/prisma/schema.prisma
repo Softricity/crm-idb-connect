@@ -1,6 +1,6 @@
 generator client {
   provider     = "prisma-client-js"
-  output       = "../generated/prisma"
+  // output       = "../generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -10,25 +10,19 @@ datasource db {
 }
 
 model Branch {
-  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String
-  code        String    @unique // e.g., HO-001, DEL-SOUTH
-  type        String    // "HeadOffice", "Regional", "Branch"
-  address     String?
-  phone       String?
-  
-  // Hierarchy (Self-Relation)
-  parent_id   String?   @db.Uuid
-  parent      Branch?   @relation("BranchHierarchy", fields: [parent_id], references: [id])
-  children    Branch[]  @relation("BranchHierarchy")
-
-  // Relations (Scoped Data)
-  partners    partners[]
-  leads       leads[]
-  // Note: Applications/Payments don't need direct branch_id as they are linked to Leads
-  
-  created_at  DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime  @default(now()) @updatedAt @db.Timestamptz(6)
+  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String
+  code       String     @unique
+  type       String
+  address    String?
+  phone      String?
+  parent_id  String?    @db.Uuid
+  created_at DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
+  parent     Branch?    @relation("BranchHierarchy", fields: [parent_id], references: [id])
+  children   Branch[]   @relation("BranchHierarchy")
+  leads      leads[]
+  partners   partners[]
 
   @@map("branches")
 }
@@ -49,9 +43,9 @@ model announcements {
   id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   title              String
   content            String
-  target_audience    String       // user or branch
-  users             String[]             @default([])
-  branch_id         String?
+  target_audience    String
+  users              String[]             @default([])
+  branch_id          String?
   created_by         String?              @db.Uuid
   created_at         DateTime?            @default(now()) @db.Timestamptz(6)
   is_active          Boolean?             @default(true)
@@ -60,30 +54,28 @@ model announcements {
 }
 
 model application_documents {
-  id                        String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  application_id            String       @db.Uuid
-  profile_photo_url         String?
-  passport_copy_url         String?
-  academic_documents_urls   String[]     @default([]) // Multi-file
-  english_test_cert_url     String?
-  sop_url                   String?
-  cv_resume_url             String?
-  recommendation_letters_url String[]    @default([]) // Multi-file
-  financial_documents_url   String?
-  other_documents_url       String?
-  
-  applications              applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  id                         String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id             String       @db.Uuid
+  profile_photo_url          String?
+  passport_copy_url          String?
+  academic_documents_urls    String[]     @default([])
+  english_test_cert_url      String?
+  sop_url                    String?
+  cv_resume_url              String?
+  recommendation_letters_url String[]     @default([])
+  financial_documents_url    String?
+  other_documents_url        String?
+  applications               applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
 model application_family_details {
-  id                        String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  application_id            String       @db.Uuid
-  father_name               String?
-  mother_name               String?
-  emergency_contact_name    String?
-  emergency_contact_number  String?
-  
-  applications              applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  id                       String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id           String       @db.Uuid
+  father_name              String?
+  mother_name              String?
+  emergency_contact_name   String?
+  emergency_contact_number String?
+  applications             applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
 model application_preferences {
@@ -92,91 +84,79 @@ model application_preferences {
   preferred_country     String?
   preferred_course_type String?
   preferred_course_name String?
-  preferred_intake      String?      // Jan/May/Sept + Year
+  preferred_intake      String?
   preferred_university  String?
   backup_country        String?
-  study_mode            String?      // On-campus/Online
+  study_mode            String?
   budget_range          String?
   scholarship_interest  Boolean?
-  travel_history        String?      // Text area
-  
+  travel_history        String?
   applications          applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
 model applications {
-  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  lead_id          String   @db.Uuid
-  student_id       String?  @unique 
-  
-  // --- Personal Details ---
-  given_name       String?
-  surname          String?
-  dob              DateTime? @db.Date
-  gender           String?   
-  marital_status   String?   
-  email            String?
-  phone            String?
-  alternate_phone  String?
-  address          String?   
-  city             String?
-  state            String?
-  country          String?
-  citizenship      String?
-  national_id      String?   
-  current_status   String?   
-  gap_years        Int?
-  referral_source  String?
-  
-  // --- CRM Tracking ---
+  id                String                        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  lead_id           String                        @db.Uuid
+  student_id        String?                       @unique
+  given_name        String?
+  surname           String?
+  dob               DateTime?                     @db.Date
+  gender            String?
+  marital_status    String?
+  email             String?
+  phone             String?
+  alternate_phone   String?
+  address           String?
+  city              String?
+  state             String?
+  country           String?
+  citizenship       String?
+  national_id       String?
+  current_status    String?
+  gap_years         Int?
+  referral_source   String?
   application_stage String?
   system_remarks    String?
-
-  created_at       DateTime? @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime? @default(now()) @updatedAt @db.Timestamptz(6)
-
-  // --- Relations ---
-  leads            leads     @relation(fields: [lead_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  
-  // These match the models I provided in the previous step
-  family_details   application_family_details[]
-  education        application_education[]
-  preferences      application_preferences[]
-  tests            application_tests[]
-  work_experience  application_work_experience[]
-  visa_details     application_visa_details[]
-  documents        application_documents[]
+  created_at        DateTime?                     @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?                     @default(now()) @updatedAt @db.Timestamptz(6)
+  documents         application_documents[]
+  education         application_education[]
+  family_details    application_family_details[]
+  preferences       application_preferences[]
+  tests             application_tests[]
+  visa_details      application_visa_details[]
+  work_experience   application_work_experience[]
+  leads             leads                         @relation(fields: [lead_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 model application_education {
   id                    String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   application_id        String       @db.Uuid
-  level                 String?      // 10th/12th/Bachelor...
+  level                 String?
   institution_name      String?
   board_university      String?
   country_of_study      String?
   major_stream          String?
   percentage_gpa        String?
-  year_of_passing       String?      // Year
+  year_of_passing       String?
   medium_of_instruction String?
   backlogs              Int?
-  certificate_url       String?      // Checkbox/File URL
-  
+  certificate_url       String?
   applications          applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
 model application_tests {
-  id              String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  application_id  String       @db.Uuid
-  test_type       String?      // IELTS/PTE...
-  test_date       DateTime?    @db.Date
-  overall_score   Decimal?     @db.Decimal(4, 1)
-  listening       Decimal?     @db.Decimal(4, 1)
-  reading         Decimal?     @db.Decimal(4, 1)
-  writing         Decimal?     @db.Decimal(4, 1)
-  speaking        Decimal?     @db.Decimal(4, 1)
-  trf_number      String?      // Score Report No.
-  
-  applications    applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  id             String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  application_id String       @db.Uuid
+  test_type      String?
+  test_date      DateTime?    @db.Date
+  overall_score  Decimal?     @db.Decimal(4, 1)
+  listening      Decimal?     @db.Decimal(4, 1)
+  reading        Decimal?     @db.Decimal(4, 1)
+  writing        Decimal?     @db.Decimal(4, 1)
+  speaking       Decimal?     @db.Decimal(4, 1)
+  trf_number     String?
+  applications   applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
 model application_work_experience {
@@ -186,9 +166,8 @@ model application_work_experience {
   designation     String?
   start_date      DateTime?    @db.Date
   end_date        DateTime?    @db.Date
-  job_duties      String?      // Text area
+  job_duties      String?
   certificate_url String?
-  
   applications    applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
@@ -202,11 +181,10 @@ model application_visa_details {
   passport_nationality    String?
   country_applied_for     String?
   previous_visa_type      String?
-  visa_status             String?      // Approved/Refused/Pending
+  visa_status             String?
   visa_refusal_reason     String?
   travelled_countries     String?
   is_visa_rejected_past   Boolean?
-  
   applications            applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
@@ -251,16 +229,15 @@ model leads {
   reason                               String?
   password                             String?            @default("")
   is_flagged                           Boolean            @default(false)
+  branch_id                            String?            @db.Uuid
   applications                         applications[]
   followups                            followups[]
   partners_leads_assigned_toTopartners partners?          @relation("leads_assigned_toTopartners", fields: [assigned_to], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  branch                               Branch?            @relation(fields: [branch_id], references: [id])
   partners_leads_created_byTopartners  partners?          @relation("leads_created_byTopartners", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   notes                                notes[]
   offline_payments                     offline_payments[]
   timeline                             timeline[]
-
-  branch_id   String?   @db.Uuid
-  branch      Branch?   @relation(fields: [branch_id], references: [id])
 }
 
 model notes {
@@ -292,8 +269,7 @@ model offline_payments {
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model partners {
   id                                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  role_id        String   @db.Uuid
-  role           role     @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  role_id                           String               @db.Uuid
   name                              String
   email                             String               @unique
   mobile                            String               @unique
@@ -306,6 +282,7 @@ model partners {
   remarks                           String?
   agency_name                       String?
   created_at                        DateTime             @default(now()) @db.Timestamptz(6)
+  branch_id                         String?              @db.Uuid
   announcement_reads                announcement_reads[]
   announcements                     announcements[]
   followup_comments                 followup_comments[]
@@ -314,10 +291,10 @@ model partners {
   leads_leads_created_byTopartners  leads[]              @relation("leads_created_byTopartners")
   notes                             notes[]
   offline_payments                  offline_payments[]
+  branch                            Branch?              @relation(fields: [branch_id], references: [id])
+  role                              role                 @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   timeline                          timeline[]
-
-  branch_id   String?   @db.Uuid
-  branch      Branch?   @relation(fields: [branch_id], references: [id])
+  todos                             todos[]
 }
 
 model timeline {
@@ -335,6 +312,92 @@ model timeline {
   @@index([created_by], map: "idx_timeline_created_by")
   @@index([event_type], map: "idx_timeline_event_type")
   @@index([lead_id], map: "idx_timeline_lead_id")
+}
+
+model permission_group {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String       @unique
+  permissions permission[]
+}
+
+model permission {
+  id                  String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                String            @unique
+  permission_group_id String?           @db.Uuid
+  permission_group    permission_group? @relation(fields: [permission_group_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  role_permissions    role_permission[]
+}
+
+model role {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String            @unique
+  description      String?
+  partners         partners[]
+  role_permissions role_permission[]
+}
+
+model role_permission {
+  role_id       String     @db.Uuid
+  permission_id String     @db.Uuid
+  permission    permission @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  role          role       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([role_id, permission_id])
+}
+
+model Country {
+  id           String       @id @default(uuid())
+  name         String       @unique
+  flag         String?
+  universities University[]
+
+  @@map("countries")
+}
+
+model University {
+  id        String   @id @default(uuid())
+  name      String
+  logo      String?
+  city      String?
+  countryId String   @map("country_id")
+  courses   Course[]
+  country   Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  @@map("universities")
+}
+
+model Course {
+  id                  String     @id @default(uuid())
+  name                String
+  description         String?
+  level               String?
+  category            String?
+  duration            Int?
+  feeType             String?    @map("fee_type")
+  originalFee         Decimal?   @map("original_fee") @db.Decimal(10, 2)
+  feeCurrency         String?    @default("PLN") @map("fee_currency")
+  fee                 Decimal?   @map("fee") @db.Decimal(10, 2)
+  courseCurrency      String?    @default("PLN") @map("course_currency")
+  applicationFee      Decimal?   @map("application_fee") @db.Decimal(10, 2)
+  applicationCurrency String?    @default("PLN") @map("application_currency")
+  intakeMonth         String?    @map("intake_month")
+  commissionType      String?    @default("%") @map("commission_type")
+  commissionValue     Decimal?   @map("commission_value") @db.Decimal(10, 2)
+  details             Json?
+  universityId        String     @map("university_id")
+  createdAt           DateTime   @default(now()) @map("created_at")
+  university          University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+
+  @@map("courses")
+}
+
+model todos {
+  id         String    @id
+  title      String
+  created_by String    @db.Uuid
+  completed  Boolean   @default(false)
+  dueDate    DateTime?
+  partners   partners  @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 enum academic_level_enum {
@@ -397,91 +460,4 @@ enum timeline_event {
   LEAD_FOLLOWUP_COMMENT_UPDATED
   OFFLINE_PAYMENT_ADDED
   OFFLINE_PAYMENT_DELETED
-}
-
-model permission_group {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String   @unique
-  permissions permission[]
-}
-
-model permission {
-  id                 String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name               String           @unique
-  permission_group_id String?         @db.Uuid
-  permission_group   permission_group? @relation(fields: [permission_group_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  role_permissions   role_permission[]
-}
-
-model role {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String   @unique
-  description String?
-  role_permissions role_permission[]
-  partners         partners[]
-}
-
-model role_permission {
-  role_id       String     @db.Uuid
-  permission_id String     @db.Uuid
-  role          role       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  permission    permission @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  @@id([role_id, permission_id])
-}
-
-model Country {
-  id           String       @id @default(uuid())
-  name         String       @unique
-  flag         String?      // URL to flag image
-  universities University[]
-
-  @@map("countries")
-}
-
-model University {
-  id        String   @id @default(uuid())
-  name      String
-  logo      String?  // URL to logo image
-  city      String?
-  
-  countryId String   @map("country_id")
-  country   Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
-
-  courses   Course[]
-
-  @@map("universities")
-}
-
-model Course {
-  id                  String     @id @default(uuid())
-  name                String
-  description         String?    @db.Text
-  level               String?    // e.g., "Masters", "Bachelors"
-  category            String?    // e.g., "IT", "Business"
-  duration            Int?       // In months
-  feeType             String?    @map("fee_type") // e.g., "Per Year", "Total"
-  
-  // Fee fields with currencies
-  originalFee         Decimal?   @map("original_fee") @db.Decimal(10, 2)
-  feeCurrency         String?    @map("fee_currency") @default("PLN")
-  fee                 Decimal?   @map("fee") @db.Decimal(10, 2)
-  courseCurrency      String?    @map("course_currency") @default("PLN")
-  applicationFee      Decimal?   @map("application_fee") @db.Decimal(10, 2)
-  applicationCurrency String?    @map("application_currency") @default("PLN")
-  
-  // Intake and commission
-  intakeMonth         String?    @map("intake_month") // e.g., "Sep, Jan"
-  commissionType      String?    @map("commission_type") @default("%")
-  commissionValue     Decimal?   @map("commission_value") @db.Decimal(10, 2)
-  
-  // Course details (points)
-  details             Json?      // Array of detail points
-  
-  universityId        String     @map("university_id")
-  university          University @relation(fields: [universityId], references: [id], onDelete: Cascade)
-
-  createdAt           DateTime   @default(now()) @map("created_at")
-
-  @@map("courses")
 }

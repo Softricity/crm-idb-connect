@@ -49,7 +49,7 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
   const [isFiltersDrawerOpen, setIsFiltersDrawerOpen] = useState(false);
   const [filters, setFilters] = useState<LeadFilterState>({
     search: "",
-    types: [],
+    courses: [],
     owners: [],
     statuses: [],
     sources: [],
@@ -58,7 +58,7 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
   
   // Calculate active filter count
   const filtersActiveCount = useMemo(() => {
-    return filters.types.length + filters.owners.length + filters.statuses.length + 
+    return filters.courses.length + filters.owners.length + filters.statuses.length + 
            filters.sources.length + filters.countries.length;
   }, [filters]);
 
@@ -68,7 +68,7 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
       Array.from(new Set(arr.filter(Boolean))) as string[];
 
     return {
-      types: uniq(leads.map((l) => l.type ?? "")),
+      courses: uniq(leads.map((l) => l.preferred_course ?? "")),
       owners: uniq(leads.map((l) => l.partners_leads_assigned_toTopartners?.name ?? "Unassigned")),
       statuses: uniq(leads.map((l) => (l.status ?? "").toLowerCase())).map(
         (s) => (s.charAt(0).toUpperCase() + s.slice(1)) || ""

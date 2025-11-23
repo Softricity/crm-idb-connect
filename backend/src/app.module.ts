@@ -20,6 +20,7 @@ import { TimelineModule } from './timeline/timeline.module';
 import { AnnouncementsModule } from './announcements/announcements.module';
 import { StorageModule } from './storage/storage.module';
 import { BranchesModule } from './branches/branches.module';
+import { TodosModule } from './todos/todos.module';
 
 @Module({
   imports: [
@@ -41,7 +42,8 @@ import { BranchesModule } from './branches/branches.module';
     TimelineModule,
     AnnouncementsModule,
     StorageModule,
-    BranchesModule
+    BranchesModule,
+    TodosModule,
   ],
   controllers: [AppController],
   providers: [AppService],

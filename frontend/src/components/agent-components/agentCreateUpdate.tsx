@@ -27,6 +27,7 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
     const { addPartner, updatePartner } = usePartnerStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [agentRoleId, setAgentRoleId] = useState<string>("");
     const [formData, setFormData] = useState<PartnerFormData>({
         name: "",
         email: "",
@@ -41,6 +42,25 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         remarks: "",
     });
     const [errors, setErrors] = useState<Partial<Record<keyof PartnerFormData, string>>>({});
+
+    // Fetch agent role ID
+    useEffect(() => {
+        const fetchAgentRole = async () => {
+            try {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/roles`);
+                const roles = await response.json();
+                const agentRole = roles.find((r: any) => r.name?.toLowerCase() === 'agent');
+                if (agentRole) {
+                    setAgentRoleId(agentRole.id);
+                }
+            } catch (error) {
+                console.error("Failed to fetch agent role:", error);
+            }
+        };
+        if (open) {
+            fetchAgentRole();
+        }
+    }, [open]);
 
     const validateField = (name: keyof PartnerFormData, value: any): string => {
         switch (name) {
@@ -141,9 +161,15 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         }
 
         try {
+            if (!agentRoleId) {
+                toast.error("Agent role not found. Please contact administrator.");
+                setIsSubmitting(false);
+                return;
+            }
+
             const partnerData = {
                 ...formData,
-                role: "agent" as const,
+                role_id: agentRoleId,
             };
 
             if (agent?.id) {

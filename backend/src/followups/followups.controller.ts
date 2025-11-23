@@ -7,6 +7,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { FollowupsService } from './followups.service';
 import { CreateFollowupDto } from './dto/create-followup.dto';
@@ -22,6 +23,18 @@ export class FollowupsController {
   constructor(private readonly followupsService: FollowupsService) {}
 
   // --- Followup Routes ---
+
+  /**
+   * Get all followups with optional filtering
+   * GET /followups?userId=xxx&date=2024-11-22
+   */
+  @Get('followups')
+  findAll(
+    @Query('userId') userId?: string,
+    @Query('date') date?: string,
+  ) {
+    return this.followupsService.findAll(userId, date);
+  }
 
   /**
    * Create a new followup
@@ -67,6 +80,15 @@ export class FollowupsController {
   // --- Comment Routes ---
 
   /**
+   * Get all comments for a followup
+   * GET /followups/:id/comments
+   */
+  @Get('followups/:id/comments')
+  getComments(@Param('id') followupId: string) {
+    return this.followupsService.getComments(followupId);
+  }
+
+  /**
    * Add a comment to a followup
    * POST /followups/:id/comments
    */
@@ -81,6 +103,15 @@ export class FollowupsController {
       createCommentDto,
       user.id,
     );
+  }
+
+  /**
+   * Delete all comments for a followup
+   * DELETE /followups/:id/comments
+   */
+  @Delete('followups/:id/comments')
+  deleteAllComments(@Param('id') followupId: string, @GetUser() user: any) {
+    return this.followupsService.deleteAllComments(followupId, user);
   }
 
   /**

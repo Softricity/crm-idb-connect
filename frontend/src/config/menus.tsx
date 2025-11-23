@@ -68,7 +68,10 @@ export const menus: MenuItem[] = [
   // Support
   { title: "Support", type: "title" },
   { title: "Helpdesk", icon: <HelpCircle size={20} />, type: "link", link: "/helpdesk" },
-  // { title: "Settings", icon: <Settings size={20} />, type: "link", link: "/settings" },
+  
+  // Settings (Super Admin Only)
+  { title: "Settings", type: "title" },
+  { title: "Branches", icon: <Building size={20} />, type: "link", link: "/settings/branches", requiredPermissions: ["Branch Manage"] },
 ];
 
 

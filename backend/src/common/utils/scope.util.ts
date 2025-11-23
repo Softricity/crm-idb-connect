@@ -2,7 +2,7 @@
 
 export function getScope(user: any) {
   // 1. Head Office Admins (or Super Admins) see EVERYTHING
-  if (user.branch_type === 'HeadOffice' && user.role === 'admin') {
+  if (user.branch_type === 'HeadOffice' && user.role.name === 'admin') {
     return {}; 
   }
 

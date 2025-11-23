@@ -12,7 +12,7 @@ const matchText = (lead: Lead, q: string) => {
     lead.mobile ?? "",
     lead.email ?? "",
     lead.partners_leads_assigned_toTopartners?.name ?? "",
-    lead.purpose ?? "",
+    lead.preferred_course ?? "",
     lead.utm_source ?? "",
     lead.utm_medium ?? "",
     lead.preferred_country ?? "",
@@ -24,7 +24,7 @@ const matchText = (lead: Lead, q: string) => {
 };
 
 export function filterLeads(leads: Lead[], f: LeadFilterState): Lead[] {
-  const { search, types, owners, statuses, sources, countries, dateRange } = f;
+  const { search, courses, owners, statuses, sources, countries, dateRange } = f;
 
   const startMs = dateRange?.start ? new Date(dateRange.start).setHours(0, 0, 0, 0) : null;
   const endMs = dateRange?.end ? new Date(dateRange.end).setHours(23, 59, 59, 999) : null;
@@ -39,7 +39,7 @@ export function filterLeads(leads: Lead[], f: LeadFilterState): Lead[] {
     }
 
     // Multi-selects
-    if (!inSet(lead.purpose ?? "", types)) return false;
+    if (!inSet(lead.preferred_course ?? "", courses)) return false;
     if (!inSet(lead.partners_leads_assigned_toTopartners?.name ?? "Unassigned", owners)) return false;
     if (!inSet((lead.status ?? "").toLowerCase(), statuses.map((s) => s.toLowerCase()))) return false;
     if (!inSet(lead.utm_source ?? "", sources)) return false;

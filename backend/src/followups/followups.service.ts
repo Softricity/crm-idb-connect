@@ -17,6 +17,39 @@ import { getScope } from '../common/utils/scope.util'; // <--- IMPORT
 export class FollowupsService {
   constructor(private prisma: PrismaService, private timelineService: TimelineService) {}
 
+  async findAll(userId?: string, date?: string) {
+    const where: any = {};
+    
+    // Filter by userId if provided
+    if (userId) {
+      where.created_by = userId;
+    }
+    
+    // Filter by date if provided
+    if (date) {
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+      
+      where.due_date = {
+        gte: startDate,
+        lte: endDate,
+      };
+    }
+
+    const followups = await this.prisma.followups.findMany({
+      where,
+      include: {
+        partners: { select: { name: true } },
+        leads: { select: { name: true, email: true } },
+      },
+      orderBy: { due_date: 'asc' },
+    });
+
+    return followups;
+  }
+
   async createFollowup(createFollowupDto: CreateFollowupDto, user: any) {
     const { lead_id, title, due_date } = createFollowupDto;
 
@@ -116,6 +149,24 @@ export class FollowupsService {
 
   // --- Comment Methods ---
 
+  async getComments(followupId: string) {
+    await this.findFollowupOrThrow(followupId);
+    
+    const comments = await this.prisma.followup_comments.findMany({
+      where: { followup_id: followupId },
+      include: {
+        partners: { select: { name: true } },
+      },
+      orderBy: { created_at: 'asc' },
+    });
+
+    // Convert BigInt to string for JSON serialization
+    return comments.map(comment => ({
+      ...comment,
+      id: comment.id.toString(),
+    }));
+  }
+
   async addComment(
     followupId: string,
     createCommentDto: CreateFollowupCommentDto,
@@ -148,6 +199,16 @@ export class FollowupsService {
       ...comment,
       id: comment.id.toString(),
     };
+  }
+
+  async deleteAllComments(followupId: string, user: any) {
+    await this.findFollowupOrThrow(followupId);
+    
+    await this.prisma.followup_comments.deleteMany({
+      where: { followup_id: followupId },
+    });
+
+    return { message: 'All comments deleted successfully.' };
   }
 
   async updateComment(

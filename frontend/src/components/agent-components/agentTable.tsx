@@ -22,12 +22,14 @@ import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 import { usePartnerStore, Partner } from "@/stores/usePartnerStore";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useBranchStore } from "@/stores/useBranchStore";
 import { hasAnyPermission, AgentsPermission } from "@/lib/utils";
 import { AgentForm } from "./agentCreateUpdate";
 
 export function AgentTable() {
     const { partners, fetchPartners, deletePartner, loading } = usePartnerStore();
     const { user } = useAuthStore();
+    const { selectedBranch } = useBranchStore();
     const userPermissions = user?.permissions || [];
     
     const canCreate = hasAnyPermission(userPermissions, [AgentsPermission.AGENTS_CREATE]);
@@ -46,8 +48,8 @@ export function AgentTable() {
     const rowsPerPage = 10;
 
     React.useEffect(() => {
-        fetchPartners();
-    }, [fetchPartners]);
+        fetchPartners(selectedBranch?.id);
+    }, [fetchPartners, selectedBranch]);
 
     const agents = React.useMemo(
         () =>

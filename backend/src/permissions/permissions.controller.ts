@@ -152,7 +152,6 @@ export class PermissionsController {
    * GET /roles
    */
   @Get('roles')
-  @Roles(Role.Admin, Role.Counsellor)
   findAllRoles() {
     return this.permissionsService.findAllRoles();
   }
