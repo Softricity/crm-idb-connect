@@ -41,6 +41,7 @@ interface FollowupState {
   deleteAllCommentsForFollowup: (followupId: string) => Promise<void>;
   markComplete: (id: string) => Promise<void>;
   extendDueDate: (id: string, newDate: string) => Promise<void>;
+  reset: () => void;
 }
 
 // Using `get` to access other stores without causing dependency cycles
@@ -162,4 +163,5 @@ export const useFollowupStore = create<FollowupState>((set, get) => ({
       return [];
     }
   },
+  reset: () => set({ followups: [], loading: false }),
 }));

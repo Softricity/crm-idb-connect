@@ -6,10 +6,12 @@ import { usePartnerStore } from "@/stores/usePartnerStore";
 import PaymentsTable from "./paymentsTable";
 import CreateUpdatePayments from "./createUpdatePayments";
 import PaymentToolbar from "./paymentTabToolbar";
+import { useBranchStore } from "@/stores/useBranchStore";
 
 export default function PaymentsTab({ leadId }: { leadId?: string }) {
   const { payments, fetchPaymentsByLeadId } = useOfflinePaymentStore() as any;
   const { loading, partners, fetchPartners } = usePartnerStore() as any;
+  const { selectedBranch } = useBranchStore();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
 
@@ -18,8 +20,8 @@ export default function PaymentsTab({ leadId }: { leadId?: string }) {
   }, [fetchPaymentsByLeadId, leadId]);
 
   useEffect(() => {
-    fetchPartners();
-  }, [fetchPartners]);
+    fetchPartners(selectedBranch?.id);
+  }, [fetchPartners, selectedBranch?.id]);
 
   const receivers = useMemo(
     () =>

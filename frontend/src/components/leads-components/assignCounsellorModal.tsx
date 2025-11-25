@@ -12,6 +12,7 @@ import {
   SelectItem,
 } from "@heroui/react";
 import { usePartnerStore } from "@/stores/usePartnerStore";
+import { useBranchStore } from "@/stores/useBranchStore";
 import { useLeadStore, Lead } from "@/stores/useLeadStore";
 import { toast } from "sonner";
 import { UserCheck } from "lucide-react";
@@ -24,13 +25,14 @@ interface AssignCounsellorModalProps {
 
 export function AssignCounsellorModal({ isOpen, onOpenChange, lead }: AssignCounsellorModalProps) {
   const { partners, fetchPartners } = usePartnerStore();
+  const { selectedBranch } = useBranchStore();
   const { updateLead, fetchLeads } = useLeadStore();
   const [selectedCounsellor, setSelectedCounsellor] = useState<string>("");
   const [isAssigning, setIsAssigning] = useState(false);
 
   useEffect(() => {
-    fetchPartners();
-  }, [fetchPartners]);
+    fetchPartners(selectedBranch?.id);
+  }, [fetchPartners, selectedBranch?.id]);
 
   useEffect(() => {
     if (lead?.assigned_to) {

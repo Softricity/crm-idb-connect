@@ -25,6 +25,7 @@ interface TimelineState {
     event: Omit<Timeline, "id" | "partner" | "created_at">
   ) => Promise<void>;
   fetchAllTimelines: (leadIds: string[]) => Promise<void>;
+  reset: () => void;
 }
 
 export const useTimelineStore = create<TimelineState>((set, get) => ({
@@ -75,4 +76,5 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
       throw new Error(error.message || error);
     }
   },
+  reset: () => set({ timeline: [], loading: false, timelineByLead: {} }),
 }));

@@ -1,6 +1,7 @@
 // store/auth.ts
 import { create } from "zustand";
 import api from "@/lib/api";
+import { resetAllStores } from "@/stores/resetStores";
 
 export interface AuthUser {
   id: string;
@@ -158,6 +159,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     clearAuthToken();
     clearPartnerCookie();
+    // Reset other global stores to clean slate
+    try {
+      resetAllStores();
+    } catch (e) {
+      console.warn("Failed to reset stores during logout:", e);
+    }
+
     set({ isAuthenticated: false, user: null, token: null, loading: false });
   },
 

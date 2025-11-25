@@ -20,6 +20,7 @@ interface NoteState {
   updateNote: (id: string, updates: Partial<Note>) => Promise<void>;
   deleteNote: (id: string) => Promise<void>;
   clearNotes: () => void;
+  reset: () => void;
 }
 
 export const useNoteStore = create<NoteState>((set) => ({
@@ -75,4 +76,5 @@ export const useNoteStore = create<NoteState>((set) => ({
   },
 
   clearNotes: () => set({ notes: [] }),
+  reset: () => set({ notes: [], loading: false }),
 }));

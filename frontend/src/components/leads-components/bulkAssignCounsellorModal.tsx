@@ -12,6 +12,7 @@ import {
   SelectItem,
 } from "@heroui/react";
 import { usePartnerStore } from "@/stores/usePartnerStore";
+import { useBranchStore } from "@/stores/useBranchStore";
 import { useLeadStore, Lead } from "@/stores/useLeadStore";
 import { toast } from "sonner";
 import { Users, UserCheck } from "lucide-react";
@@ -32,13 +33,14 @@ export function BulkAssignCounsellorModal({
   onComplete 
 }: BulkAssignCounsellorModalProps) {
   const { partners, fetchPartners } = usePartnerStore();
+  const { selectedBranch } = useBranchStore();
   const { updateLead, fetchLeads } = useLeadStore();
   const [selectedCounsellor, setSelectedCounsellor] = useState<string>("");
   const [isAssigning, setIsAssigning] = useState(false);
 
   useEffect(() => {
-    fetchPartners();
-  }, [fetchPartners]);
+    fetchPartners(selectedBranch?.id);
+  }, [fetchPartners, selectedBranch?.id]);
 
   // Get all internal team members (not external agents)
   const counsellors = partners.filter((p) => p.role?.toLowerCase() !== "agent");

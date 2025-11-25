@@ -33,6 +33,7 @@ interface PartnerState {
   updatePartner: (id: string, updates: Partial<Partner>) => Promise<void>;
   deletePartner: (id: string) => Promise<void>;
   loadCurrentPartner: (id: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const usePartnerStore = create<PartnerState>((set) => ({
@@ -111,4 +112,5 @@ export const usePartnerStore = create<PartnerState>((set) => ({
       console.error("Failed to load partner:", error);
     }
   },
+  reset: () => set({ partners: [], loading: false, currentPartner: undefined }),
 }));

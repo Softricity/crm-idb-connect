@@ -25,6 +25,7 @@ interface TodoState {
   deleteTodo: (id: string) => Promise<void>;
   markComplete: (id: string) => Promise<void>;
   markIncomplete: (id: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const useTodoStore = create<TodoState>((set) => ({
@@ -115,4 +116,5 @@ export const useTodoStore = create<TodoState>((set) => ({
       throw error;
     }
   },
+  reset: () => set({ todos: [], loading: false }),
 }));

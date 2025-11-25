@@ -26,6 +26,7 @@ interface DashboardState {
 
   fetchDashboardLeads: () => Promise<void>;
   refresh: () => Promise<void>;
+  reset: () => void;
 }
 
 export const useDashboardStore = create<DashboardState>((set, get) => ({
@@ -106,4 +107,5 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   refresh: async () => {
     await get().fetchDashboardLeads();
   },
+  reset: () => set({ leads: [], loading: false, error: undefined, metrics: { todaysLeads: 0, converted: 0, rejected: 0, total: 0 }, byStatus: {}, bySource: {}, last7Days: [] }),
 }));

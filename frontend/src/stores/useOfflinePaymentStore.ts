@@ -32,6 +32,7 @@ interface OfflinePaymentState {
   deletePayment: (id: string, fileUrl?: string) => Promise<void>;
   uploadPaymentFile: (file: File, leadId?: string) => Promise<string | null>;
   deletePaymentFile: (fileUrl: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const useOfflinePaymentStore = create<OfflinePaymentState>((set, get) => ({
@@ -200,4 +201,5 @@ export const useOfflinePaymentStore = create<OfflinePaymentState>((set, get) => 
       console.error("Error deleting file from storage:", err);
     }
   },
+  reset: () => set({ payments: [], loading: false }),
 }));

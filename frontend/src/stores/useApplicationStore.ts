@@ -159,6 +159,7 @@ interface ApplicationState {
   patchSection: (leadId: string, section: string, body: any) => Promise<void>;
   deleteApplication: (id: string) => Promise<void>; // stub
   setCurrentApplication: (application: Application | null) => void;
+  reset: () => void;
 }
 
 export const useApplicationStore = create<ApplicationState>((set, get) => ({
@@ -261,4 +262,5 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
   setCurrentApplication: (application: Application | null) => {
     set({ currentApplication: application });
   },
+  reset: () => set({ applications: [], currentApplication: null, loading: false }),
 }));

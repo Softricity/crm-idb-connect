@@ -38,6 +38,7 @@ interface LeadState {
   addLead: (lead: Omit<Lead, "id" | "created_at">) => Promise<void>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
   getLeadIds: () => string[];
+  reset: () => void;
 }
 
 export const useLeadStore = create<LeadState>((set, get) => ({
@@ -141,4 +142,6 @@ export const useLeadStore = create<LeadState>((set, get) => ({
       throw error;
     }
   },
+
+  reset: () => set({ leads: [], loading: false }),
 }));

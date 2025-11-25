@@ -27,6 +27,7 @@ interface AnnouncementState {
   deleteAnnouncement: (id: string) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
   fetchUnreadCount: () => Promise<void>;
+  reset: () => void;
 }
 
 export const useAnnouncementStore = create<AnnouncementState>((set) => ({
@@ -124,4 +125,5 @@ export const useAnnouncementStore = create<AnnouncementState>((set) => ({
       console.error("Error fetching unread count:", error);
     }
   },
+  reset: () => set({ announcements: [], loading: false, unreadCount: 0 }),
 }));

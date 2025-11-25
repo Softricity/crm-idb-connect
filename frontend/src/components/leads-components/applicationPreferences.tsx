@@ -11,6 +11,7 @@ import { Lead } from "@/stores/useLeadStore";
 import { Dispatch, SetStateAction, useState, useEffect } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePartnerStore } from "@/stores/usePartnerStore";
+import { useBranchStore } from "@/stores/useBranchStore";
 import { Label } from "../ui/label";
 import { isRestrictedToOwnLeads, hasAnyPermission, LeadPermission } from "@/lib/utils";
 
@@ -27,11 +28,12 @@ export default function ApplicationPreferences({
 }: ApplicationPreferencesProps) {
   const { user } = useAuthStore();
   const { partners, fetchPartners } = usePartnerStore();
+  const { selectedBranch } = useBranchStore();
   const [isOther, setIsOther] = useState(formData.utm_source === "");
 
   useEffect(() => {
-    fetchPartners();
-  }, [fetchPartners]);
+    fetchPartners(selectedBranch?.id);
+  }, [fetchPartners, selectedBranch?.id]);
 
   // Get all internal team members (not external agents)
   const counsellors = partners.filter((p) => p.role?.toLowerCase() !== "agent");

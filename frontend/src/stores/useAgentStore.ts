@@ -32,6 +32,7 @@ interface AgentState {
   addAgent: (agent: Omit<Agent, "id" | "created_at">) => Promise<void>;
   updateAgent: (id: string, updates: Partial<Agent>) => Promise<void>;
   deleteAgent: (id: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const useAgentStore = create<AgentState>((set) => ({
@@ -97,4 +98,5 @@ export const useAgentStore = create<AgentState>((set) => ({
       agents: state.agents.filter((agent) => agent.id !== id),
     }));
   },
+  reset: () => set({ agents: [], loading: false }),
 }));

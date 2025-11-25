@@ -21,6 +21,7 @@ interface BranchState {
   fetchBranches: () => Promise<void>;
   setSelectedBranch: (branch: Branch | null) => void;
   getBranchById: (id: string) => Branch | null;
+  reset: () => void;
 }
 
 export const useBranchStore = create<BranchState>((set, get) => ({
@@ -47,4 +48,6 @@ export const useBranchStore = create<BranchState>((set, get) => ({
   getBranchById: (id: string) => {
     return get().branches.find((b) => b.id === id) || null;
   },
+
+  reset: () => set({ branches: [], selectedBranch: null, loading: false }),
 }));
