@@ -214,7 +214,7 @@ export const NotesAPI = {
 // --- Timeline ---
 export const TimelineAPI = {
   fetchTimelineByLeadId: async (leadId: string) => {
-    const res = await fetch(`${API_BASE}/timeline/${leadId}`, { headers: getHeaders() });
+    const res = await fetch(`${API_BASE}/leads/${leadId}/timeline`, { headers: getHeaders() });
     return handleResponse(res);
   },
   createTimelineEvent: async (payload: any) => {
