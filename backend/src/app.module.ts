@@ -21,6 +21,7 @@ import { AnnouncementsModule } from './announcements/announcements.module';
 import { StorageModule } from './storage/storage.module';
 import { BranchesModule } from './branches/branches.module';
 import { TodosModule } from './todos/todos.module';
+import { OptionsModule } from './options/options.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { TodosModule } from './todos/todos.module';
     StorageModule,
     BranchesModule,
     TodosModule,
+    OptionsModule
   ],
   controllers: [AppController],
   providers: [AppService],

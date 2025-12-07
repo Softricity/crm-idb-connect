@@ -400,6 +400,16 @@ model todos {
   partners   partners  @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
+model OptionList {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  key        String   @unique
+  value      Json     @default("{}")
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  updated_at DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("option_lists")
+}
+
 enum academic_level_enum {
   Class_Xth_SSC   @map("Class Xth/SSC")
   Class_XIIth_HSC @map("Class XIIth/HSC")

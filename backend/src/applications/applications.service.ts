@@ -1,20 +1,42 @@
-// src/applications/applications.service.ts
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import {
   UpdatePersonalDetailsDto, UpdateEducationDto, UpdatePreferencesDto,
   UpdateTestsDto, UpdateWorkExperienceDto, UpdateVisaDetailsDto,
 } from './dto/update-sections.dto';
 import { SupabaseService } from '../storage/supabase.service';
-import { getScope } from '../common/utils/scope.util'; // <--- IMPORT SCOPE
+import { getScope } from '../common/utils/scope.util';
+import { MailService } from '../mail/mail.service';
+import * as bcrypt from 'bcrypt';
 
 @Injectable()
 export class ApplicationsService {
-  constructor(private prisma: PrismaService, private supabaseService: SupabaseService) {}
+  private readonly logger = new Logger(ApplicationsService.name);
+
+  constructor(
+    private prisma: PrismaService, 
+    private supabaseService: SupabaseService,
+    private mailService: MailService
+  ) {}
+
+  // --- Password Helpers ---
+  private generateRandomPassword(length = 8): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+    let password = '';
+    for (let i = 0; i < length; i++) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
+  private async hashPassword(password: string): Promise<string> {
+    const saltRounds = 10;
+    return bcrypt.hash(password, saltRounds);
+  }
 
   // 🔒 SECURITY HELPER
   private async validateLeadAccess(leadId: string, user: any) {
-    // If user is null (public access), only verify lead exists (no branch scope restriction)
+    // If user is null (public access), only verify lead exists
     if (!user) {
       const lead = await this.prisma.leads.findUnique({ where: { id: leadId } });
       if (!lead) throw new ForbiddenException('Lead not found or inaccessible.');
@@ -30,44 +52,81 @@ export class ApplicationsService {
     if (!lead) throw new ForbiddenException('You do not have access to this Lead.');
   }
 
-  // Helper: Find or Create Application
-  private async getOrCreateApplication(leadId: string) {
+  // Helper: Find or Create Application & Handle Conversion Logic
+  private async getOrCreateApplication(leadId: string, user?: any) {
     let app = await this.prisma.applications.findFirst({ where: { lead_id: leadId } });
+    
     if (!app) {
+      // 1. Create Application Record
       const studentId = `STU-${Date.now().toString().slice(-6)}`;
       app = await this.prisma.applications.create({
         data: { lead_id: leadId, student_id: studentId },
       });
+
+      // 2. Fetch Lead to check type and email
+      const lead = await this.prisma.leads.findUnique({ where: { id: leadId } });
+      if (lead) {
+        // 3. Update Lead Type to 'application'
+        await this.prisma.leads.update({
+          where: { id: leadId },
+          data: { type: 'application' }
+        });
+
+        // 4. Handle "Lead to Application" Email Notification
+        // Only send if the trigger is NOT the student themselves (i.e., triggered by Partner/Admin)
+        // If user is null, it might be public access (student), so we skip email.
+        // If user is set and NOT the student (has a role), we send email.
+        const isStaffUser = user && user.role && (user.role.name === 'admin' || user.role.name === 'counsellor' || user.role.name === 'agent');
+        
+        if (isStaffUser) {
+          const newPassword = this.generateRandomPassword();
+          const hashedPassword = await this.hashPassword(newPassword);
+
+          // Update password in DB
+          await this.prisma.leads.update({
+            where: { id: leadId },
+            data: { password: hashedPassword }
+          });
+
+          // Resend Credentials
+          await this.mailService.sendWelcomeEmail(lead.email, newPassword);
+          this.logger.log(`Converted lead ${leadId} to application. Credentials sent to ${lead.email}`);
+        }
+      }
     }
     return app;
   }
 
-  // 1. Personal Details (Updated to accept User)
-  async updatePersonalDetails(leadId: string, dto: UpdatePersonalDetailsDto, user: any) {
-    await this.validateLeadAccess(leadId, user); // <--- CHECK PERMISSION
+  // --- Explicit Conversion (Manual Trigger) ---
+  async convertLeadToApplication(leadId: string, user: any) {
+    await this.validateLeadAccess(leadId, user);
+    // getOrCreateApplication handles the logic of creation + email sending
+    return this.getOrCreateApplication(leadId, user);
+  }
 
-    const app = await this.getOrCreateApplication(leadId);
+  // --- Update Methods ---
+
+  // 1. Personal Details
+  async updatePersonalDetails(leadId: string, dto: UpdatePersonalDetailsDto, user: any) {
+    await this.validateLeadAccess(leadId, user);
+    const app = await this.getOrCreateApplication(leadId, user);
 
     const { 
       father_name, mother_name, emergency_contact_name, emergency_contact_number, 
       ...appData 
     } = dto;
 
-    // Normalize date and empty string values
     const normalized: any = { ...appData };
-    // Handle dob (Date only string -> Date object)
     if (typeof normalized.dob === 'string') {
       const trimmed = normalized.dob.trim();
       normalized.dob = trimmed ? new Date(trimmed) : null;
     }
-    // Convert empty strings to null for scalar optional fields
     Object.keys(normalized).forEach((key) => {
       if (typeof normalized[key] === 'string' && normalized[key].trim() === '') {
         normalized[key] = null;
       }
     });
 
-    // Whitelist only scalar columns belonging to applications table to prevent Prisma relation validation error
     const allowedFields = [
       'given_name','surname','dob','gender','marital_status','email','phone','alternate_phone','address','city','state','country','citizenship','national_id','current_status','gap_years','referral_source','application_stage','system_remarks'
     ];
@@ -98,11 +157,10 @@ export class ApplicationsService {
     return this.getFullApplication(leadId, user);
   }
 
-  // Family-only update (used by public /family route)
+  // Family-only update
   async updateFamilyDetails(leadId: string, body: any, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId);
-    // Support both flat body fields and nested body.family_details[0]
+    const app = await this.getOrCreateApplication(leadId, user);
     const source = body?.family_details?.[0] ? body.family_details[0] : body;
     const { father_name, mother_name, emergency_contact_name, emergency_contact_number } = source;
     const familyData = { father_name, mother_name, emergency_contact_name, emergency_contact_number };
@@ -122,8 +180,8 @@ export class ApplicationsService {
 
   // 2. Education
   async updateEducation(leadId: string, dto: UpdateEducationDto, user: any) {
-    await this.validateLeadAccess(leadId, user); // <--- CHECK PERMISSION
-    const app = await this.getOrCreateApplication(leadId);
+    await this.validateLeadAccess(leadId, user);
+    const app = await this.getOrCreateApplication(leadId, user);
     
     for (const record of dto.records) {
       if (record.id) {
@@ -143,7 +201,7 @@ export class ApplicationsService {
   // 3. Preferences
   async updatePreferences(leadId: string, dto: UpdatePreferencesDto, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId);
+    const app = await this.getOrCreateApplication(leadId, user);
     const existing = await this.prisma.application_preferences.findFirst({ where: { application_id: app.id } });
 
     if (existing) {
@@ -157,9 +215,8 @@ export class ApplicationsService {
   // 4. Tests
   async updateTests(leadId: string, dto: UpdateTestsDto, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId);
+    const app = await this.getOrCreateApplication(leadId, user);
     for (const record of dto.records) {
-      // Normalize date string for test_date
       const payload: any = { ...record };
       if (typeof payload.test_date === 'string') {
         const trimmed = payload.test_date.trim();
@@ -182,7 +239,7 @@ export class ApplicationsService {
   // 5. Work Experience
   async updateWorkExperience(leadId: string, dto: UpdateWorkExperienceDto, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId);
+    const app = await this.getOrCreateApplication(leadId, user);
     for (const record of dto.records) {
       const payload: any = { ...record };
       ['start_date','end_date'].forEach((field) => {
@@ -208,7 +265,7 @@ export class ApplicationsService {
   // 6. Visa Details
   async updateVisaDetails(leadId: string, dto: UpdateVisaDetailsDto, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId);
+    const app = await this.getOrCreateApplication(leadId, user);
     const existing = await this.prisma.application_visa_details.findFirst({ where: { application_id: app.id } });
 
     const payload: any = { ...dto };
@@ -231,23 +288,20 @@ export class ApplicationsService {
   async updateDocuments(
     leadId: string,
     files: any,
-    user: any // <--- Accept User
+    user: any
   ) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId);
-    // Debug logging (can be switched to proper logger later)
+    const app = await this.getOrCreateApplication(leadId, user);
+    
     try {
-      // Avoid logging full file buffers, just names & field keys
       const summary: Record<string, any> = {};
       Object.keys(files || {}).forEach((k) => {
         const arr = files[k];
         summary[k] = Array.isArray(arr) ? arr.map((f: any) => f.originalname) : arr?.originalname;
       });
-      // eslint-disable-next-line no-console
-      console.log('[updateDocuments] leadId', leadId, 'fields', summary);
+      this.logger.log(`[updateDocuments] leadId ${leadId} fields ${JSON.stringify(summary)}`);
     } catch (logErr) {
-      // eslint-disable-next-line no-console
-      console.warn('[updateDocuments] logging error', logErr);
+      this.logger.warn('[updateDocuments] logging error', logErr);
     }
 
     const existingDocs = await this.prisma.application_documents.findFirst({
@@ -256,52 +310,20 @@ export class ApplicationsService {
 
     const updateData: any = {};
 
-    const processSingleFile = async (
-      fileArray: Express.Multer.File[] | undefined,
-      fieldName: string,
-    ) => {
+    const processSingleFile = async (fileArray: Express.Multer.File[] | undefined, fieldName: string) => {
       if (fileArray && fileArray.length > 0) {
-        try {
-          const url = await this.supabaseService.uploadFile(
-            fileArray[0],
-            `applications/${leadId}`,
-            'idb-student-documents',
-          );
-          updateData[`${fieldName}_url`] = url;
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error('[updateDocuments] single upload failed', fieldName, err);
-          throw err; // propagate to return 500
-        }
+        const url = await this.supabaseService.uploadFile(fileArray[0], `applications/${leadId}`, 'idb-student-documents');
+        updateData[`${fieldName}_url`] = url;
       }
     };
 
-    const processArrayFiles = async (
-      fileArray: Express.Multer.File[] | undefined,
-      fieldName: string,
-      existingUrls: string[] = [],
-    ) => {
+    const processArrayFiles = async (fileArray: Express.Multer.File[] | undefined, fieldName: string, existingUrls: string[] = []) => {
       if (fileArray && fileArray.length > 0) {
-        try {
-          const newUrls = await Promise.all(
-            fileArray.map((file) =>
-              this.supabaseService.uploadFile(
-                file,
-                `applications/${leadId}`,
-                'idb-student-documents',
-              ),
-            ),
-          );
-          const targetKey =
-            fieldName === 'academic_documents'
-              ? 'academic_documents_urls'
-              : `${fieldName}_url`;
-          updateData[targetKey] = [...existingUrls, ...newUrls];
-        } catch (err) {
-          // eslint-disable-next-line no-console
-          console.error('[updateDocuments] multi upload failed', fieldName, err);
-          throw err;
-        }
+        const newUrls = await Promise.all(
+          fileArray.map((file) => this.supabaseService.uploadFile(file, `applications/${leadId}`, 'idb-student-documents'))
+        );
+        const targetKey = fieldName === 'academic_documents' ? 'academic_documents_urls' : `${fieldName}_url`;
+        updateData[targetKey] = [...existingUrls, ...newUrls];
       }
     };
 
@@ -313,11 +335,7 @@ export class ApplicationsService {
     await processSingleFile(files.financial_documents, 'financial_documents');
     await processSingleFile(files.other_documents, 'other_documents');
 
-    await processArrayFiles(
-      files.academic_documents,
-      'academic_documents',
-      existingDocs?.academic_documents_urls || [],
-    );
+    await processArrayFiles(files.academic_documents, 'academic_documents', existingDocs?.academic_documents_urls || []);
     await processArrayFiles(files.recommendation_letters, 'recommendation_letters', existingDocs?.recommendation_letters_url || []);
 
     if (existingDocs) {
@@ -330,9 +348,6 @@ export class ApplicationsService {
         data: { application_id: app.id, ...updateData },
       });
     }
-
-    // eslint-disable-next-line no-console
-    console.log('[updateDocuments] updateData applied keys:', Object.keys(updateData));
 
     return this.getFullApplication(leadId, user);
   }
