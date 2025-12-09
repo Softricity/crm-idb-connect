@@ -9,7 +9,7 @@ import LeadFormSheet  from "./leads-components/createUpdateLead";
 import { Button } from "@heroui/react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import Link from "next/link";
-import { hasPermission, LeadPermission, UniversityPermission } from "@/lib/utils";
+import { hasPermission, LeadPermission, PermissionPermission, UniversityPermission } from "@/lib/utils";
 
 export default function Sidebar() {
   const [open, setOpen] = React.useState(true);
@@ -85,7 +85,7 @@ export default function Sidebar() {
           </Link>
             )
           }
-          {user?.role?.toLowerCase() === 'super admin' && (
+          {hasPermission(user?.permissions ?? [], PermissionPermission.ROLES_CREATE) && (
             <Link href="/roles-permissions" className="flex items-center gap-4 px-3 text-sm py-3 hover:bg-gray-200 rounded-xl text-black transition-colors">
               <Lock size={20} />
               <span>Roles & Permission</span>
