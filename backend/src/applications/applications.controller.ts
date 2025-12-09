@@ -1,5 +1,4 @@
-// src/applications/applications.controller.ts
-import { Controller, Get, Patch, Body, Param, UseGuards, 
+import { Controller, Get, Post, Patch, Body, Param, UseGuards, 
   UseInterceptors, UploadedFiles } from '@nestjs/common';
 import {
   UpdatePersonalDetailsDto, UpdateEducationDto, UpdatePreferencesDto,
@@ -11,13 +10,18 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { GetUser } from '../auth/get-user.decorator';
 import { Public } from '../auth/public.decorator';
 
-// Guard removed from class; individual endpoints made public for student panel access.
-// SECURITY NOTE: Public write access allows anyone with a leadId to modify data.
-// Consider implementing a proper Lead JWT auth in future.
-// @UseGuards(JwtAuthGuard)
 @Controller('applications')
 export class ApplicationsController {
   constructor(private readonly applicationsService: ApplicationsService) {}
+
+  // Manual Conversion Trigger
+  @Post()
+  @UseGuards(JwtAuthGuard)
+  create(@Body('lead_id') leadId: string, @GetUser() user: any) {
+    // Frontend might send 'lead_id' or 'leadId' depending on store implementation. 
+    // Handled mainly by lead_id as per schema, but good to be safe.
+    return this.applicationsService.convertLeadToApplication(leadId, user);
+  }
 
   @Public()
   @Get(':leadId')

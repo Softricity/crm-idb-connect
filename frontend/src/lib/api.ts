@@ -1,4 +1,4 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE || '';
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5005';
 
 // Helper to get auth token from cookies
 function getAuthToken(): string | null {
@@ -506,6 +506,29 @@ export const TodosAPI = {
   },
 };
 
+export const OptionsAPI = {
+  get: async (key: string) => {
+    // Returns { "New": true, "Cold": false }
+    const res = await fetch(`${API_BASE}/options/${key}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  update: async (key: string, name: string, isActive: boolean) => {
+    const res = await fetch(`${API_BASE}/options/${key}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ name, isActive }),
+    });
+    return handleResponse(res);
+  },
+  delete: async (key: string, name: string) => {
+    const res = await fetch(`${API_BASE}/options/${key}/${name}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  }
+};
+
 export default {
   LeadsAPI,
   PartnersAPI,
@@ -524,4 +547,5 @@ export default {
   BranchesAPI,
   AnnouncementsAPI,
   TodosAPI,
+  OptionsAPI
 };
