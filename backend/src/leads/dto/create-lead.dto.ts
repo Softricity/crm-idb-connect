@@ -19,5 +19,6 @@ export class CreateLeadDto {
   utm_medium?: string;
   utm_campaign?: string;
 
-  
+  // Optional Branch Override
+  branch_id?: string;  
 }

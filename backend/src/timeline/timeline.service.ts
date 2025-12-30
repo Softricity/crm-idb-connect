@@ -58,7 +58,7 @@ export class TimelineService {
     await this.log(
       lead.id,
       'LEAD_CREATED',
-      lead.created_by || lead.id, // Fallback for public leads
+      lead.created_by || null, // Fallback for public leads
       `Lead created for ${lead.name}`,
     );
   }

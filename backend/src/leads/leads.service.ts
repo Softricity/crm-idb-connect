@@ -70,6 +70,8 @@ export class LeadsService {
           select: { branch_id: true },
         });
         derivedBranchId = creator?.branch_id || null;
+      } else if (createLeadDto.branch_id) {
+        derivedBranchId = createLeadDto.branch_id;
       }
 
       const newLead = await this.prisma.leads.create({
