@@ -61,17 +61,32 @@ export class LeadsService {
 
     try {
       // 3. Create Lead - EXPLICIT MAPPING
-      // We map every field manually to ensure data integrity
       // Determine branch for this lead if created_by is provided
       let derivedBranchId: string | null = null;
-      if (createLeadDto.created_by) {
+      let finalCreatedBy: string | null = null;
+
+      // Only attempt to find partner if created_by is a valid non-empty string
+      if (createLeadDto.created_by && createLeadDto.created_by.trim() !== '') {
         const creator = await this.prisma.partners.findUnique({
           where: { id: createLeadDto.created_by },
-          select: { branch_id: true },
+          select: { branch_id: true, id: true },
         });
-        derivedBranchId = creator?.branch_id || null;
+        
+        if (creator) {
+            derivedBranchId = creator.branch_id || null;
+            finalCreatedBy = creator.id;
+        } else {
+             // If ID was provided but not found, you can either throw or default to null.
+             // Given the previous error, we'll default to null to prevent 500s on bad IDs,
+             // or you can throw a clearer error. 
+             // Here we treat it as an unassigned lead to avoid crashing.
+             console.warn(`Partner ID ${createLeadDto.created_by} not found, creating unassigned lead.`);
+        }
       }
 
+      // Allow manual override of branch_id if provided (and not just derived)
+      // but usually we prefer derivation. If frontend sends null branch_id, it stays null.
+      
       const newLead = await this.prisma.leads.create({
         data: {
           // --- A. The 5 Core Fields (From Form) ---
@@ -88,7 +103,7 @@ export class LeadsService {
           status: createLeadDto.status || 'new',
           type: createLeadDto.type || 'lead',
 
-          created_by: createLeadDto.created_by || null,
+          created_by: finalCreatedBy,
           assigned_to: createLeadDto.assigned_to || null,
 
           // --- D. Tracking Fields ---
@@ -98,13 +113,18 @@ export class LeadsService {
 
           // --- E. Unused/Future Fields ---
           reason: null,
-          // Branch association
+          // Branch association (Null if unassigned)
           branch_id: derivedBranchId,
         },
       });
 
       // 4. Send Welcome Email
-      await this.mailService.sendWelcomeEmail(email, password);
+      // Wrap in try-catch so email failure doesn't block lead creation
+      try {
+        await this.mailService.sendWelcomeEmail(email, password);
+      } catch (emailError) {
+        console.error("Failed to send welcome email:", emailError);
+      }
 
       // 5. Log Timeline
       await this.timelineService.logLeadCreated(newLead);
@@ -116,9 +136,7 @@ export class LeadsService {
         if (error.code === 'P2002') {
           throw new ConflictException('Lead with this email or mobile already exists.');
         }
-        // P2003 is foreign key constraint failed (e.g., invalid created_by UUID)
         if (error.code === 'P2003') {
-          // Log specifically which field failed if needed
           throw new InternalServerErrorException('Invalid Partner ID provided for created_by or assigned_to');
         }
       }
@@ -162,7 +180,6 @@ export class LeadsService {
 
     // 2. Log events for each lead (async, don't await loop to return fast)
     leadIds.forEach(async (leadId) => {
-      // Ideally fetch old status first for accuracy, but for bulk we can just log the new status
       await this.timelineService.logStatusChange(leadId, user.id, 'Previous', status);
     });
 
@@ -191,14 +208,7 @@ export class LeadsService {
     for (const lead of leads) {
       try {
         // --- PSEUDO-CODE for sending SMS ---
-        // await smsProvider.send({
-        //   to: lead.mobile,
-        //   from: process.env.TWILIO_NUMBER,
-        //   body: message,
-        // });
-
-        // TODO: Log a timeline event for each message sent
-
+        // await smsProvider.send({ ... });
         successCount++;
       } catch (error) {
         console.error(`Failed to send message to lead ${lead.id}:`, error);
@@ -279,7 +289,6 @@ export class LeadsService {
       const lead = await this.prisma.leads.findUnique({
         where: { id },
         include: {
-          // Use the relation name from your schema
           partners_leads_assigned_toTopartners: { select: { name: true, email: true } },
         },
       });
@@ -299,7 +308,6 @@ export class LeadsService {
   }
 
   async update(id: string, updateLeadDto: Prisma.leadsUpdateInput) {
-    // Replaces updateLead() (FIX: changed .lead to .leads)
     return this.prisma.leads.update({
       where: { id },
       data: updateLeadDto,
@@ -322,15 +330,11 @@ export class LeadsService {
 
   async bulkDelete(bulkDeleteDto: BulkDeleteDto) {
     const { leadIds } = bulkDeleteDto;
-
-    // Optional: You could check if any of these leads belong to 'protected' status if needed.
-
     const result = await this.prisma.leads.deleteMany({
       where: {
         id: { in: leadIds },
       },
     });
-
     return { message: `Successfully deleted ${result.count} leads.` };
   }
 }

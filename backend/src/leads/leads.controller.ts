@@ -7,10 +7,9 @@ import {
   Param,
   Delete,
   UseGuards,
-  Query, // <-- For query parameters
+  Query,
 } from '@nestjs/common';
 import { LeadsService } from './leads.service';
-// ✅ 1. Import new DTOs
 import {
   BulkAssignDto,
   BulkStatusDto,
@@ -18,9 +17,9 @@ import {
 } from './dto/bulk-update.dto';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { Public } from '../auth/public.decorator';
-import { GetUser } from '../auth/get-user.decorator'; // <-- Import GetUser
-import { Roles } from '../auth/roles.decorator'; // <-- Import Roles
-import { Role } from '../auth/roles.enum'; // <-- Import Role
+import { GetUser } from '../auth/get-user.decorator';
+import { Roles } from '../auth/roles.decorator';
+import { Role } from '../auth/roles.enum';
 import { RolesGuard } from '../auth/roles.guard';
 import { BulkDeleteDto } from './dto/bulk-update.dto';
 
@@ -38,17 +37,15 @@ export class LeadsController {
   }
 
   // Get All Leads
-  // GET /leads?assigned_to=userId&created_by=userId&type=lead
   @Get()
   findAll(
-    @GetUser() user: any, // <--- GET LOGGED IN USER
+    @GetUser() user: any,
     @Query('assigned_to') assignedTo?: string,
     @Query('created_by') createdBy?: string,
     @Query('type') type?: string,
     @Query('branch_id') branchId?: string,
     @Query('email') email?: string,
   ) {
-    // Pass 'user' to the service along with optional branch override
     return this.leadsService.findAll(user, assignedTo, createdBy, type, branchId, email);
   }
 
@@ -65,7 +62,7 @@ export class LeadsController {
   }
 
   @Post('bulk/assign')
-  @Roles(Role.Admin) // Only Admins can bulk assign
+  @Roles(Role.Admin)
   bulkAssign(@Body() bulkAssignDto: BulkAssignDto, @GetUser() user: any) {
     return this.leadsService.bulkAssign(bulkAssignDto, user);
   }
@@ -76,34 +73,26 @@ export class LeadsController {
     return this.leadsService.login(email, password);
   }
 
-  /**
-   * Bulk update status of leads
-   * POST /leads/bulk/status
-   */
   @Post('bulk/status')
-  @Roles(Role.Admin) // Only Admins can bulk update status
+  @Roles(Role.Admin)
   bulkUpdateStatus(@Body() bulkStatusDto: BulkStatusDto, @GetUser() user: any) {
     return this.leadsService.bulkUpdateStatus(bulkStatusDto, user);
   }
 
-  /**
-   * Bulk send message to leads
-   * POST /leads/bulk/message
-   */
   @Post('bulk/message')
-  @Roles(Role.Admin) // Only Admins can bulk message
+  @Roles(Role.Admin)
   bulkSendMessage(@Body() bulkMessageDto: BulkMessageDto, @GetUser() user: any) {
     return this.leadsService.bulkSendMessage(bulkMessageDto, user);
   }
 
   @Delete(':id')
-  @Roles(Role.Admin) // 🔒 Only Admins can delete leads
+  @Roles(Role.Admin)
   remove(@Param('id') id: string) {
     return this.leadsService.remove(id);
   }
   
   @Post('bulk/delete')
-  @Roles(Role.Admin) // 🔒 Strict Admin Only
+  @Roles(Role.Admin)
   bulkDelete(@Body() bulkDeleteDto: BulkDeleteDto) {
     return this.leadsService.bulkDelete(bulkDeleteDto);
   }
