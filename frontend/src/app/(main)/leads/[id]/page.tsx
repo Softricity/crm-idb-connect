@@ -1,11 +1,13 @@
 "use client";
 
 import { format } from "date-fns";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
+import { generateStudentPanelToken } from "@/utils/token";
 import { useParams } from "next/navigation";
 import { useLeadStore, Lead } from "@/stores/useLeadStore";
 import LeadFormSheet from "@/components/leads-components/createUpdateLead";
 import { Button, Tabs, Tab } from "@heroui/react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { FilePen } from "lucide-react";
 import NotesTab from "@/components/leads-components/notesTab";
@@ -49,6 +51,7 @@ export default function LeadDetailPage() {
     const [loading, setLoading] = useState(true);
     const [isSheetOpen, setSheetOpen] = useState(false);
     const [selectedTab, setSelectedTab] = useState(defaultTab);
+    const [studentPanelOpen, setStudentPanelOpen] = useState(false);
 
     const fetchAndSetLead = useCallback(async () => {
         setLoading(true);
@@ -114,6 +117,13 @@ export default function LeadDetailPage() {
         return <div className="p-8 text-center text-red-500">Lead not found.</div>;
     }
 
+    // Memoize token so it only changes when lead changes
+    const studentPanelToken = () => {
+        if (!lead) return "";
+        console.log("Generating new student panel token for lead:", generateStudentPanelToken({ id: lead.id || "", email: lead.email || "", name: lead.name || "" }));
+        return generateStudentPanelToken({ id: lead.id || "", email: lead.email || "", name: lead.name || "" });
+    };
+
     return (
         <>
             <div className="bg-gray-50 p-6">
@@ -146,6 +156,27 @@ export default function LeadDetailPage() {
                         >
                             Update Details
                         </Button>
+                        <Button
+                            onPress={() => setStudentPanelOpen(true)}
+                            color="secondary"
+                            variant="bordered"
+                        >
+                            Open Student Panel
+                        </Button>
+                        <Dialog open={studentPanelOpen} onOpenChange={setStudentPanelOpen}>
+                            <DialogContent className="min-w-7xl w-full h-[80vh] p-0 flex flex-col">
+                                <DialogHeader className="p-4 border-b">
+                                    <DialogTitle>Student Panel</DialogTitle>
+                                    <DialogClose className="absolute right-4 top-4" />
+                                </DialogHeader>
+                                <iframe
+                                    src={`http://student.idbconnect.global/login?token=${encodeURIComponent(studentPanelToken())}`}
+                                    title="Student Panel"
+                                    className="flex-1 w-full h-full border-0"
+                                    allowFullScreen
+                                />
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </div>
                 <StatusTimeline

@@ -22,6 +22,10 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Lead } from "@/stores/useLeadStore";
+import { useLeadStore } from "@/stores/useLeadStore";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { useBranchStore } from "@/stores/useBranchStore";
+import { toast } from "sonner";
 
 interface LeadActionsMenuProps {
     leadId: string;
@@ -33,6 +37,9 @@ interface LeadActionsMenuProps {
 
 export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssign = false, userRole = "admin" }: LeadActionsMenuProps) {
     const router = useRouter();
+    const { updateLead, fetchLeadsBasedOnPermission } = useLeadStore();
+    const { user } = useAuthStore();
+    const { selectedBranch } = useBranchStore();
     
     // All users use /leads path (B2B users are handled by middleware)
     const basePath = "/leads";
@@ -56,7 +63,22 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                         </DropdownItem>
                     ) : null}
 
-                    <DropdownItem key="add_lead" startContent={<Plus className="h-4 w-4 text-blue-500" />}>
+                    <DropdownItem
+                        key="add_lead"
+                        startContent={<Plus className="h-4 w-4 text-blue-500" />}
+                        onClick={async () => {
+                            try {
+                                await updateLead(leadId, { type: 'application' });
+                                toast.success('Lead converted to application');
+                                if (user && user.id && user.permissions) {
+                                    await fetchLeadsBasedOnPermission(user.id, user.permissions, selectedBranch?.id);
+                                }
+                            } catch (err) {
+                                console.error('Error converting lead to application', err);
+                                toast.error('Failed to convert lead');
+                            }
+                        }}
+                    >
                         Lead to Application
                     </DropdownItem>
 

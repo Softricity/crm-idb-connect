@@ -73,7 +73,7 @@ export default function Sidebar() {
 
         {/* ✅ User Section at Bottom */}
         <div className="py-3 border-t border-gray-200">
-          <NavUser user={{name: "Admin", email: user?.email ?? "", avatar: "https://swiftwebapp.sgp1.digitaloceanspaces.com/images/avatar.png"}} />
+          <NavUser user={{name: user?.name ?? "", email: user?.email ?? "", avatar: "https://swiftwebapp.sgp1.digitaloceanspaces.com/images/avatar.png", role: user?.role ?? ""}} />
         </div>
       </div>
       <div className={"w-60 p-3 border-r border-gray-300 h-screen absolute left-60 z-50 bg-white " + (settingsOpen ? "block" : "hidden") }>

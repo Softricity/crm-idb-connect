@@ -137,6 +137,11 @@ export enum AdministrativePermission {
  ACTIVITY_LOGS = "Activity Logs", 
 }
 
+// Referral Module Permissions
+export enum ReferralPermission {
+  REFERRAL_MANAGE = "Referral Manage",
+}
+
 export enum PermissionPermission {
   ROLES_CREATE = "Roles Create",
   ROLES_PERMISSION = "Roles Permission",

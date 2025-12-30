@@ -5,19 +5,18 @@ import { Download, Filter, Flag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import LeadsTable from "@/components/leads-components/leadsTable";
 import { Application, useApplicationStore } from "@/stores/useApplicationStore";
 import ColumnVisibilitySelector, { ColumnConfig } from "../leads-components/columnVisibilitySelector";
+import Link from "next/link";
 
 // Default column configuration for applications
 const DEFAULT_APPLICATION_COLUMNS: ColumnConfig[] = [
     { uid: "select", name: "", isVisible: true, isMandatory: true },
     { uid: "date", name: "Date", isVisible: true, isMandatory: true },
-    { uid: "student_id", name: "Student ID", isVisible: true, isMandatory: true },
     { uid: "name", name: "Name", isVisible: true, isMandatory: true },
     { uid: "phone", name: "Phone", isVisible: true, isMandatory: false },
     { uid: "email", name: "Email", isVisible: true, isMandatory: false },
-    { uid: "citizenship", name: "Citizenship", isVisible: false, isMandatory: false },
-    { uid: "stage", name: "Application Stage", isVisible: true, isMandatory: false },
     { uid: "actions", name: "Action", isVisible: true, isMandatory: true },
 ];
 
@@ -90,11 +89,39 @@ export default function ApplicationsDataTable({
             );
         }
 
-        // TODO: Create dedicated ApplicationsTable component
+        // Map applications to leads shape for table reuse
+        const leads = (applications as any[]).map(app => ({
+            id: app.lead_id || app.id || '',
+            name: [app.given_name, app.surname].filter(Boolean).join(' ') || '-',
+            email: app.email || '-',
+            mobile: app.phone || '-',
+            type: 'application',
+            preferred_country: app.country || '-',
+            status: '-',
+            created_at: app.created_at,
+            utm_source: '',
+            utm_medium: '',
+            utm_campaign: '',
+            assigned_to: '',
+            created_by: '',
+            reason: '',
+            password: '',
+            is_flagged: false,
+            branch_id: app.branch_id || '',
+            partners_leads_assigned_toTopartners: null,
+        })) as import("@/stores/useLeadStore").Lead[];
+
         return (
-            <div className="text-center p-8 border rounded-lg">
-                <p className="text-muted-foreground">Application table view coming soon...</p>
-                <p className="text-sm mt-2">Found {applications.length} applications</p>
+            <div className="max-h-[67vh] overflow-y-auto">
+                <LeadsTable
+                    leads={leads}
+                    selectedLeadIds={selectedApplicationIds}
+                    setSelectedLeadIds={setSelectedApplicationIds}
+                    columns={columns}
+                    renderActions={(lead: import("@/stores/useLeadStore").Lead) => (
+                        <Link href={`/leads/${lead.id}`} className="text-blue-600 underline">View</Link>
+                    )}
+                />
             </div>
         );
     }

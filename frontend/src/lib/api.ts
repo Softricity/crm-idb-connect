@@ -227,6 +227,42 @@ export const TimelineAPI = {
   }
 };
 
+// --- Offline Payments ---
+export const OfflinePaymentsAPI = {
+  uploadFile: async (file: File, leadId?: string) => {
+    const form = new FormData();
+    form.append('file', file);
+    if (leadId) form.append('lead_id', leadId);
+
+    const res = await fetch(`${API_BASE}/offline-payments/upload`, { method: 'POST', headers: { Authorization: `Bearer ${getAuthToken()}` }, body: form });
+    return handleResponse(res);
+  },
+  deleteUploadedFile: async (fileUrl: string) => {
+    const res = await fetch(`${API_BASE}/offline-payments/delete-file`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ fileUrl }) });
+    return handleResponse(res);
+  },
+  createPayment: async (payload: any) => {
+    const res = await fetch(`${API_BASE}/offline-payments`, { method: 'POST', headers: getHeaders(), body: JSON.stringify(payload) });
+    return handleResponse(res);
+  },
+  fetchByLeadId: async (leadId: string) => {
+    const res = await fetch(`${API_BASE}/leads/${leadId}/offline-payments`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  fetchByReceiver: async (receiverId: string) => {
+    const res = await fetch(`${API_BASE}/partners/${receiverId}/offline-payments`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  updatePayment: async (id: string, updates: any) => {
+    const res = await fetch(`${API_BASE}/offline-payments/${id}`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify(updates) });
+    return handleResponse(res);
+  },
+  deletePayment: async (id: string) => {
+    const res = await fetch(`${API_BASE}/offline-payments/${id}`, { method: 'DELETE', headers: getHeaders() });
+    return handleResponse(res);
+  }
+};
+
 // --- Dashboard ---
 export const DashboardAPI = {
   getStats: async () => {
