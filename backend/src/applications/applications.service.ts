@@ -348,7 +348,7 @@ export class ApplicationsService {
         data: { application_id: app.id, ...updateData },
       });
     }
-
+ 
     return this.getFullApplication(leadId, user);
   }
 
