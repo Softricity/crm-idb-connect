@@ -118,7 +118,7 @@ export default function ApplicationsDataTable({
                     selectedLeadIds={selectedApplicationIds}
                     setSelectedLeadIds={setSelectedApplicationIds}
                     columns={columns}
-                    renderActions={(lead: import("@/stores/useLeadStore").Lead) => (
+                    renderActions={(lead: any) => (
                         <Link href={`/leads/${lead.id}`} className="text-blue-600 underline">View</Link>
                     )}
                 />
