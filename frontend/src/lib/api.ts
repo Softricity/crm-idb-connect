@@ -19,14 +19,14 @@ function getHeaders(includeAuth = true): HeadersInit {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   if (includeAuth) {
     const token = getAuthToken();
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
   }
-  
+
   return headers;
 }
 
@@ -224,7 +224,11 @@ export const TimelineAPI = {
   fetchAllTimelines: async (leadIds: string[]) => {
     const res = await fetch(`${API_BASE}/timeline?leadIds=${encodeURIComponent(leadIds.join(','))}`, { headers: getHeaders() });
     return handleResponse(res);
-  }
+  },
+  fetchGlobalTimeline: async () => {
+    const res = await fetch(`${API_BASE}/timeline`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
 };
 
 // --- Dashboard ---

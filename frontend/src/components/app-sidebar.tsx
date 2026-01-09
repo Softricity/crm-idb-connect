@@ -40,7 +40,7 @@ const data = {
     },
     {
       title: "Activity Logs",
-      url: "#",
+      url: "/activity-logs",
       icon: Activity,
     },
   ],

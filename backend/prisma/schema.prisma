@@ -28,7 +28,7 @@ model Branch {
 }
 
 model announcement_reads {
-  id              String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   announcement_id String?        @db.Uuid
   partner_id      String?        @db.Uuid
   read_at         DateTime?      @default(now()) @db.Timestamptz(6)
@@ -40,7 +40,7 @@ model announcement_reads {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model announcements {
-  id                 String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title              String
   content            String
   target_audience    String
@@ -54,7 +54,7 @@ model announcements {
 }
 
 model application_documents {
-  id                         String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                         String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   application_id             String       @db.Uuid
   profile_photo_url          String?
   passport_copy_url          String?
@@ -69,7 +69,7 @@ model application_documents {
 }
 
 model application_family_details {
-  id                       String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                       String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   application_id           String       @db.Uuid
   father_name              String?
   mother_name              String?
@@ -79,7 +79,7 @@ model application_family_details {
 }
 
 model application_preferences {
-  id                    String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   application_id        String       @db.Uuid
   preferred_country     String?
   preferred_course_type String?
@@ -95,7 +95,7 @@ model application_preferences {
 }
 
 model applications {
-  id                String                        @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                String                        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   lead_id           String                        @db.Uuid
   student_id        String?                       @unique
   given_name        String?
@@ -130,7 +130,7 @@ model applications {
 }
 
 model application_education {
-  id                    String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                    String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   application_id        String       @db.Uuid
   level                 String?
   institution_name      String?
@@ -146,7 +146,7 @@ model application_education {
 }
 
 model application_tests {
-  id             String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id             String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   application_id String       @db.Uuid
   test_type      String?
   test_date      DateTime?    @db.Date
@@ -160,7 +160,7 @@ model application_tests {
 }
 
 model application_work_experience {
-  id              String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id              String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   application_id  String       @db.Uuid
   company_name    String?
   designation     String?
@@ -172,7 +172,7 @@ model application_work_experience {
 }
 
 model application_visa_details {
-  id                      String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id                      String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   application_id          String       @db.Uuid
   passport_number         String?
   passport_issue_date     DateTime?    @db.Date
@@ -392,7 +392,7 @@ model Course {
 }
 
 model todos {
-  id         String    @id
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid // Changed from just @id
   title      String
   created_by String    @db.Uuid
   completed  Boolean   @default(false)

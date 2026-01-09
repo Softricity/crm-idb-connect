@@ -17,4 +17,9 @@ export class TimelineController {
   getTimelineForLead(@Param('leadId') leadId: string) {
     return this.timelineService.getTimelineForLead(leadId);
   }
+
+  @Get('timeline')
+  getAllTimeline() {
+    return this.timelineService.getGlobalTimeline();
+  }
 }

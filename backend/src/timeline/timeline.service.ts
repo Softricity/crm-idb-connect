@@ -119,4 +119,25 @@ export class TimelineService {
       `Assigned to ${newOwnerName}`
     );
   }
+
+  /**
+   * Fetches the most recent global timeline events (e.g., last 100).
+   * Useful for the Activity Logs page.
+   */
+  async getGlobalTimeline(limit: number = 100) {
+    return this.prisma.timeline.findMany({
+      take: limit,
+      orderBy: {
+        created_at: 'desc',
+      },
+      include: {
+        partners: {
+          select: { name: true },
+        },
+        leads: {
+            select: { name: true } // Fetch lead name to show context
+        }
+      },
+    });
+  }
 }
