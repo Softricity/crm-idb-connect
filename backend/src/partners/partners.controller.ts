@@ -51,12 +51,6 @@ export class PartnersController {
   // GET /partners/:id
   @Get(':id')
   async findOne(@Param('id') id: string, @Request() req) {
-    // Users can access their own data, or Admin/Counsellor can access any partner's data
-    // Note: This currently checks ID ownership but not Branch Scope for Admins. 
-    // If you want strict Branch Scoping for findOne, the Service needs to be updated to accept `req.user` here too.
-    if (req.user.userId !== id && req.user.role !== Role.Admin && req.user.role !== Role.Counsellor) {
-      throw new ForbiddenException('You can only access your own profile');
-    }
     return this.partnersService.findOne(id);
   }
 

@@ -34,6 +34,19 @@ export class OfflinePaymentsController {
     return this.offlinePaymentsService.create(createDto, req.user.userId, file, req.user);
   }
 
+  // Upload-only endpoint: accepts a file and returns the public URL without creating a DB record
+  @Post('offline-payments/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFileOnly(@UploadedFile() file: Express.Multer.File, @Body('lead_id') leadId: string) {
+    return this.offlinePaymentsService.uploadFileOnly(file, leadId);
+  }
+
+  // Delete uploaded file by URL (no DB record) - expects JSON { fileUrl }
+  @Post('offline-payments/delete-file')
+  async deleteUploadedFile(@Body('fileUrl') fileUrl: string) {
+    return this.offlinePaymentsService.deleteFileOnly(fileUrl);
+  }
+
   @Get('leads/:leadId/offline-payments')
   findByLeadId(@Param('leadId') leadId: string, @Request() req) {
     return this.offlinePaymentsService.findByLeadId(leadId, req.user);

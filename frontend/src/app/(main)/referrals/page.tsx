@@ -7,8 +7,8 @@ import React from 'react'
 
 export default function AdminReferralsPage() {
   return (
-    <PermissionGuard requiredPermissions={[AgencyPermission.AGENCY_MANAGE]}>
+    // <PermissionGuard requiredPermissions={[]}>
       <Referral />
-    </PermissionGuard>
+    // </PermissionGuard>
   );
 }

@@ -19,7 +19,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   // This method runs after the token is successfully verified
   async validate(payload: any) {
+    // Return both `userId` (used across controllers/services) and `id` for compatibility
     return {
+      userId: payload.sub,
       id: payload.sub,
       email: payload.email,
       name: payload.name,

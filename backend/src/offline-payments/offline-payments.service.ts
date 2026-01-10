@@ -147,4 +147,28 @@ export class OfflinePaymentsService {
 
     return { message: 'Payment deleted successfully', fileUrl: payment.file };
   }
+
+  // Upload file only (no DB record) - used by frontend to upload receipt and get URL
+  async uploadFileOnly(file: Express.Multer.File | undefined, leadId?: string) {
+    if (!file) return { url: null };
+    try {
+      const fileUrl = await this.supabaseService.uploadFile(
+        file,
+        leadId ? `leads/${leadId}` : 'general',
+        'idb-offline-payments',
+      );
+      return { url: fileUrl };
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[offline-payments] uploadFileOnly failed', err);
+      throw err;
+    }
+  }
+
+  // Delete file only (no DB record) - used when frontend wants to remove uploaded file
+  async deleteFileOnly(fileUrl: string) {
+    if (!fileUrl) return { ok: false };
+    const result = await this.supabaseService.removeFileByUrl(fileUrl);
+    return { ok: result };
+  }
 }

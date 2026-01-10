@@ -167,24 +167,35 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
   currentApplication: null,
   loading: false,
 
-  fetchApplications: async (leadIds) => {
+  fetchApplications: async (leadIds, branchId?: string) => {
     set({ loading: true });
     try {
-      if (!leadIds || leadIds.length === 0) {
-        set({ applications: [] });
+      // If leadIds provided, fetch per-lead using Applications API
+      if (leadIds && leadIds.length > 0) {
+        const results: Application[] = [];
+        for (const leadId of leadIds) {
+          try {
+            const data = await api.ApplicationsAPI.fetchApplicationByLeadId(leadId);
+            if (data) results.push(data as Application);
+          } catch (e) {
+            console.warn(`Failed to fetch application for lead ${leadId}`);
+          }
+        }
+        set({ applications: results });
         return;
       }
-      const results: Application[] = [];
-      for (const leadId of leadIds) {
-        try {
-          const data = await api.ApplicationsAPI.fetchApplicationByLeadId(leadId);
-          if (data) results.push(data as Application);
-        } catch (e) {
-          // swallow individual errors to continue
-          console.warn(`Failed to fetch application for lead ${leadId}`);
-        }
-      }
-      set({ applications: results });
+
+      // If no leadIds provided, fetch leads with type=application and map to lightweight applications
+      const leads = await api.LeadsAPI.fetchApplications(branchId);
+      const mapped = (leads || []).map((l: any) => ({
+        lead_id: l.id,
+        created_at: l.created_at,
+        branch_id: l.branch_id,
+        given_name: l.name,
+        email: l.email,
+        phone: l.mobile,
+      } as Application));
+      set({ applications: mapped });
     } catch (error) {
       console.error("Error fetching applications collection:", error);
       throw error;

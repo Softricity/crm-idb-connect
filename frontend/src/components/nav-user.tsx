@@ -31,6 +31,7 @@ export function NavUser({
     name: string
     email: string
     avatar: string
+    role?: string
   }
 }) {
   const logout = useAuthStore((state) => state.logout)
@@ -52,6 +53,7 @@ export function NavUser({
             <div className="flex-1 flex flex-col leading-tight">
               <span className="truncate font-semibold text-gray-900">{user.name}</span>
               <span className="truncate text-gray-500 text-xs">{user.email}</span>
+              {user.role && <span className="truncate text-gray-400 text-xs">{user.role}</span>}
             </div>
             <IconDotsVertical className="w-5 h-5 text-gray-400" />
           </div>
@@ -72,6 +74,7 @@ export function NavUser({
               <div className="flex flex-col leading-tight">
                 <span className="truncate font-semibold">{user.name}</span>
                 <span className="truncate text-gray-500 text-sm">{user.email}</span>
+                {user.role && <span className="truncate text-gray-400 text-sm">{user.role}</span>}
               </div>
             </div>
           </DropdownMenuLabel>

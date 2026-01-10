@@ -243,7 +243,7 @@ export default function CreateUpdatePayments({
             />
           </div>
 
-          <div
+          {/* <div
             className="border-dashed border-2 rounded-xl p-6 text-center mt-4 hover:border-blue-400 transition-colors cursor-pointer"
             onClick={() => fileInputRef.current?.click()}
           >
@@ -293,7 +293,7 @@ export default function CreateUpdatePayments({
                 View Existing File
               </a>
             )}
-          </div>
+          </div> */}
         </DrawerBody>
 
         <DrawerFooter className="border-t border-default-200">

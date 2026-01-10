@@ -59,7 +59,7 @@ export const menus: MenuItem[] = [
   { title: "Agents", icon: <Users size={20} />, type: "link", link: "/agents", requiredPermissions: [AgentsPermission.AGENTS_CREATE, AgentsPermission.AGENTS_UPDATE] },
   { title: "Internal Team", icon: <Users size={20} />, type: "link", link: "/team", requiredPermissions: [EmployeePermission.EMPLOYEE_MANAGE, EmployeePermission.EMPLOYEE_CREATE] },
   { title: "Commissions", icon: <DollarSign size={20} />, type: "link", link: "/commissions", requiredPermissions: [CommissionPermission.COMMISSION_MANAGE] },
-  { title: "Referrals", icon: <Link size={20} />, type: "link", link: "/referrals", requiredPermissions: [AgencyPermission.AGENCY_MANAGE] },
+  { title: "Referrals", icon: <Link size={20} />, type: "link", link: "/referrals" },
 
   // Task Management
   { title: "Task Management", type: "title" },
