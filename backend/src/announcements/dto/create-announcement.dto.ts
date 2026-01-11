@@ -3,6 +3,8 @@ import { IsString, IsBoolean, IsOptional, IsArray, IsEnum } from 'class-validato
 enum TargetAudience {
   USER = 'user',
   BRANCH = 'branch',
+  BRANCH_SPECIFIC = 'branch-specific',
+  ROLE_BASED = 'role-based',
 }
 
 export class CreateAnnouncementDto {
@@ -19,6 +21,16 @@ export class CreateAnnouncementDto {
   @IsArray()
   @IsString({ each: true })
   users?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  branches?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  roles?: string[];
 
   @IsOptional()
   @IsString()
