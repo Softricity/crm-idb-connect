@@ -45,6 +45,8 @@ model announcements {
   content            String
   target_audience    String
   users              String[]             @default([])
+  branches           String[]             @default([])
+  roles              String[]             @default([])
   branch_id          String?
   created_by         String?              @db.Uuid
   created_at         DateTime?            @default(now()) @db.Timestamptz(6)

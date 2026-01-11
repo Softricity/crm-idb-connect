@@ -243,6 +243,14 @@ export class LeadsService {
         partners_leads_assigned_toTopartners: {
           select: { name: true, email: true },
         },
+        // Include application data when fetching applications
+        ...(type === 'application' && {
+          applications: {
+            include: {
+              preferences: true,
+            },
+          },
+        }),
       },
       orderBy: { created_at: 'desc' },
     });

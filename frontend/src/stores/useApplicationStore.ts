@@ -34,6 +34,7 @@ export interface Application {
   system_remarks?: string | null;
   // Derived / linkage (from lead)
   branch_id?: string | null; // populate client-side from related lead if needed
+  is_flagged?: boolean; // from lead
   
   created_at?: string;
   updated_at?: string;
@@ -187,14 +188,40 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
 
       // If no leadIds provided, fetch leads with type=application and map to lightweight applications
       const leads = await api.LeadsAPI.fetchApplications(branchId);
-      const mapped = (leads || []).map((l: any) => ({
-        lead_id: l.id,
-        created_at: l.created_at,
-        branch_id: l.branch_id,
-        given_name: l.name,
-        email: l.email,
-        phone: l.mobile,
-      } as Application));
+      const mapped = (leads || []).map((l: any) => {
+        // If the lead has application data nested, use it; otherwise use lead fields
+        const app = l.applications?.[0] || {};
+        const prefs = app.preferences?.[0] || {};
+        
+        return {
+          id: app.id || l.id,
+          lead_id: l.id,
+          created_at: app.created_at || l.created_at,
+          branch_id: l.branch_id,
+          
+          // Personal details from application or fallback to lead
+          given_name: app.given_name || l.name?.split(' ')[0] || l.name,
+          surname: app.surname || l.name?.split(' ').slice(1).join(' ') || '',
+          email: app.email || l.email,
+          phone: app.phone || l.mobile,
+          dob: app.dob,
+          gender: app.gender,
+          citizenship: app.citizenship,
+          country: app.country,
+          marital_status: app.marital_status,
+          current_status: app.current_status,
+          
+          // Application tracking
+          application_stage: app.application_stage,
+          student_id: app.student_id,
+          
+          // Preferences
+          preferences: app.preferences ? [prefs] : [],
+          
+          // Lead-level fields
+          is_flagged: l.is_flagged || false,
+        } as Application;
+      });
       set({ applications: mapped });
     } catch (error) {
       console.error("Error fetching applications collection:", error);
