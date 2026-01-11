@@ -297,6 +297,67 @@ model partners {
   todos                             todos[]
 }
 
+model Agent {
+  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  // Login Credentials
+  email          String   @unique
+  mobile         String   @unique
+  password       String
+  
+  // Profile Info
+  name           String
+  agency_name    String
+  website        String?
+  
+  // Location & Access Control
+  region         String   // 👈 Requested for Region-based access control
+  country        String
+  state          String
+  city           String
+  address        String
+  postal_code    String?
+  
+  // Business Details
+  business_reg_no String? // Tax ID or Registration Number
+  established_year Int?
+  
+  // Onboarding Status
+  status         AgentStatus @default(PENDING) // PENDING -> IN_REVIEW -> APPROVED
+  is_active      Boolean     @default(true)
+  rejection_reason String?
+
+  // Relations
+  documents      AgentDocument[]
+  
+  created_at     DateTime @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("agents")
+}
+
+model AgentDocument {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id    String   @db.Uuid
+  title       String   // e.g., "Business License", "ID Proof"
+  file_url    String
+  uploaded_at DateTime @default(now()) @db.Timestamptz(6)
+  
+  // Verification for individual documents
+  is_verified Boolean  @default(false)
+  
+  agent       Agent    @relation(fields: [agent_id], references: [id], onDelete: Cascade)
+
+  @@map("agent_documents")
+}
+
+enum AgentStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
 model timeline {
   id         String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   lead_id    String         @db.Uuid
