@@ -150,6 +150,49 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
         case "country":
           return lead.preferred_country ?? "-";
 
+        case "preferred_country":
+          return lead.preferred_country ?? "-";
+
+        case "preferred_course":
+          return (lead as any).preferred_course ?? "-";
+
+        case "preferred_intake":
+          return (lead as any).preferred_intake ?? "-";
+
+        case "dob":
+          return (lead as any).dob && (lead as any).dob !== '-' 
+            ? format(new Date((lead as any).dob), "dd MMM yyyy") 
+            : "-";
+
+        case "gender":
+          return (lead as any).gender ?? "-";
+
+        case "citizenship":
+          return (lead as any).citizenship ?? "-";
+
+        case "student_id":
+          return (lead as any).student_id ?? "-";
+
+        case "marital_status":
+          return (lead as any).marital_status ?? "-";
+
+        case "current_status":
+          return (lead as any).current_status ?? "-";
+
+        case "application_stage":
+          const stage = (lead as any).application_stage;
+          return stage ? (
+            <Chip
+              color="primary"
+              radius="sm"
+              size="sm"
+              variant="flat"
+              className="capitalize"
+            >
+              {stage}
+            </Chip>
+          ) : "-";
+
         case "status":
           return (
             <Chip

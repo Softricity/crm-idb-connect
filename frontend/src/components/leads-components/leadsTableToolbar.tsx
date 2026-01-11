@@ -95,7 +95,7 @@ export default function LeadsTableToolbar({
   };
 
   return (
-    <div className="mt-5 flex flex-col sm:flex-row justify-between items-center gap-3 ">
+    <div className="mt-5 flex flex-col sm:flex-row justify-between items-center gap-3 overflow-x-auto">
       {canManageLeads && (<div className="flex items-center gap-2">
         <Button
           variant={showOnlyFlagged ? "default" : "secondary"}

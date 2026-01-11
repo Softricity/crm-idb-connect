@@ -131,11 +131,11 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
   };
 
   return (
-    <div className="w-full">
+    <div className="w-full p-3 overflow-x-auto">
       <Tabs aria-label="Lead Status Tabs" radius="md">
         {TAB_LABELS.map((tab) => (
           <Tab key={tab} title={renderTabTitle(tab)}>
-            <Card>
+            <Card className="overflow-x-auto">
               <CardBody>
                 <div className="gap-5 flex flex-col">
                   <LeadsTableToolbar 

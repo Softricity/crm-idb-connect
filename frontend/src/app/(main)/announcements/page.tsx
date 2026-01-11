@@ -2,13 +2,11 @@
 
 import { useEffect } from "react";
 import { useAnnouncementStore } from "@/stores/useAnnouncementStore";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardBody, CardFooter, Chip, Button } from "@heroui/react";
 import { Bell, Megaphone, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import CreateAnnouncementDialog from "@/components/announcement-components/CreateAnnouncementDialog";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { Button } from "@/components/ui/button";
 
 export default function AnnouncementsPage() {
   const { announcements, fetchAnnouncements, loading, deleteAnnouncement } = useAnnouncementStore();
@@ -21,12 +19,9 @@ export default function AnnouncementsPage() {
   }, [fetchAnnouncements]);
 
   return (
-    <div className="p-6 max-w-5xl mx-auto space-y-6">
+    <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center">
-            <Megaphone size={24} />
-          </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Announcements</h1>
             <p className="text-gray-500 text-sm">Updates, news, and important notices.</p>
@@ -35,50 +30,72 @@ export default function AnnouncementsPage() {
         {isAdmin && <CreateAnnouncementDialog />}
       </div>
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {loading ? (
-          <p className="text-center text-gray-500 py-10">Loading updates...</p>
+          <div className="flex justify-center items-center py-20 col-span-2">
+            <div className="text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-primary border-r-transparent mb-4"></div>
+              <p className="text-default-500">Loading announcements...</p>
+            </div>
+          </div>
         ) : announcements.length === 0 ? (
-          <div className="text-center py-16 bg-gray-50 rounded-xl border-2 border-dashed">
-            <Bell className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-            <h3 className="text-lg font-medium text-gray-900">No Announcements</h3>
-            <p className="text-gray-500">You are all caught up!</p>
+          <div className="text-center py-16 bg-default-50 rounded-xl border-2 border-dashed border-default-200 col-span-2">
+            <Bell className="mx-auto h-12 w-12 text-default-300 mb-3" />
+            <h3 className="text-lg font-medium text-default-900">No Announcements</h3>
+            <p className="text-default-500">You are all caught up!</p>
           </div>
         ) : (
           announcements.map((item) => (
-            <Card key={item.id} className="group relative overflow-hidden transition-all hover:shadow-md border-l-4 border-l-primary">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <CardTitle className="text-lg">{item.title}</CardTitle>
-                      <Badge variant="secondary" className="text-xs font-normal">
-                        {item.target_audience}
-                      </Badge>
+            <Card 
+              key={item.id} 
+              className="group relative overflow-visible hover:shadow-lg transition-shadow"
+              shadow="sm"
+            >
+              <CardHeader className="flex-row justify-between items-start gap-3 pb-2">
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="flex-shrink-0 mt-1">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Megaphone className="h-5 w-5 text-primary" />
                     </div>
-                    <CardDescription>
-                      {/* Added safety check for created_at */}
-                      Posted on {item.created_at ? format(new Date(item.created_at), "PPP 'at' p") : "Just now"}
-                    </CardDescription>
                   </div>
                   
-                  {isAdmin && item.id && ( // ✅ Check if item.id exists
-                    <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => item.id && deleteAnnouncement(item.id)} // ✅ Pass only if string
-                    >
-                        <Trash2 size={16} />
-                    </Button>
-                  )}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="text-lg font-semibold text-default-900">{item.title}</h3>
+                      <Chip 
+                        size="sm" 
+                        variant="flat" 
+                        color="primary"
+                        className="capitalize"
+                      >
+                        {item.target_audience.replace('-', ' ')}
+                      </Chip>
+                    </div>
+                    <p className="text-sm text-default-500">
+                      {item.created_at ? format(new Date(item.created_at), "PPP 'at' p") : "Just now"}
+                    </p>
+                  </div>
                 </div>
+                
+                {isAdmin && item.id && (
+                  <Button 
+                    isIconOnly
+                    variant="light" 
+                    color="danger"
+                    size="sm"
+                    className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+                    onClick={() => item.id && deleteAnnouncement(item.id)}
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                )}
               </CardHeader>
-              <CardContent>
-                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+              
+              <CardBody className="pt-0 pl-16">
+                <p className="text-default-700 whitespace-pre-wrap leading-relaxed">
                   {item.content}
                 </p>
-              </CardContent>
+              </CardBody>
             </Card>
           ))
         )}

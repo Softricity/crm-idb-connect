@@ -23,12 +23,11 @@ export default function Navbar({ menus }: { menus: MenuItem[] }) {
     <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 gap-4">
       {/* Logo */}
       <div className="flex items-center shrink-0">
-        <img src="logo.jpg" alt="Logo" className="w-10 rounded-xl" />
-        <span className="ml-2 font-bold text-lg">Softricity</span>
+        <img src="/logo.gif" alt="Logo" className="w-30 rounded-xl" />
       </div>
 
       {/* Branch Selector - Hidden on small screens */}
-      <div className="hidden md:block flex-1 max-w-xs">
+      <div className="hidden lg:block flex-1 max-w-xs">
         <BranchSelector
           value={selectedBranch}
           onChange={setSelectedBranch}
@@ -54,8 +53,7 @@ export default function Navbar({ menus }: { menus: MenuItem[] }) {
           {(onClose) => (
             <>
               <DrawerHeader className="p-4 border-b border-gray-200 flex items-center justify-start gap-3">
-                <img src="logo.jpg" alt="Logo" className="w-10 rounded-xl" />
-                <span className="text-xl font-bold">Softricity</span>
+                <img src="/logo.gif" alt="Logo" className="w-30 rounded-xl" />
               </DrawerHeader>
 
               <DrawerBody className="p-0">

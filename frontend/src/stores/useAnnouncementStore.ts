@@ -5,9 +5,11 @@ export interface Announcement {
   id?: string;
   title: string;
   content: string;
-  target_audience: "user" | "branch";
+  target_audience: "user" | "branch" | "branch-specific" | "role-based";
   branch_id?: string | null;
   users?: string[] | null; // Array of user IDs
+  branches?: string[] | null; // Array of branch IDs
+  roles?: string[] | null; // Array of roles
   created_at?: string;
   created_by?: string;
   announcement_reads?: {
