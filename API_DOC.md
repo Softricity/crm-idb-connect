@@ -64,6 +64,34 @@ All routes are relative to the NestJS server URL (e.g., `http://localhost:3000`)
       }
     }
     ```
+### Agent Login (Unified)
+
+Agents use the same login endpoint as internal staff. The system automatically detects if the email belongs to an Agent or a Partner.
+
+-   **Route:** `POST /auth/login`
+-   **Authentication:** **None (Public)**
+-   **Description:** Authenticates an agent using email and password. The system automatically identifies whether the user is an Agent or Partner.
+-   **Request Body:**
+    ```json
+    {
+      "email": "john.doe@agency.com",
+      "password": "securePassword123"
+    }
+    ```
+-   **Returns:** JWT token and user details.
+    ```json
+    {
+      "access_token": "eyJhbGciOiJIUzI1NiIsInR...",
+      "partner": {
+        "id": "8d0f0726-4a33-4748-ad00-050b6821db20",
+        "name": "John Doe",
+        "email": "john.doe@agency.com",
+        "role": "agent",
+        "type": "agent",
+        "permissions": []
+      }
+    }
+    ```
 
 ---
 
@@ -334,6 +362,75 @@ This module handles lead creation, management, and bulk operations.
 -   **Route:** `POST /partners/bulk/delete`
 -   **Authentication:** **JWT Required (Admin Only)**
 -   **Body:** `{ "partnerIds": ["uuid-1", "uuid-2"] }`
+
+---
+
+## 🕵️ Agents API
+
+### 1. Onboard New Agent (Public)
+
+-   **Route:** `POST /agents/onboard`
+-   **Authentication:** **None (Public)**
+-   **Description:** Allows external users (agents) to register themselves in the system.
+-   **Request Body:**
+    ```json
+    {
+      "name": "John Doe",
+      "email": "john.doe@agency.com",
+      "mobile": "+919876543210",
+      "password": "securePassword123",
+      "agency_name": "Global Education Consultants",
+      "website": "https://globaledu.com",           // Optional
+      "region": "South Asia",
+      "country": "India",
+      "state": "Maharashtra",
+      "city": "Mumbai",
+      "address": "123 Business Park, Andheri East",
+      "business_reg_no": "GSTIN123456789"          // Optional
+    }
+    ```
+-   **Returns:** 
+    ```json
+    {
+      "id": "uuid-string",
+      "name": "John Doe",
+      "email": "john.doe@agency.com",
+      "status": "PENDING",
+      "created_at": "2023-10-27T10:00:00.000Z"
+    }
+    ```
+-   **Errors:**
+    -   `400 Bad Request`: Validation failed (missing required fields).
+    -   `409 Conflict`: Agent with this email or mobile already exists.
+
+### 2. Get All Agents
+-   **Route:** `GET /agents`
+-   **Authentication:** **JWT Required (Admin Only)**
+-   **Query Params:** `?status=PENDING` (Filter by status: PENDING, APPROVED, REJECTED)
+-   **Returns:** Array of agent objects with documents list.
+
+### 3. Get Agent Details
+-   **Route:** `GET /agents/:id`
+-   **Authentication:** **JWT Required (Admin Only)**
+-   **Returns:** Full agent profile including nested documents array.
+
+### 4. Update Agent Status
+-   **Route:** `PATCH /agents/:id/status`
+-   **Authentication:** **JWT Required (Admin Only)**
+-   **Request Body:**
+    ```json
+    {
+      "status": "APPROVED",  // or "REJECTED"
+      "reason": "Documents verified successfully."  // Optional
+    }
+    ```
+-   **Returns:** Updated agent object.
+
+### 5. Delete Agent
+-   **Route:** `DELETE /agents/:id`
+-   **Authentication:** **JWT Required (Admin Only)**
+-   **Description:** Permanently removes agent and associated documents.
+
 
 ---
 

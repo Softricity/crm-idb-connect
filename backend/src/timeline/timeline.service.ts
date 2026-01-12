@@ -1,7 +1,6 @@
 // src/timeline/timeline.service.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-// ✅ FIX 1: Import 'timeline_event' (snake_case) as defined in your schema/client
 import { timeline_event } from '@prisma/client';
 
 @Injectable()
@@ -13,18 +12,17 @@ export class TimelineService {
    */
   private async log(
     leadId: string,
-    eventType: timeline_event, // ✅ FIX 1: Use correct enum type
+    eventType: timeline_event,
     userId: string,
     newState?: any,
     oldState?: any,
   ) {
-    // Ensure states are JSON-compatible strings
     const cleanNewState = newState && typeof newState !== 'string' ? JSON.stringify(newState) : newState;
     const cleanOldState = oldState && typeof oldState !== 'string' ? JSON.stringify(oldState) : oldState;
 
+    // Note: If userId is null/undefined here, created_by becomes null -> "System" in frontend
     return this.prisma.timeline.create({
       data: {
-        // ✅ FIX 2: Use snake_case property names to match schema
         lead_id: leadId, 
         event_type: eventType,
         created_by: userId,
@@ -38,8 +36,7 @@ export class TimelineService {
    * Fetches the complete timeline for a specific lead.
    */
   async getTimelineForLead(leadId: string) {
-    return this.prisma.timeline.findMany({
-      // ✅ FIX 2: Use snake_case property names
+    const events = await this.prisma.timeline.findMany({
       where: { lead_id: leadId },
       include: {
         partners: { 
@@ -47,9 +44,15 @@ export class TimelineService {
         },
       },
       orderBy: {
-        created_at: 'desc', // ✅ FIX 2: Use snake_case property names
+        created_at: 'desc',
       },
     });
+
+    // ✅ FIX: Map 'partners' (DB name) to 'partner' (Frontend name)
+    return events.map(event => ({
+        ...event,
+        partner: event.partners
+    }));
   }
 
   // --- Specific Event Logging Methods ---
@@ -58,16 +61,14 @@ export class TimelineService {
     await this.log(
       lead.id,
       'LEAD_CREATED',
-      lead.created_by || null, // Fallback for public leads
+      lead.created_by || null, // If created_by is null, "System" is correct
       `Lead created for ${lead.name}`,
     );
   }
 
   async logNoteAdded(note: any, userId: string) {
-    // ✅ FIX 2: Note object likely has snake_case keys from DB too
-    // Adjust accessors if 'note' comes directly from Prisma result
     await this.log(
-      note.lead_id, // Changed from note.leadId
+      note.lead_id, 
       'LEAD_NOTE_ADDED',
       userId,
       note.text, 
@@ -76,7 +77,7 @@ export class TimelineService {
   
   async logFollowupAdded(followup: any, userId: string) {
       await this.log(
-          followup.lead_id, // Changed from followup.leadId
+          followup.lead_id,
           'LEAD_FOLLOWUP_ADDED',
           userId,
           followup.title 
@@ -85,7 +86,7 @@ export class TimelineService {
   
   async logFollowupCompleted(followup: any, userId: string) {
       await this.log(
-          followup.lead_id, // Changed from followup.leadId
+          followup.lead_id,
           'LEAD_FOLLOWUP_COMPLETED',
           userId,
           followup.title 
@@ -121,11 +122,10 @@ export class TimelineService {
   }
 
   /**
-   * Fetches the most recent global timeline events (e.g., last 100).
-   * Useful for the Activity Logs page.
+   * Fetches the most recent global timeline events.
    */
   async getGlobalTimeline(limit: number = 100) {
-    return this.prisma.timeline.findMany({
+    const events = await this.prisma.timeline.findMany({
       take: limit,
       orderBy: {
         created_at: 'desc',
@@ -135,9 +135,15 @@ export class TimelineService {
           select: { name: true },
         },
         leads: {
-            select: { name: true } // Fetch lead name to show context
+            select: { name: true } 
         }
       },
     });
+
+    // ✅ FIX: Map 'partners' -> 'partner' here as well
+    return events.map(event => ({
+        ...event,
+        partner: event.partners
+    }));
   }
 }

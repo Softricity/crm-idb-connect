@@ -1,6 +1,6 @@
-// src/auth/auth.service.ts
-import { Injectable } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PartnersService } from '../partners/partners.service';
+import { AgentsService } from '../agents/agents.service'; // 👈 Import AgentsService
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -8,65 +8,98 @@ import * as bcrypt from 'bcrypt';
 export class AuthService {
   constructor(
     private partnersService: PartnersService,
+    private agentsService: AgentsService, // 👈 Inject it
     private jwtService: JwtService,
   ) {}
 
-  /**
-   * Validates a partner's credentials.
-   * @param email The partner's email
-   * @param pass The partner's plaintext password
-   * @returns The partner object without the password, or null if invalid
-   */
   async validateUser(email: string, pass: string): Promise<any> {
-    // 1. Find the partner by email
+    // 1. Try to find as Internal Partner
     const partner = await this.partnersService.findOneByEmail(email);
-
     if (partner) {
-      // 2. Compare the plaintext password with the hashed password from the DB
       const isMatch = await bcrypt.compare(pass, partner.password);
       if (isMatch) {
-        // 3. If they match, return the user object (minus the password)
         const { password, ...result } = partner;
-        return result;
+        return { ...result, type: 'partner' }; // Tag as partner
       }
     }
-    // 4. If user not found or password doesn't match, return null
+
+    // 2. If not found, Try to find as Agent
+    const agent = await this.agentsService.findByEmail(email);
+    if (agent) {
+      // ✅ Security Check: Agent must be APPROVED and ACTIVE
+      if (agent.status !== 'APPROVED' || !agent.is_active) {
+         // You might want to throw a specific error or just return null
+         // returning null triggers "Invalid Credentials" generic message
+         return null; 
+      }
+
+      const isMatch = await bcrypt.compare(pass, agent.password);
+      if (isMatch) {
+        const { password, ...result } = agent;
+        return { ...result, type: 'agent' }; // Tag as agent
+      }
+    }
+
     return null;
   }
 
-  /**
-   * Generates a JWT for a validated user.
-   * @param partner The user object returned from validateUser
-   * @returns An object containing the access_token and partner info
-   */
-  async login(partner: any) {
-    // Extract permissions
-    const permissions = partner.role?.role_permissions?.map(
-      (rp: any) => rp.permission.name
-    ) || [];
+  async login(user: any) {
+    // 1. Define Payload based on User Type
+    let payload: any = {};
+    let responseUser: any = {};
 
-    // ⚠️ UPDATED PAYLOAD: Added branch_type for hierarchy logic
-    const payload = {
-      email: partner.email,
-      sub: partner.id,
-      name: partner.name,
-      role: partner.role.name,
-      permissions: permissions,
-      branch_id: partner.branch_id,     // <--- Existing
-      branch_type: partner.branch?.type // <--- CRITICAL NEW ADDITION
-    };
+    if (user.type === 'partner') {
+      // --- PARTNER LOGIC (Existing) ---
+      const permissions = user.role?.role_permissions?.map((rp: any) => rp.permission.name) || [];
+      
+      payload = {
+        email: user.email,
+        sub: user.id,
+        name: user.name,
+        role: user.role.name,
+        permissions: permissions,
+        branch_id: user.branch_id,
+        branch_type: user.branch?.type
+      };
 
+      responseUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: user.role.name,
+        permissions: permissions,
+        branch_id: user.branch_id,
+        type: 'partner'
+      };
+
+    } else {
+      // --- AGENT LOGIC (New) ---
+      // Agents don't have dynamic roles/permissions tables yet, so we hardcode "agent"
+      
+      payload = {
+        email: user.email,
+        sub: user.id,
+        name: user.name,
+        role: 'agent', // Hardcoded role
+        permissions: [], // Agents generally have fixed permissions logic in FE
+        branch_id: null, // Agents usually belong to Head Office logically or null
+        branch_type: 'agent_portal'
+      };
+
+      responseUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: 'agent',
+        permissions: [],
+        type: 'agent'
+      };
+    }
+
+    // 2. Return Token
     return {
       access_token: this.jwtService.sign(payload),
-      partner: {
-        id: partner.id,
-        name: partner.name,
-        email: partner.email,
-        role: partner.role.name,
-        branch_id: partner.branch_id,
-        branch_name: partner.branch?.name,
-        permissions: permissions,
-      },
+      partner: responseUser, // Frontend expects "partner" key
     };
   }
 }

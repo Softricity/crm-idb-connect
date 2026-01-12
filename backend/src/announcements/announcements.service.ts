@@ -8,23 +8,19 @@ import { UpdateAnnouncementDto } from './dto/update-announcement.dto';
 export class AnnouncementsService {
   constructor(private prisma: PrismaService) {}
 
-  // 1. Create: Auto-assign branch_id if not provided?
-  // Usually announcements are global or specific.
-  // For now, we trust the Admin to select the target correctly.
+  // 1. Create
   async create(createDto: CreateAnnouncementDto, userId: string) {
-    // Normalize roles to lowercase for consistent comparison
-    const normalizedRoles = createDto.roles?.map(role => role.toLowerCase()) || [];
-    
+    // Destructure to ensure we only pass fields that exist in the Prisma Schema
+    const { title, content, target_audience, users, branch_id, is_active } = createDto;
+
     return this.prisma.announcements.create({
       data: {
-        title: createDto.title,
-        content: createDto.content,
-        target_audience: createDto.target_audience,
-        users: createDto.users || [],
-        branches: createDto.branches || [],
-        roles: normalizedRoles,
-        branch_id: createDto.branch_id,
-        is_active: createDto.is_active ?? true,
+        title,
+        content,
+        target_audience,
+        users: users ?? [],     // Default to empty array if null
+        branch_id: branch_id,   // ✅ Correct field name (matches schema)
+        is_active: is_active ?? true,
         created_by: userId,
       },
       include: {
@@ -42,35 +38,19 @@ export class AnnouncementsService {
       where.is_active = true;
     }
 
-    // Normalize user role to lowercase for consistent comparison
-    const userRole = user.role?.toLowerCase() || '';
-
     // B. Scoping Logic
-    if (userRole === 'super admin') {
+    if (user.role === 'admin') {
       // Admins see EVERYTHING (Management View)
-      // No extra filters needed
     } else {
       // Standard Users (Consumption View)
-      // They see:
-      // 1. Announcements specifically for them (target_audience = 'user' AND users array contains their ID)
-      // 2. Announcements for all branches (target_audience = 'branch')
-      // 3. Announcements for their specific branch (target_audience = 'branch-specific' AND branches array contains their branch_id)
-      // 4. Announcements for their role (target_audience = 'role-based' AND roles array contains their role - case insensitive)
       where.OR = [
         { 
           target_audience: 'user', 
           users: { has: user.id } 
         },
         { 
-          target_audience: 'branch'
-        },
-        { 
-          target_audience: 'branch-specific', 
-          branches: { has: user.branch_id }
-        },
-        { 
-          target_audience: 'role-based', 
-          roles: { has: userRole }
+          target_audience: 'branch', 
+          branch_id: user.branch_id // <--- Match User's Branch
         },
       ];
     }

@@ -48,6 +48,46 @@ async function handleResponse(res: Response) {
   return data;
 }
 
+// --- Agents ---
+export const AgentsAPI = {
+  // Public Onboarding
+  onboard: async (data: any) => {
+    // No auth header needed for public onboarding
+    const res = await fetch(`${API_BASE}/agents/onboard`, { 
+      method: 'POST', 
+      headers: { 'Content-Type': 'application/json' }, 
+      body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+  // Admin: Get All Agents
+  getAll: async (status?: string) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    const res = await fetch(`${API_BASE}/agents?${params.toString()}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  // Admin: Get Single Agent
+  getById: async (id: string) => {
+    const res = await fetch(`${API_BASE}/agents/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  // Admin: Approve/Reject
+  updateStatus: async (id: string, status: 'APPROVED' | 'REJECTED', reason?: string) => {
+    const res = await fetch(`${API_BASE}/agents/${id}/status`, { 
+      method: 'PATCH', 
+      headers: getHeaders(), 
+      body: JSON.stringify({ status, reason }) 
+    });
+    return handleResponse(res);
+  },
+  delete: async (id: string) => {
+     // NOTE: Ensure your Backend AgentsController has @Delete(':id') if using this
+     const res = await fetch(`${API_BASE}/agents/${id}`, { method: 'DELETE', headers: getHeaders() });
+     return handleResponse(res);
+  }
+};
+
 // --- Leads ---
 export const LeadsAPI = {
   fetchLeads: async (branchId?: string) => {
@@ -587,5 +627,6 @@ export default {
   BranchesAPI,
   AnnouncementsAPI,
   TodosAPI,
-  OptionsAPI
+  OptionsAPI,
+  AgentsAPI
 };

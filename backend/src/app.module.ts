@@ -22,6 +22,7 @@ import { StorageModule } from './storage/storage.module';
 import { BranchesModule } from './branches/branches.module';
 import { TodosModule } from './todos/todos.module';
 import { OptionsModule } from './options/options.module';
+import { AgentsModule } from './agents/agents.module';
 
 @Module({
   imports: [
@@ -45,7 +46,8 @@ import { OptionsModule } from './options/options.module';
     StorageModule,
     BranchesModule,
     TodosModule,
-    OptionsModule
+    OptionsModule,
+    AgentsModule
   ],
   controllers: [AppController],
   providers: [AppService],
