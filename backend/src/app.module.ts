@@ -23,6 +23,7 @@ import { BranchesModule } from './branches/branches.module';
 import { TodosModule } from './todos/todos.module';
 import { OptionsModule } from './options/options.module';
 import { AgentsModule } from './agents/agents.module';
+import { CommissionsModule } from './commissions/commissions.module';
 
 @Module({
   imports: [
@@ -47,7 +48,8 @@ import { AgentsModule } from './agents/agents.module';
     BranchesModule,
     TodosModule,
     OptionsModule,
-    AgentsModule
+    AgentsModule,
+    CommissionsModule
   ],
   controllers: [AppController],
   providers: [AppService],

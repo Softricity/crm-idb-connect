@@ -467,6 +467,97 @@ Retrieves a consolidated list of records that are either **Leads**, **Applicatio
 -   **Authentication:** **JWT Required (Admin Only)**
 -   **Description:** Permanently removes agent and associated documents.
 
+---
+
+## 💰 Commissions API
+
+Manages commission tracking and payments for agents.
+
+### Create Commission
+-   **Route:** `POST /commissions`
+-   **Authentication:** **JWT Required (Admin, Super Admin)**
+-   **Description:** Manually creates a commission record for a Lead or Application. The system automatically links the commission to the Agent who created the Lead/Application.
+-   **Request Body:**
+    ```json
+    {
+      "lead_id": "uuid-of-lead",
+      "application_id": null,
+      "amount": 5000,
+      "currency": "INR",
+      "status": "PENDING",
+      "remarks": "Commission for Spring Intake admission"
+    }
+    ```
+    *Note: Provide either `lead_id` OR `application_id`.*
+-   **Returns:**
+    ```json
+    {
+      "id": "comm-uuid",
+      "lead_id": "uuid-of-lead",
+      "agent_id": "uuid-of-agent",
+      "amount": 5000,
+      "currency": "INR",
+      "status": "PENDING",
+      "agent": {
+        "name": "John Doe",
+        "agency_name": "Global Edu"
+      }
+    }
+    ```
+
+### Get All Commissions
+-   **Route:** `GET /commissions`
+-   **Authentication:** **JWT Required (Admin, Super Admin)**
+-   **Description:** Retrieves a master list of all commissions across all agents.
+-   **Returns:** Array of commission objects with nested agent and lead details.
+
+### Get My Commissions
+-   **Route:** `GET /commissions/my-commissions`
+-   **Authentication:** **JWT Required**
+-   **Description:** Retrieves commissions linked to the currently logged-in Agent. Used for the B2B Dashboard.
+-   **Returns:**
+    ```json
+    [
+      {
+        "id": "comm-uuid-2",
+        "amount": 5000,
+        "currency": "INR",
+        "status": "PENDING",
+        "remarks": "Awaiting University confirmation",
+        "lead": {
+          "name": "Student B"
+        },
+        "application": {
+          "student_id": "STU-2024-001",
+          "application_stage": "Offer Letter Received"
+        }
+      }
+    ]
+    ```
+
+### Get Single Commission
+-   **Route:** `GET /commissions/:id`
+-   **Authentication:** **JWT Required**
+-   **Description:** Retrieves details of a specific commission.
+
+### Update Commission
+-   **Route:** `PATCH /commissions/:id`
+-   **Authentication:** **JWT Required (Admin, Super Admin)**
+-   **Description:** Updates commission status or remarks.
+-   **Request Body:**
+    ```json
+    {
+      "status": "PAID",
+      "remarks": "Transaction ID: TXN123456"
+    }
+    ```
+-   **Valid Statuses:** `PENDING`, `APPROVED`, `PAID`, `REJECTED`
+-   **Returns:** Updated commission object.
+
+### Delete Commission
+-   **Route:** `DELETE /commissions/:id`
+-   **Authentication:** **JWT Required (Admin, Super Admin)**
+-   **Description:** Permanently removes a commission record.
 
 ---
 
