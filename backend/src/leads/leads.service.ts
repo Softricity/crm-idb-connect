@@ -337,4 +337,24 @@ export class LeadsService {
     });
     return { message: `Successfully deleted ${result.count} leads.` };
   }
+
+  async findMyApplications(createdBy?: string) {
+    const where: Prisma.leadsWhereInput = {
+      type: { in: ['lead', 'application', 'visa'] },
+    };
+
+    if (createdBy) {
+      where.created_by = createdBy;
+    }
+
+    return this.prisma.leads.findMany({
+      where,
+      include: {
+        partners_leads_assigned_toTopartners: {
+          select: { name: true, email: true },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  }
 }

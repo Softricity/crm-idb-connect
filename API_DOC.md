@@ -288,6 +288,42 @@ This module handles lead creation, management, and bulk operations.
 -   **Bulk Delete:** `POST /leads/bulk/delete` (**Admin Only**)
     -   **Body:** `{ "leadIds": ["uuid-1", "uuid-2"] }`
 
+### Get My Applications (Leads, Apps, Visas)
+
+Retrieves a consolidated list of records that are either **Leads**, **Applications**, or **Visa** stages. This is useful for a unified view of all student files.
+
+-   **Route:** `GET /leads/my-applications`
+-   **Authentication:** **JWT Required (Admin, Counsellor, Super Admin)**
+-   **Query Params:**
+    -   `created_by` (UUID, Optional): Filters records created by a specific user. If omitted, returns all records.
+-   **Example:** `GET /leads/my-applications?created_by=8d0f0726-4a33-4748-ad00-050b6821db20`
+-   **Returns:** Array of mixed record types (Leads, Applications, Visas).
+    ```json
+    [
+        {
+        "id": "lead-uuid-1",
+        "name": "Student A",
+        "email": "studentA@example.com",
+        "mobile": "+919876543210",
+        "type": "lead",
+        "status": "new",
+        "created_at": "2023-10-25T10:00:00.000Z",
+        "assigned_partner": {
+            "name": "Counsellor Name",
+            "email": "counsellor@agency.com"
+        }
+        },
+        {
+        "id": "lead-uuid-2",
+        "name": "Student B",
+        "type": "application",
+        "status": "applied",
+        "created_at": "2023-10-24T14:30:00.000Z",
+        "assigned_partner": null
+        }
+    ]
+    ```
+
 ---
 
 ## 🤝 Partners API

@@ -35,6 +35,11 @@ export class LeadsController {
   create(@Body() createLeadDto: CreateLeadDto) {
     return this.leadsService.create(createLeadDto);
   }
+  // Get My Applications
+  @Get('my-applications')
+  findMyApplications(@Query('created_by') createdBy?: string) {
+    return this.leadsService.findMyApplications(createdBy);
+  }
 
   // Get All Leads
   @Get()
