@@ -66,7 +66,7 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
         utm_medium: isRestrictedToOwnLeads(user?.permissions || []) ? partnerDetails?.name : "walkin",
         utm_campaign: isRestrictedToOwnLeads(user?.permissions || []) ? partnerDetails?.agency_name : "walkin",
         assigned_to: lead.assigned_to || null,
-        created_by: user?.id,
+        created_by: lead?.created_by || null,
         reason: lead.reason || null,
         password: lead.password || null,
         is_flagged: lead.is_flagged || false,
@@ -102,6 +102,7 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
           utm_medium: isRestrictedToOwnLeads(user?.permissions || []) ? partnerDetails?.name : "walkin",
           utm_campaign: isRestrictedToOwnLeads(user?.permissions || []) ? partnerDetails?.agency_name : "walkin",
         };
+        console.log("Creating lead with data:", leadData);
         await addLead(leadData);
         toast.success("Lead created successfully!");
       }

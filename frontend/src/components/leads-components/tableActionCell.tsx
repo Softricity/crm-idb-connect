@@ -19,6 +19,7 @@ import {
     CalendarFold,
     Plus,
     UserCheck,
+    DollarSign,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { Lead } from "@/stores/useLeadStore";
@@ -26,6 +27,8 @@ import { useLeadStore } from "@/stores/useLeadStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { toast } from "sonner";
+import { useState } from "react";
+import CommissionModal from "./CommissionModal";
 
 interface LeadActionsMenuProps {
     leadId: string;
@@ -40,11 +43,18 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
     const { updateLead, fetchLeadsBasedOnPermission } = useLeadStore();
     const { user } = useAuthStore();
     const { selectedBranch } = useBranchStore();
+    const [commissionModalOpen, setCommissionModalOpen] = useState(false);
     
     // All users use /leads path (B2B users are handled by middleware)
     const basePath = "/leads";
     
+    // Check if user has Commission Create permission
+    const hasCommissionCreatePermission = user?.permissions?.some(
+        (perm: any) => perm.name === "Commission Create" || perm === "Commission Create"
+    );
+    
     return (
+        <>
         <Dropdown>
             <DropdownTrigger>
                 <Button isIconOnly variant="light" size="sm" aria-label="Lead Actions">
@@ -86,6 +96,16 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                         Change Lead Status
                     </DropdownItem>
 
+                    {lead?.agent_id && hasCommissionCreatePermission ? (
+                        <DropdownItem
+                            key="create_commission"
+                            startContent={<DollarSign className="h-4 w-4 text-green-500" />}
+                            onClick={() => setCommissionModalOpen(true)}
+                        >
+                            Create Commission
+                        </DropdownItem>
+                    ) : null}
+
                     {/* ✅ Notes Click Navigate */}
                     <DropdownItem
                         key="notes"
@@ -124,5 +144,20 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                 </DropdownSection>
             </DropdownMenu>
         </Dropdown>
+        
+        {/* Commission Modal */}
+        {lead && (
+            <CommissionModal
+                isOpen={commissionModalOpen}
+                onClose={() => setCommissionModalOpen(false)}
+                leadId={leadId}
+                leadName={lead.name}
+                agentId={lead.agent_id ?? ""}
+                onSuccess={() => {
+                    toast.success("Commission created successfully");
+                }}
+            />
+        )}
+        </>
     );
 }

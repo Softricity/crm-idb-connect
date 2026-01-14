@@ -609,6 +609,45 @@ export const OptionsAPI = {
   }
 };
 
+// --- Commissions ---
+export const CommissionsAPI = {
+  create: async (data: any) => {
+    const res = await fetch(`${API_BASE}/commissions`, { 
+      method: 'POST', 
+      headers: getHeaders(), 
+      body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+  getAll: async () => {
+    const res = await fetch(`${API_BASE}/commissions`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getMyCommissions: async () => {
+    const res = await fetch(`${API_BASE}/commissions/my-commissions`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getById: async (id: string) => {
+    const res = await fetch(`${API_BASE}/commissions/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  update: async (id: string, data: any) => {
+    const res = await fetch(`${API_BASE}/commissions/${id}`, { 
+      method: 'PATCH', 
+      headers: getHeaders(), 
+      body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+  delete: async (id: string) => {
+    const res = await fetch(`${API_BASE}/commissions/${id}`, { 
+      method: 'DELETE', 
+      headers: getHeaders() 
+    });
+    return handleResponse(res);
+  },
+};
+
 export default {
   LeadsAPI,
   PartnersAPI,
@@ -628,5 +667,6 @@ export default {
   AnnouncementsAPI,
   TodosAPI,
   OptionsAPI,
-  AgentsAPI
+  AgentsAPI,
+  CommissionsAPI
 };

@@ -11,9 +11,8 @@ export default function Page() {
     const { applications, fetchApplications } = useApplicationStore();
     const { selectedBranch } = useBranchStore();
     useEffect(() => {
-        // Placeholder: when backend implements applications fetch with branch filter.
-        // Currently no branch param, but we can refetch on branch change for future compatibility.
-        fetchApplications();
+        // Fetch applications filtered by selected branch
+        fetchApplications(undefined, selectedBranch?.id);
     }, [fetchApplications, selectedBranch?.id]);
 
     return (
