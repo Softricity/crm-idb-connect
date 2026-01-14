@@ -10,15 +10,15 @@ export class CommissionsService {
   async create(createDto: CreateCommissionDto) {
     let agentId: string | null = null;
 
-    // 1. Auto-Detect Agent Logic
+    // 1. Auto-Detect Agent Logic (Updated)
     if (createDto.lead_id) {
       const lead = await this.prisma.leads.findUnique({ 
         where: { id: createDto.lead_id } 
       });
-      if (lead && lead.created_by) {
-        // Verify if created_by matches an Agent
-        const agent = await this.prisma.agent.findUnique({ where: { id: lead.created_by } });
-        if (agent) agentId = agent.id;
+      
+      // ✅ FIX: Check the dedicated 'agent_id' column directly
+      if (lead && lead.agent_id) {
+        agentId = lead.agent_id;
       }
     } 
     else if (createDto.application_id) {
@@ -26,15 +26,16 @@ export class CommissionsService {
         where: { id: createDto.application_id },
         include: { leads: true } 
       });
-      if (app && app.leads && app.leads.created_by) {
-         const agent = await this.prisma.agent.findUnique({ where: { id: app.leads.created_by } });
-         if (agent) agentId = agent.id;
+      
+      // ✅ FIX: Check the lead's 'agent_id' via the application
+      if (app && app.leads && app.leads.agent_id) {
+         agentId = app.leads.agent_id;
       }
     }
 
     if (!agentId) {
-      // You can decide to throw error or allow "unassigned" commissions
-      // throw new BadRequestException("Could not link an Agent to this Lead/Application.");
+      // Optional: You can throw an error if a commission MUST be linked to an agent
+      // throw new BadRequestException("This Lead/Application is not linked to any Agent.");
     }
 
     // 2. Create Record
@@ -42,7 +43,7 @@ export class CommissionsService {
       data: {
         lead_id: createDto.lead_id,
         application_id: createDto.application_id,
-        agent_id: agentId, // <--- Linked automatically
+        agent_id: agentId, // Automatically linked from the lead
         amount: createDto.amount,
         currency: createDto.currency || 'INR',
         status: createDto.status || 'PENDING',
