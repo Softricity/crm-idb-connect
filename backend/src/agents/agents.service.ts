@@ -30,6 +30,7 @@ export class AgentsService {
       data: {
         ...createAgentDto,
         password: hashedPassword,
+        branch_id: createAgentDto.branch_id || null,
         status: 'PENDING', // Default to Pending
       }
     });

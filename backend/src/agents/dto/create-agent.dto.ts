@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString, IsOptional, MinLength, IsEnum } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, IsOptional, MinLength, IsEnum, IsUUID } from 'class-validator';
 
 export class CreateAgentDto {
   @IsNotEmpty()
@@ -45,6 +45,10 @@ export class CreateAgentDto {
   @IsNotEmpty()
   @IsString()
   address: string;
+
+  @IsOptional()
+  @IsUUID()
+  branch_id?: string;
   
   @IsOptional()
   @IsString()
