@@ -64,8 +64,10 @@ export class LeadsService {
     // 2. Fallback: Manual DTO Input (Public/Admin Manual Create)
     else if (createLeadDto.created_by) {
       partnerId = createLeadDto.created_by;
+    } else if (createLeadDto.agent_id) {
+      agentId = createLeadDto.agent_id;
     }
-
+    
     // Default Country Fix
     const finalPreferredCountry = createLeadDto.preferred_country || "India"; 
 

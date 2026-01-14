@@ -82,7 +82,7 @@ export class AuthService {
         name: user.name,
         role: 'agent', // Hardcoded role
         permissions: [], // Agents generally have fixed permissions logic in FE
-        branch_id: null, // Agents usually belong to Head Office logically or null
+        branch_id: user.branch_id, // Agents usually belong to Head Office logically or null
         branch_type: 'agent_portal'
       };
 
@@ -92,7 +92,8 @@ export class AuthService {
         email: user.email,
         role: 'agent',
         permissions: [],
-        type: 'agent'
+        type: 'agent',
+        branch_id: user.branch_id
       };
     }
 
