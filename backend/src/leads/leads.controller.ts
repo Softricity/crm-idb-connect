@@ -26,15 +26,16 @@ import { BulkDeleteDto } from './dto/bulk-update.dto';
 @UseGuards(RolesGuard)
 @Controller('leads')
 export class LeadsController {
-  constructor(private readonly leadsService: LeadsService) {}
+  constructor(private readonly leadsService: LeadsService) { }
 
   // Public & Internal Lead Creation
   // POST /leads
   @Public()
   @Post()
-  create(@Body() createLeadDto: CreateLeadDto) {
-    return this.leadsService.create(createLeadDto);
+  async create(@Body() createLeadDto: CreateLeadDto, @GetUser() user?: any) {
+    return this.leadsService.create(createLeadDto, user);
   }
+  
   // Get My Applications
   @Get('my-applications')
   findMyApplications(@Query('created_by') createdBy?: string) {
@@ -95,7 +96,7 @@ export class LeadsController {
   remove(@Param('id') id: string) {
     return this.leadsService.remove(id);
   }
-  
+
   @Post('bulk/delete')
   @Roles(Role.Admin)
   bulkDelete(@Body() bulkDeleteDto: BulkDeleteDto) {

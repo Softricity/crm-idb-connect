@@ -41,99 +41,57 @@ export class LeadsService {
     return bcrypt.hash(password, saltRounds);
   }
 
-  async create(createLeadDto: CreateLeadDto) {
-    const { email, mobile } = createLeadDto;
-
-    // 1. Check for duplicates
-    const existingLead = await this.prisma.leads.findFirst({
-      where: {
-        OR: [{ email }, { mobile }],
-      },
-    });
-
-    if (existingLead) {
-      throw new ConflictException('Lead with this email or mobile already exists.');
-    }
-
-    // 2. Generate Password
+  // Update the method signature to accept the User object
+  // Update the method signature to accept the User object
+  async create(createLeadDto: CreateLeadDto, user?: any) { 
+    
     const password = this.generateRandomPassword();
     const hashedPassword = await this.hashPassword(password);
 
-    try {
-      // 3. Create Lead - EXPLICIT MAPPING
-      // Determine branch for this lead if created_by is provided
-      let derivedBranchId: string | null = null;
-      let finalCreatedBy: string | null = null;
+    // ✅ FIX: Explicitly define type as 'string | null'
+    let partnerId: string | null = null;
+    let agentId: string | null = null;
 
-      // Only attempt to find partner if created_by is a valid non-empty string
-      if (createLeadDto.created_by && createLeadDto.created_by.trim() !== '') {
-        const creator = await this.prisma.partners.findUnique({
-          where: { id: createLeadDto.created_by },
-          select: { branch_id: true, id: true },
-        });
-        derivedBranchId = creator?.branch_id || null;
-      } else if (createLeadDto.branch_id) {
-        derivedBranchId = createLeadDto.branch_id;
+    // 1. If User is logged in (from Token)
+    if (user?.id) {
+      if (user.type === 'agent') {
+        agentId = user.id;
+      } else {
+        // Default to Partner for 'admin', 'counsellor', etc.
+        partnerId = user.id;
       }
-
-      // Allow manual override of branch_id if provided (and not just derived)
-      // but usually we prefer derivation. If frontend sends null branch_id, it stays null.
-      
-      const newLead = await this.prisma.leads.create({
-        data: {
-          // --- A. The 5 Core Fields (From Form) ---
-          name: createLeadDto.name,
-          email: createLeadDto.email,
-          mobile: createLeadDto.mobile,
-          preferred_course: createLeadDto.preferred_course,
-          preferred_country: createLeadDto.preferred_country,
-
-          // --- B. System/Security Defaults ---
-          password: hashedPassword,
-          is_flagged: false,
-          created_at: new Date(),
-          status: createLeadDto.status || 'new',
-          type: createLeadDto.type || 'lead',
-
-          created_by: finalCreatedBy,
-          assigned_to: createLeadDto.assigned_to || null,
-
-          // --- D. Tracking Fields ---
-          utm_source: createLeadDto.utm_source || null,
-          utm_medium: createLeadDto.utm_medium || null,
-          utm_campaign: createLeadDto.utm_campaign || null,
-
-          // --- E. Unused/Future Fields ---
-          reason: null,
-          // Branch association (Null if unassigned)
-          branch_id: derivedBranchId,
-        },
-      });
-
-      // 4. Send Welcome Email
-      // Wrap in try-catch so email failure doesn't block lead creation
-      try {
-        await this.mailService.sendWelcomeEmail(email, password);
-      } catch (emailError) {
-        console.error("Failed to send welcome email:", emailError);
-      }
-
-      // 5. Log Timeline
-      await this.timelineService.logLeadCreated(newLead);
-
-      return newLead;
-    } catch (error) {
-      console.error(error);
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        if (error.code === 'P2002') {
-          throw new ConflictException('Lead with this email or mobile already exists.');
-        }
-        if (error.code === 'P2003') {
-          throw new InternalServerErrorException('Invalid Partner ID provided for created_by or assigned_to');
-        }
-      }
-      throw new InternalServerErrorException('Failed to create lead');
+    } 
+    // 2. Fallback: Manual DTO Input (Public/Admin Manual Create)
+    else if (createLeadDto.created_by) {
+      partnerId = createLeadDto.created_by;
     }
+
+    // Default Country Fix
+    const finalPreferredCountry = createLeadDto.preferred_country || "India"; 
+
+    return this.prisma.leads.create({
+      data: {
+        name: createLeadDto.name,
+        email: createLeadDto.email,
+        mobile: createLeadDto.mobile,
+        type: createLeadDto.type || 'lead',
+        status: createLeadDto.status || 'new',
+        preferred_country: finalPreferredCountry,
+        preferred_course: createLeadDto.preferred_course,
+        utm_source: createLeadDto.utm_source,
+        utm_medium: createLeadDto.utm_medium,
+        utm_campaign: createLeadDto.utm_campaign,
+        
+        // Correctly assign creator based on logic above
+        created_by: partnerId, 
+        agent_id: agentId,     
+        
+        assigned_to: createLeadDto.assigned_to,
+        password: hashedPassword,
+        is_flagged: false,
+        branch_id: createLeadDto.branch_id,
+      },
+    });
   }
 
   async bulkAssign(bulkAssignDto: BulkAssignDto, user: any) {
@@ -338,13 +296,17 @@ export class LeadsService {
     return { message: `Successfully deleted ${result.count} leads.` };
   }
 
-  async findMyApplications(createdBy?: string) {
+  async findMyApplications(userId?: string) {
     const where: Prisma.leadsWhereInput = {
       type: { in: ['lead', 'application', 'visa'] },
     };
 
-    if (createdBy) {
-      where.created_by = createdBy;
+    if (userId) {
+      // ✅ Check BOTH fields: "Did this user create it as a Partner OR as an Agent?"
+      where.OR = [
+        { created_by: userId },
+        { agent_id: userId }
+      ];
     }
 
     return this.prisma.leads.findMany({
@@ -353,6 +315,10 @@ export class LeadsService {
         partners_leads_assigned_toTopartners: {
           select: { name: true, email: true },
         },
+        // Optional: Include Agent details if needed
+        agent: {
+          select: { name: true, agency_name: true }
+        }
       },
       orderBy: { created_at: 'desc' },
     });

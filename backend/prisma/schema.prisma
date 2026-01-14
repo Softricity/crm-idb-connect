@@ -229,6 +229,8 @@ model leads {
   assigned_to                          String?            @db.Uuid
   created_at                           DateTime           @default(now()) @db.Timestamptz(6)
   created_by                           String?            @db.Uuid
+  agent_id                             String?             @db.Uuid 
+  agent                                Agent?              @relation(fields: [agent_id], references: [id])
   reason                               String?
   password                             String?            @default("")
   is_flagged                           Boolean            @default(false)
@@ -336,6 +338,7 @@ model Agent {
   
   created_at     DateTime @default(now()) @db.Timestamptz(6)
   updated_at     DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  leads            leads[]
 
   @@map("agents")
 }
