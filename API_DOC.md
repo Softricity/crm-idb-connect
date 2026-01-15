@@ -303,6 +303,96 @@ Manages commission tracking and payments for agents. Automatically links commiss
 
 ---
 
+## ⚙️ Dropdowns API
+
+### Get All Categories & Options
+
+Retrieves the entire dropdown structure: categories (tabs) and their nested options (items). Used for the "Customize" page.
+
+-   **Route:** `GET /dropdowns/categories`
+-   **Authentication:** **JWT Required (Admin, Super Admin)**
+-   **Returns:**
+    ```json
+    [
+      {
+        "id": "uuid-cat-1",
+        "name": "reasons",
+        "label": "Reasons",
+        "is_system": true,
+        "options": [
+          {
+            "id": "uuid-opt-1",
+            "label": "Not Interested",
+            "value": "not_interested",
+            "is_active": true
+          },
+          {
+            "id": "uuid-opt-2",
+            "label": "Too Expensive",
+            "value": "expensive",
+            "is_active": true
+          }
+        ]
+      },
+      {
+        "id": "uuid-cat-2",
+        "name": "intakes",
+        "label": "Intake Months",
+        "is_system": false,
+        "options": []
+      }
+    ]
+    ```
+
+### Create New Category
+
+Adds a new category (tab) for organizing dropdown options.
+
+-   **Route:** `POST /dropdowns/categories`
+-   **Authentication:** **JWT Required (Admin, Super Admin)**
+-   **Request Body:**
+    ```json
+    {
+      "name": "lead_sources",
+      "label": "Lead Sources"
+    }
+    ```
+-   **Returns:** Created category object.
+
+### Delete Category
+
+Removes a category and all associated options. System categories cannot be deleted.
+
+-   **Route:** `DELETE /dropdowns/categories/:id`
+-   **Authentication:** **JWT Required (Admin, Super Admin)**
+-   **Returns:** Deleted category object.
+
+### Add Option to Category
+
+Adds a new dropdown item to a specific category.
+
+-   **Route:** `POST /dropdowns/options`
+-   **Authentication:** **JWT Required (Admin, Super Admin)**
+-   **Request Body:**
+    ```json
+    {
+      "category_id": "uuid-cat-1",
+      "label": "Instagram Ads",
+      "value": "ig_ads"
+    }
+    ```
+-   **Returns:** Created option object.
+
+### Delete Option
+
+Removes a specific dropdown item from a category.
+
+-   **Route:** `DELETE /dropdowns/options/:id`
+-   **Authentication:** **JWT Required (Admin, Super Admin)**
+-   **Returns:** Deleted option object.
+
+---
+
 ## 💬 Chat System (Socket.io)
 
 Real-time messaging system for communication between leads and counsellors.

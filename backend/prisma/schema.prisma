@@ -548,6 +548,37 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
+// 1. Create the Category Model
+model DropdownCategory {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique // e.g. "reasons", "visa_status"
+  label       String?  // e.g. "Rejection Reasons" (Human readable)
+  is_system   Boolean  @default(false) // If true, cannot be deleted (e.g. built-ins)
+  
+  options     DropdownOption[]
+  
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("dropdown_categories")
+}
+
+// 2. Update existing Option Model
+model DropdownOption {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  label       String
+  value       String
+  
+  // Link to the new Category table
+  category_id String   @db.Uuid
+  category    DropdownCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("dropdown_options")
+}
+
 enum SenderType {
   PARTNER // Counsellor/Admin
   LEAD    // Student
