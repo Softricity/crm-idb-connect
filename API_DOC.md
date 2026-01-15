@@ -302,3 +302,109 @@ Manages commission tracking and payments for agents. Automatically links commiss
 -   **Description:** Permanently removes a commission record.
 
 ---
+
+## 💬 Chat System (Socket.io)
+
+Real-time messaging system for communication between leads and counsellors.
+
+**Endpoint URL:** `ws://localhost:5005`  
+**Namespace:** `/chat`
+
+### Authentication
+
+Socket connection requires a valid JWT token passed during handshake.
+
+```javascript
+import { io } from "socket.io-client";
+
+const socket = io("http://localhost:5005/chat", {
+    auth: {
+        token: "Bearer <YOUR_JWT_TOKEN>"
+    }
+});
+
+socket.on("connect_error", (err) => {
+    console.log(err.message); // "No token" or "Invalid token"
+});
+```
+
+### Load Chat History
+
+Retrieve previous messages for a lead before connecting to socket.
+
+-   **Route:** `GET /chat/history/:leadId`
+-   **Authentication:** **JWT Required**
+-   **Returns:**
+    ```json
+        [
+            {
+                "id": "msg-uuid-1",
+                "message": "Hello, I need help with my visa.",
+                "sender_type": "LEAD",
+                "created_at": "2023-10-27T10:00:00Z",
+                "is_read": true
+            },
+            {
+                "id": "msg-uuid-2",
+                "message": "Sure, I can help you.",
+                "sender_type": "PARTNER",
+                "partner": { "name": "Counsellor John" }
+            }
+        ]
+    ```
+
+### Client → Server Events
+
+Events emitted from the frontend.
+
+| Event | Payload | Description |
+|-------|---------|-------------|
+| `join_room` | `{ "lead_id": "uuid" }` | (Staff Only) Join student's chat room. Students auto-join on connect. |
+| `send_message` | `{ "lead_id": "uuid", "message": "Hi" }` | Send a message. |
+| `typing` | `{ "lead_id": "uuid", "isTyping": true }` | Send typing status (true/false). |
+| `mark_read` | `{ "lead_id": "uuid" }` | Mark unread messages as read. |
+
+### Server → Client Events
+
+Events to listen for on the frontend.
+
+**receive_message**
+
+Triggered when a message is sent in the room.
+
+```javascript
+socket.on("receive_message", (data) => {
+    // { id, message, sender_type, created_at, partner: {...} }
+    console.log("New Message:", data);
+});
+```
+
+**user_typing**
+
+Triggered when the other person starts/stops typing.
+
+```javascript
+socket.on("user_typing", (data) => {
+    // { user: "John Doe", isTyping: true }
+    console.log(data);
+});
+```
+
+### Frontend Implementation Flow
+
+1. **On Page Load:**
+     - Call `GET /chat/history/:leadId`
+     - Connect to socket
+     - If counsellor: Emit `join_room` with lead_id
+     - Scroll to bottom
+
+2. **Sending Messages:**
+     - User types → Emit `typing { isTyping: true }`
+     - User stops → Emit `typing { isTyping: false }`
+     - User submits → Emit `send_message`
+     - Optimistic UI: Append message immediately (greyed out)
+     - Confirm when `receive_message` returns
+
+3. **Receiving Messages:**
+     - Listen for `receive_message` → Append to list
+     - If chat window open → Emit `mark_read`
