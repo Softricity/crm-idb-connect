@@ -17,6 +17,7 @@ export interface Lead {
   assigned_to?: string | null;
   created_at?: string;
   created_by?: string | null;
+  agent_id?: string | null;
   reason?: string | null;
   password?: string | null;
   is_flagged?: boolean;
@@ -61,7 +62,6 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     try {
       // If user has LEAD_VIEW permission, fetch all leads
       if (canViewAllLeads(permissions)) {
-        console.log("User has permission to view all leads.", userId);
         const data = await api.LeadsAPI.fetchLeads(branchId);
         set({ leads: data as Lead[] });
       } else {

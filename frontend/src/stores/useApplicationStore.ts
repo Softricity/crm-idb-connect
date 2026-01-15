@@ -154,7 +154,7 @@ interface ApplicationState {
   applications: Application[];
   currentApplication: Application | null;
   loading: boolean;
-  fetchApplications: (leadIds?: string[]) => Promise<void>; // until backend list exists, fetch sequentially by lead ids
+  fetchApplications: (leadIds?: string[], branchId?: string) => Promise<void>;
   fetchApplicationByLeadId: (leadId: string) => Promise<void>;
   createApplication: (leadId: string) => Promise<Application>; // create via minimal trigger (server auto-creates)
   patchSection: (leadId: string, section: string, body: any) => Promise<void>;
@@ -197,7 +197,9 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
           id: app.id || l.id,
           lead_id: l.id,
           created_at: app.created_at || l.created_at,
+          created_by: app.created_by || l.created_by,
           branch_id: l.branch_id,
+          agent_id: l.agent_id,
           
           // Personal details from application or fallback to lead
           given_name: app.given_name || l.name?.split(' ')[0] || l.name,

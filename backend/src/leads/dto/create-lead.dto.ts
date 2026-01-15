@@ -55,5 +55,9 @@ export class CreateLeadDto {
 
   @IsOptional()
   @IsUUID()
+  agent_id?: string;
+
+  @IsOptional()
+  @IsUUID()
   assigned_to?: string;
 }
