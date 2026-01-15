@@ -245,6 +245,7 @@ model leads {
   offline_payments                     offline_payments[]
   timeline                             timeline[]
   commissions                          Commission[]
+  chat_messages                        ChatMessage[]
 }
 
 model notes {
@@ -302,6 +303,7 @@ model partners {
   role                              role                 @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   timeline                          timeline[]
   todos                             todos[]
+  sent_messages                     ChatMessage[]
 }
 
 model Agent {
@@ -336,6 +338,7 @@ model Agent {
   // Relations
   documents      AgentDocument[]
   commissions    Commission[]
+  sent_messages   ChatMessage[]
 
   branch_id      String?         @db.Uuid
   branch         Branch?         @relation(fields: [branch_id], references: [id])
@@ -517,6 +520,38 @@ model OptionList {
   updated_at DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@map("option_lists")
+}
+
+model ChatMessage {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  
+  // The Room (Always linked to a specific Lead/Student)
+  lead_id         String      @db.Uuid
+  
+  // Who sent it? (Nullable Foreign Keys for Data Integrity)
+  partner_id      String?     @db.Uuid
+  agent_id        String?     @db.Uuid
+  // Note: If both partner_id and agent_id are null, it implies the Student (Lead) sent it.
+  
+  sender_type     SenderType
+  message         String
+  is_read         Boolean     @default(false)
+  
+  created_at      DateTime    @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  lead            leads       @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  partner         partners?   @relation(fields: [partner_id], references: [id])
+  agent           Agent?      @relation(fields: [agent_id], references: [id])
+
+  @@index([lead_id]) // Crucial for fetching chat history quickly
+  @@map("chat_messages")
+}
+
+enum SenderType {
+  PARTNER // Counsellor/Admin
+  LEAD    // Student
+  AGENT   // (Future proofing)
 }
 
 enum academic_level_enum {

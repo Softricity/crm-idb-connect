@@ -24,6 +24,7 @@ import { TodosModule } from './todos/todos.module';
 import { OptionsModule } from './options/options.module';
 import { AgentsModule } from './agents/agents.module';
 import { CommissionsModule } from './commissions/commissions.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
   imports: [
@@ -49,7 +50,8 @@ import { CommissionsModule } from './commissions/commissions.module';
     TodosModule,
     OptionsModule,
     AgentsModule,
-    CommissionsModule
+    CommissionsModule,
+    ChatModule,
   ],
   controllers: [AppController],
   providers: [AppService],
