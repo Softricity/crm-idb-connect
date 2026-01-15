@@ -61,6 +61,7 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
         type: lead.type || "lead",
         preferred_country: lead.preferred_country || "",
         preferred_course: lead.preferred_course || "",
+        branch_id: user?.branch_id || null,
         status: lead.status || "new",
         utm_source: lead.utm_source || "walkin",
         utm_medium: isRestrictedToOwnLeads(user?.permissions || []) ? partnerDetails?.name : "walkin",
