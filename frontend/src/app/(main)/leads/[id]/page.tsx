@@ -170,7 +170,7 @@ export default function LeadDetailPage() {
                                     <DialogClose className="absolute right-4 top-4" />
                                 </DialogHeader>
                                 <iframe
-                                    src={`http://student.idbconnect.global/login?token=${encodeURIComponent(studentPanelToken())}`}
+                                    src={`https://student.idbconnect.global/login?token=${encodeURIComponent(studentPanelToken())}`}
                                     title="Student Panel"
                                     className="flex-1 w-full h-full border-0"
                                     allowFullScreen
