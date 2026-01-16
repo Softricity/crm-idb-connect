@@ -12,7 +12,7 @@ import {
   Select,
   SelectItem,
 } from "@heroui/react";
-import { LeadsAPI, ApplicationsAPI, CountriesAPI, UniversitiesAPI } from "@/lib/api";
+import { LeadsAPI, ApplicationsAPI, CountriesAPI, UniversitiesAPI, CoursesAPI } from "@/lib/api";
 
 interface CreateApplicationModalProps {
   isOpen: boolean;
@@ -31,6 +31,14 @@ interface University {
   countryId: string;
 }
 
+interface Course {
+  id: string;
+  name: string;
+  universityId: string;
+  level?: string;
+  category?: string;
+}
+
 const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
   isOpen,
   onClose,
@@ -40,6 +48,8 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
   const [countries, setCountries] = useState<Country[]>([]);
   const [universities, setUniversities] = useState<University[]>([]);
   const [filteredUniversities, setFilteredUniversities] = useState<University[]>([]);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [filteredCourses, setFilteredCourses] = useState<Course[]>([]);
 
   // Form fields
   const [name, setName] = useState("");
@@ -54,6 +64,7 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
     if (isOpen) {
       fetchCountries();
       fetchUniversities();
+      fetchCourses();
     }
   }, [isOpen]);
 
@@ -73,6 +84,26 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
     }
   }, [preferredCountry, universities, preferredUniversity]);
 
+  // Filter courses based on selected university
+  useEffect(() => {
+    if (preferredUniversity) {
+      const selectedUni = universities.find((u) => (u as any).name === preferredUniversity);
+      if (selectedUni) {
+        const filtered = courses.filter(
+          (course) => (course as any).universityId === selectedUni.id
+        );
+        setFilteredCourses(filtered);
+        // Reset course selection if it's not in the filtered list
+        if (preferredCourse && !filtered.find((c) => c.name === preferredCourse)) {
+          setPreferredCourse("");
+        }
+      }
+    } else {
+      setFilteredCourses([]);
+      setPreferredCourse("");
+    }
+  }, [preferredUniversity, courses, universities]);
+
   const fetchCountries = async () => {
     try {
       const data = await CountriesAPI.getAll();
@@ -90,6 +121,16 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
       setFilteredUniversities(data || []);
     } catch (error) {
       console.error("Failed to fetch universities:", error);
+    }
+  };
+
+  const fetchCourses = async () => {
+    try {
+      const data = await CoursesAPI.getAll();
+      console.log("Fetched courses:", data);
+      setCourses(data || []);
+    } catch (error) {
+      console.error("Failed to fetch courses:", error);
     }
   };
 
@@ -156,6 +197,8 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
       setPreferredCourse("");
       setPreferredCountry("");
       setPreferredUniversity("");
+      setFilteredUniversities([]);
+      setFilteredCourses([]);
 
       onClose();
       if (onSuccess) {
@@ -190,6 +233,8 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
       setPreferredCourse("");
       setPreferredCountry("");
       setPreferredUniversity("");
+      setFilteredUniversities([]);
+      setFilteredCourses([]);
       onClose();
     }
   };
@@ -237,15 +282,6 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
               isDisabled={loading}
             />
 
-            <Input
-              label="Preferred Course"
-              placeholder="e.g., Masters in Computer Science"
-              value={preferredCourse}
-              onChange={(e) => setPreferredCourse(e.target.value)}
-              isRequired
-              isDisabled={loading}
-            />
-
             <Select
               label="Preferred Country"
               placeholder="Select a country"
@@ -274,6 +310,26 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
               {filteredUniversities.map((university) => (
                 <SelectItem key={university.name}>
                   {university.name}
+                </SelectItem>
+              ))}
+            </Select>
+
+            <Select
+              label="Preferred Course"
+              placeholder={
+                preferredUniversity
+                  ? "Select a course"
+                  : "Please select a university first"
+              }
+              selectedKeys={preferredCourse ? [preferredCourse] : []}
+              onChange={(e) => setPreferredCourse(e.target.value)}
+              isRequired
+              isDisabled={loading || !preferredUniversity}
+            >
+              {filteredCourses.map((course) => (
+                <SelectItem key={course.name}>
+                  
+                  {`${course.name} ${course.level ? ` (${course.level})` : ""}`}
                 </SelectItem>
               ))}
             </Select>

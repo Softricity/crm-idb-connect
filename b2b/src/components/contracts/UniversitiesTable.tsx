@@ -70,7 +70,6 @@ export default function UniversitiesTable({
     { key: "city", label: "CITY", sortable: true },
     { key: "country", label: "COUNTRY", sortable: true },
     { key: "courses", label: "NO. OF COURSES", sortable: true },
-    { key: "website", label: "WEBSITE", sortable: false },
   ];
 
   const renderCell = (university: University, columnKey: React.Key) => {
@@ -82,7 +81,7 @@ export default function UniversitiesTable({
               <img 
                 src={university.logo} 
                 alt={university.name}
-                className="w-8 h-8 rounded object-cover"
+                className="w-auto h-10 rounded object-cover"
                 onError={(e) => {
                   (e.target as HTMLImageElement).style.display = 'none';
                 }}

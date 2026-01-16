@@ -11,9 +11,16 @@ import {
   Chip,
   Pagination,
   Spinner,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  Button,
+  Tooltip,
 } from "@heroui/react";
 import { format } from "date-fns";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
+import { generateStudentPanelToken } from "@/utils/token";
 
 export interface Lead {
   id: string;
@@ -64,6 +71,22 @@ export default function ApplicationsTable({
   sortOrder = 'desc',
   onSort,
 }: ApplicationsTableProps) {
+  const [studentPanelOpen, setStudentPanelOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+
+  const handleOpenStudentPanel = (lead: Lead) => {
+    setSelectedLead(lead);
+    setStudentPanelOpen(true);
+  };
+
+  const studentPanelToken = () => {
+    if (!selectedLead) return "";
+    return generateStudentPanelToken({ 
+      id: selectedLead.id, 
+      email: selectedLead.email, 
+      name: selectedLead.name 
+    });
+  };
 
   const renderSortIcon = (columnKey: string) => {
     if (sortBy !== columnKey) {
@@ -84,7 +107,7 @@ export default function ApplicationsTable({
     { key: "preferred_course", label: "COURSE", sortable: true },
     { key: "preferred_country", label: "COUNTRY", sortable: true },
     { key: "status", label: "STATUS", sortable: true },
-    // { key: "updated_at", label: "LAST UPDATED", sortable: true },
+    { key: "actions", label: "ACTIONS", sortable: false },
   ];
 
 
@@ -137,6 +160,23 @@ export default function ApplicationsTable({
           </div>
         );
 
+      case "actions":
+        return (
+          <div className="flex justify-end">
+            <Tooltip content="Open Student Panel">
+              <Button
+                isIconOnly
+                size="sm"
+                variant="light"
+                color="secondary"
+                onPress={() => handleOpenStudentPanel(lead)}
+              >
+                <ExternalLink className="w-4 h-4" />
+              </Button>
+            </Tooltip>
+          </div>
+        );
+
       default:
         return "-";
     }
@@ -172,6 +212,7 @@ export default function ApplicationsTable({
             <TableColumn 
               key={column.key} 
               className="uppercase text-xs"
+              align={column.key === "actions" ? "end" : "start"}
             >
               {column.sortable && onSort ? (
                 <button
@@ -210,6 +251,35 @@ export default function ApplicationsTable({
           />
         </div>
       )}
+
+      {/* Student Panel Modal */}
+      <Modal 
+        isOpen={studentPanelOpen} 
+        onOpenChange={setStudentPanelOpen}
+        size="full"
+        classNames={{
+          base: "max-w-7xl h-[90vh]",
+          body: "p-0",
+        }}
+      >
+        <ModalContent>
+          {(onClose) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                Student Panel - {selectedLead?.name}
+              </ModalHeader>
+              <ModalBody>
+                <iframe
+                  src={`https://student.idbconnect.global/login?token=${encodeURIComponent(studentPanelToken())}`}
+                  title="Student Panel"
+                  className="w-full h-full border-0"
+                  allowFullScreen
+                />
+              </ModalBody>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
