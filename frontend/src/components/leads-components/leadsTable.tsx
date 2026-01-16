@@ -16,6 +16,7 @@ import { useRouter } from "next/navigation";
 import { Lead, useLeadStore } from "@/stores/useLeadStore";
 import { useAuthStore } from "@/stores/useAuthStore";
 import LeadActionsMenu from "./tableActionCell";
+import { hasPermission, LeadPermission } from "@/lib/utils";
 import { ArrowRight, FlagIcon, Flag, Eye, EyeOff } from "lucide-react";
 import { maskPhone, maskEmail } from "@/lib/maskingUtils";
 import { ColumnConfig } from "./columnVisibilitySelector";
@@ -48,6 +49,9 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
   const [selectedLeadForAssignment, setSelectedLeadForAssignment] = useState<Lead | null>(null);
 
+  // Check if user has permission to view email and phone
+  const canViewEmailPhone = hasPermission(user?.permissions || [], LeadPermission.VIEW_EMAIL_AND_PHONE);
+  
   // track which lead has phone/email visible
   const [visibleData, setVisibleData] = useState<{ [key: string]: boolean }>({});
 
@@ -113,20 +117,20 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
         case "phone":
           return (
             <span
-              className="text-sm cursor-pointer select-none"
-              onClick={(e) => toggleVisibility(lead.id || "", e)}
+              className={`text-sm ${canViewEmailPhone ? 'cursor-pointer' : 'cursor-not-allowed'} select-none`}
+              onClick={(e) => canViewEmailPhone ? toggleVisibility(lead.id || "", e) : e.stopPropagation()}
             >
-              {showFull ? lead.mobile : maskPhone(lead.mobile)}
+              {canViewEmailPhone && showFull ? lead.mobile : maskPhone(lead.mobile)}
             </span>
           );
 
         case "email":
           return (
             <span
-              className="text-sm cursor-pointer select-none"
-              onClick={(e) => toggleVisibility(lead.id || "", e)}
+              className={`text-sm ${canViewEmailPhone ? 'cursor-pointer' : 'cursor-not-allowed'} select-none`}
+              onClick={(e) => canViewEmailPhone ? toggleVisibility(lead.id || "", e) : e.stopPropagation()}
             >
-              {showFull ? lead.email : maskEmail(lead.email)}
+              {canViewEmailPhone && showFull ? lead.email : maskEmail(lead.email)}
             </span>
           );
 
@@ -230,16 +234,18 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
               </Tooltip>
 
               {/* Eye Icon - now RIGHT side of flag */}
-              <Tooltip content={showFull ? "Hide Email & Phone" : "Show Email & Phone"}>
-                <button
-                  type="button"
-                  aria-label="Toggle sensitive info"
-                  className="cursor-pointer text-lg text-gray-500 hover:text-gray-700 active:opacity-50 border-none bg-transparent p-0"
-                  onClick={(e) => toggleVisibility(lead.id || "", e)}
-                >
-                  {showFull ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
-              </Tooltip>
+              {canViewEmailPhone && (
+                <Tooltip content={showFull ? "Hide Email & Phone" : "Show Email & Phone"}>
+                  <button
+                    type="button"
+                    aria-label="Toggle sensitive info"
+                    className="cursor-pointer text-lg text-gray-500 hover:text-gray-700 active:opacity-50 border-none bg-transparent p-0"
+                    onClick={(e) => toggleVisibility(lead.id || "", e)}
+                  >
+                    {showFull ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </Tooltip>
+              )}
 
               {/* Actions Menu */}
               <Tooltip content="Actions">

@@ -24,6 +24,8 @@ import {
 } from '@heroui/react';
 import { PlusIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
 import { PermissionGroupsAPI, PermissionsAPI, RolesAPI } from '@/lib/api';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { hasPermission, PermissionPermission } from '@/lib/utils';
 
 interface PermissionGroup {
   id: string;
@@ -49,6 +51,10 @@ interface Role {
 }
 
 export default function RolesPermissions() {
+  const { user } = useAuthStore();
+  const userPermissions = user?.permissions || [];
+  const canDeletePermission = hasPermission(userPermissions, PermissionPermission.PERMISSION_DELETE);
+  
   const [activeTab, setActiveTab] = useState('roles');
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -367,16 +373,18 @@ export default function RolesPermissions() {
                           className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:border-gray-300 transition-colors group"
                         >
                           <span className="text-sm font-medium text-gray-700">{permission.name}</span>
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="light"
-                            color="danger"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            onPress={() => handleDeletePermission(permission.id)}
-                          >
-                            <TrashIcon className="h-3 w-3" />
-                          </Button>
+                          {canDeletePermission && (
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              color="danger"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              onPress={() => handleDeletePermission(permission.id)}
+                            >
+                              <TrashIcon className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -402,16 +410,18 @@ export default function RolesPermissions() {
                           className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border hover:border-gray-300 transition-colors group"
                         >
                           <span className="text-sm font-medium text-gray-700">{permission.name}</span>
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="light"
-                            color="danger"
-                            className="opacity-0 group-hover:opacity-100 transition-opacity"
-                            onPress={() => handleDeletePermission(permission.id)}
-                          >
-                            <TrashIcon className="h-3 w-3" />
-                          </Button>
+                          {canDeletePermission && (
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              color="danger"
+                              className="opacity-0 group-hover:opacity-100 transition-opacity"
+                              onPress={() => handleDeletePermission(permission.id)}
+                            >
+                              <TrashIcon className="h-3 w-3" />
+                            </Button>
+                          )}
                         </div>
                       ))}
                     </div>

@@ -29,6 +29,7 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { toast } from "sonner";
 import { useState } from "react";
 import CommissionModal from "./CommissionModal";
+import { hasPermission, LeadPermission, ApplicationPermission, CommissionPermission } from "@/lib/utils";
 
 interface LeadActionsMenuProps {
     leadId: string;
@@ -45,13 +46,14 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
     const { selectedBranch } = useBranchStore();
     const [commissionModalOpen, setCommissionModalOpen] = useState(false);
     
-    // All users use /leads path (B2B users are handled by middleware)
+    const userPermissions = user?.permissions || [];
     const basePath = "/leads";
     
-    // Check if user has Commission Create permission
-    const hasCommissionCreatePermission = user?.permissions?.some(
-        (perm: any) => perm.name === "Commission Create" || perm === "Commission Create"
-    );
+    // Permission checks
+    const canAssignLead = hasPermission(userPermissions, LeadPermission.LEAD_ASSIGNMENT);
+    const canConvertToApp = hasPermission(userPermissions, ApplicationPermission.LEAD_TO_APPLICATION);
+    const canUpdateLead = hasPermission(userPermissions, LeadPermission.LEAD_UPDATE);
+    const canCreateCommission = hasPermission(userPermissions, CommissionPermission.COMMISSION_CREATE);
     
     return (
         <>
@@ -63,7 +65,7 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
             </DropdownTrigger>
             <DropdownMenu aria-label="Lead Actions Menu">
                 <DropdownSection title="Actions">
-                    {showAssign && onAssignClick ? (
+                    {showAssign && onAssignClick && canAssignLead ? (
                         <DropdownItem 
                             key="assign_counsellor" 
                             startContent={<UserCheck className={`h-4 w-4 ${lead?.assigned_to ? 'text-green-500' : 'text-gray-500'}`} />}
@@ -73,30 +75,34 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                         </DropdownItem>
                     ) : null}
 
-                    <DropdownItem
-                        key="add_lead"
-                        startContent={<Plus className="h-4 w-4 text-blue-500" />}
-                        onClick={async () => {
-                            try {
-                                await updateLead(leadId, { type: 'application' });
-                                toast.success('Lead converted to application');
-                                if (user && user.id && user.permissions) {
-                                    await fetchLeadsBasedOnPermission(user.id, user.permissions, selectedBranch?.id);
+                    {canConvertToApp ? (
+                        <DropdownItem
+                            key="add_lead"
+                            startContent={<Plus className="h-4 w-4 text-blue-500" />}
+                            onClick={async () => {
+                                try {
+                                    await updateLead(leadId, { type: 'application' });
+                                    toast.success('Lead converted to application');
+                                    if (user && user.id && user.permissions) {
+                                        await fetchLeadsBasedOnPermission(user.id, user.permissions, selectedBranch?.id);
+                                    }
+                                } catch (err) {
+                                    console.error('Error converting lead to application', err);
+                                    toast.error('Failed to convert lead');
                                 }
-                            } catch (err) {
-                                console.error('Error converting lead to application', err);
-                                toast.error('Failed to convert lead');
-                            }
-                        }}
-                    >
-                        Lead to Application
-                    </DropdownItem>
+                            }}
+                        >
+                            Lead to Application
+                        </DropdownItem>
+                    ) : null}
 
-                    <DropdownItem key="change_status" startContent={<Replace className="h-4 w-4 text-orange-500" />}>
-                        Change Lead Status
-                    </DropdownItem>
+                    {canUpdateLead ? (
+                        <DropdownItem key="change_status" startContent={<Replace className="h-4 w-4 text-orange-500" />}>
+                            Change Lead Status
+                        </DropdownItem>
+                    ) : null}
 
-                    {lead?.agent_id && hasCommissionCreatePermission ? (
+                    {lead?.agent_id && canCreateCommission ? (
                         <DropdownItem
                             key="create_commission"
                             startContent={<DollarSign className="h-4 w-4 text-green-500" />}
@@ -106,7 +112,6 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                         </DropdownItem>
                     ) : null}
 
-                    {/* ✅ Notes Click Navigate */}
                     <DropdownItem
                         key="notes"
                         startContent={<NotebookPen className="h-4 w-4 text-indigo-500" />}
@@ -115,9 +120,11 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                         Notes
                     </DropdownItem>
 
-                    <DropdownItem key="follow_up"
+                    <DropdownItem 
+                        key="follow_up"
                         startContent={<CalendarFold className="h-4 w-4 text-pink-500" />}
-                        onClick={() => router.push(`${basePath}/${leadId}?tab=followups`)}>
+                        onClick={() => router.push(`${basePath}/${leadId}?tab=followups`)}
+                    >
                         Follow-up
                     </DropdownItem>
                 </DropdownSection>

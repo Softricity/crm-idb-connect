@@ -11,6 +11,7 @@ import {
     Button,
 } from "@heroui/react";
 import { useAgentStore, Agent } from "@/stores/useAgentStore";
+import { useBranchStore } from "@/stores/useBranchStore";
 import { AgentFormFields } from "./agentForm";
 import { Value } from "react-phone-number-input";
 
@@ -22,6 +23,7 @@ interface AgentFormProps {
 
 export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
     const { addAgent, updateStatus } = useAgentStore();
+    const { selectedBranch } = useBranchStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     
@@ -38,7 +40,8 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         state: "",
         city: "",
         address: "",
-        status: "PENDING"
+        status: "PENDING",
+        branch_id: selectedBranch?.id
     });
     
     const [errors, setErrors] = useState<Partial<Record<keyof Agent, string>>>({});
@@ -54,7 +57,8 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
                     name: "", email: "", mobile: "", password: "",
                     agency_name: "", business_reg_no: "",
                     region: "", country: "India", state: "", city: "", address: "",
-                    status: "PENDING"
+                    status: "PENDING",
+                    branch_id: selectedBranch?.id
                 });
             }
             setErrors({});

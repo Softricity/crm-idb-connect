@@ -420,27 +420,31 @@ export default function Universities() {
                           </p>
                         </div>
                         <div className="flex gap-1 flex-shrink-0">
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="light"
-                            onPress={() => {
-                              setEditingUniversity(uni);
-                              setUniversityForm({ name: uni.name, logo: uni.logo || '', city: uni.city || '' });
-                              onUniversityOpen();
-                            }}
-                          >
-                            <Edit2 className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            isIconOnly
-                            size="sm"
-                            variant="light"
-                            color="danger"
-                            onPress={() => handleDeleteUniversity(uni.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {hasPermission(userPermissions, UniversityPermission.UNIVERSITY_UPDATE) && (
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              onPress={() => {
+                                setEditingUniversity(uni);
+                                setUniversityForm({ name: uni.name, logo: uni.logo || '', city: uni.city || '' });
+                                onUniversityOpen();
+                              }}
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </Button>
+                          )}
+                          {hasPermission(userPermissions, UniversityPermission.UNIVERSITY_DELETE) ? (
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              color="danger"
+                              onPress={() => handleDeleteUniversity(uni.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                           {hasPermission(userPermissions, CoursesPermission.COURSES_CREATE) && (
                             <Button
                               size="sm"
@@ -524,44 +528,48 @@ export default function Universities() {
                             </div>
                           </div>
                           <div className="flex gap-1 flex-shrink-0">
-                            <Button
-                              isIconOnly
-                              size="sm"
-                              variant="light"
-                              onPress={() => {
-                                setEditingCourse(course);
-                                setCourseForm({
-                                  name: course.name,
-                                  level: course.level || '',
-                                  category: course.category || '',
-                                  duration: course.duration || 0,
-                                  feeType: course.feeType || 'Per Year',
-                                  feeCurrency: course.feeCurrency || 'PLN',
-                                  originalFee: Number(course.originalFee) || 0,
-                                  courseFee: Number(course.fee) || 0,
-                                  courseCurrency: course.courseCurrency || 'PLN',
-                                  applicationFee: Number(course.applicationFee) || 0,
-                                  applicationCurrency: course.applicationCurrency || 'PLN',
-                                  intakeMonths: course.intakeMonth ? course.intakeMonth.split(', ') : [],
-                                  commissionType: course.commissionType || '%',
-                                  commissionValue: Number(course.commissionValue) || 0,
-                                  applyToAll: false,
-                                  details: Array.isArray(course.details) ? course.details : ['', '']
-                                });
-                                onCourseOpen();
-                              }}
-                            >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              isIconOnly
-                              size="sm"
-                              variant="light"
-                              color="danger"
-                              onPress={() => handleDeleteCourse(course.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                            {hasPermission(userPermissions, CoursesPermission.COURSES_UPDATE) ? (
+                              <Button
+                                isIconOnly
+                                size="sm"
+                                variant="light"
+                                onPress={() => {
+                                  setEditingCourse(course);
+                                  setCourseForm({
+                                    name: course.name,
+                                    level: course.level || '',
+                                    category: course.category || '',
+                                    duration: course.duration || 0,
+                                    feeType: course.feeType || 'Per Year',
+                                    feeCurrency: course.feeCurrency || 'PLN',
+                                    originalFee: Number(course.originalFee) || 0,
+                                    courseFee: Number(course.fee) || 0,
+                                    courseCurrency: course.courseCurrency || 'PLN',
+                                    applicationFee: Number(course.applicationFee) || 0,
+                                    applicationCurrency: course.applicationCurrency || 'PLN',
+                                    intakeMonths: course.intakeMonth ? course.intakeMonth.split(', ') : [],
+                                    commissionType: course.commissionType || '%',
+                                    commissionValue: Number(course.commissionValue) || 0,
+                                    applyToAll: false,
+                                    details: Array.isArray(course.details) ? course.details : ['', '']
+                                  });
+                                  onCourseOpen();
+                                }}
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </Button>
+                            ) : null}
+                            {hasPermission(userPermissions, CoursesPermission.COURSES_DELETE) ? (
+                              <Button
+                                isIconOnly
+                                size="sm"
+                                variant="light"
+                                color="danger"
+                                onPress={() => handleDeleteCourse(course.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            ) : null}
                           </div>
                         </div>
                       </CardBody>

@@ -22,6 +22,7 @@ import {
 import { PlusCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { useBranchStore } from "@/stores/useBranchStore";
 import { hasAnyPermission, AgentsPermission } from "@/lib/utils";
 import { useAgentStore, Agent } from "@/stores/useAgentStore"; // Only use AgentStore
 import { AgentForm } from "./agentCreateUpdate";
@@ -30,11 +31,11 @@ export function AgentTable() {
     // 1. Use only useAgentStore
     const { agents, fetchAgents, loading, deleteAgent } = useAgentStore();
     const { user } = useAuthStore();
+    const { selectedBranch, branches, fetchBranches } = useBranchStore();
     const userPermissions = user?.permissions || [];
     
     const canCreate = hasAnyPermission(userPermissions, [AgentsPermission.AGENTS_CREATE]);
-    // const canUpdate = hasAnyPermission(userPermissions, [AgentsPermission.AGENTS_UPDATE]);
-    // const canDelete = hasAnyPermission(userPermissions, [AgentsPermission.AGENTS_DELETE]);
+    const canDelete = hasAnyPermission(userPermissions, [AgentsPermission.AGENTS_DELETE]);
     
     const { isOpen, onOpen, onOpenChange } = useDisclosure(); 
 
@@ -50,8 +51,12 @@ export function AgentTable() {
     const rowsPerPage = 10;
 
     React.useEffect(() => {
-        fetchAgents(); // Fetch from new backend
-    }, [fetchAgents]);
+        fetchBranches(); // Fetch branches for displaying branch names
+    }, [fetchBranches]);
+
+    React.useEffect(() => {
+        fetchAgents(undefined, selectedBranch?.id); // Fetch from new backend with branch filter
+    }, [fetchAgents, selectedBranch]);
 
     // 3. Filter the 'agents' from store directly
     const filteredAgents = React.useMemo(
@@ -106,6 +111,12 @@ export function AgentTable() {
         }
     };
 
+    const getBranchName = (branchId?: string) => {
+        if (!branchId) return "-";
+        const branch = branches.find(b => b.id === branchId);
+        return branch?.name || branchId;
+    };
+
     return (
         <div className="w-full flex flex-col gap-4">
             <div className="flex items-center justify-between">
@@ -146,6 +157,7 @@ export function AgentTable() {
                     <TableColumn>Email</TableColumn>
                     <TableColumn>Phone</TableColumn>
                     <TableColumn>Agency</TableColumn>
+                    <TableColumn>Branch</TableColumn>
                     <TableColumn>Status</TableColumn>
                     <TableColumn>Actions</TableColumn>
                 </TableHeader>
@@ -156,6 +168,7 @@ export function AgentTable() {
                             <TableCell>{agent.email}</TableCell>
                             <TableCell>{agent.mobile}</TableCell>
                             <TableCell>{agent.agency_name}</TableCell>
+                            <TableCell>{getBranchName(agent.branch_id)}</TableCell>
                             <TableCell>
                                 <Chip size="sm" color={getStatusColor(agent.status)} variant="flat">
                                     {agent.status}
@@ -166,9 +179,9 @@ export function AgentTable() {
                                     <Button size="sm" variant="bordered" onPress={() => handleEdit(agent)}>
                                         View
                                     </Button>
-                                    <Button size="sm" color="danger" variant="bordered" onPress={() => handleDeletePress(agent)}>
+                                    {canDelete && <Button size="sm" color="danger" variant="bordered" onPress={() => handleDeletePress(agent)}>
                                         Delete
-                                    </Button>
+                                    </Button>}
                                 </div>
                             </TableCell>
                         </TableRow>

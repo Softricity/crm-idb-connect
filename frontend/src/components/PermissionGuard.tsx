@@ -2,8 +2,8 @@
 
 import { useAuthStore } from "@/stores/useAuthStore";
 import { hasAnyPermission, hasAllPermissions } from "@/lib/utils";
-import { redirect } from "next/navigation";
-import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 
 interface PermissionGuardProps {
   children: React.ReactNode;
@@ -20,7 +20,9 @@ export function PermissionGuard({
   fallbackUrl = "/dashboard",
   showUnauthorized = false,
 }: PermissionGuardProps) {
-  const { user } = useAuthStore();
+  const { user, loading } = useAuthStore();
+  const router = useRouter();
+  const [hasChecked, setHasChecked] = useState(false);
   const userPermissions = user?.permissions || [];
 
   const hasAccess = requireAll
@@ -28,10 +30,22 @@ export function PermissionGuard({
     : hasAnyPermission(userPermissions, requiredPermissions);
 
   useEffect(() => {
-    if (!hasAccess && !showUnauthorized) {
-      redirect(fallbackUrl);
+    // Wait for auth to load and only check once
+    if (loading || hasChecked) {
+      return;
     }
-  }, [hasAccess, showUnauthorized, fallbackUrl]);
+
+    if (!hasAccess && !showUnauthorized) {
+      router.replace(fallbackUrl);
+    }
+    
+    setHasChecked(true);
+  }, [hasAccess, showUnauthorized, fallbackUrl, router, loading, hasChecked]);
+
+  // Show loading state while auth is initializing
+  if (loading) {
+    return null;
+  }
 
   if (!hasAccess) {
     if (showUnauthorized) {

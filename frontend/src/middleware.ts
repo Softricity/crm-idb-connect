@@ -40,52 +40,21 @@ export async function middleware(request: NextRequest) {
 
   const isAuthenticated = !!partnerUser && !!authToken;
 
-  if (!isAuthenticated && currentPath !== "/login") {
+  // Redirect unauthenticated users to login (except /login and /b2b routes)
+  if (!isAuthenticated && currentPath !== "/login" && !currentPath.startsWith("/b2b")) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  if (isAuthenticated && (currentPath === "/login" || currentPath === "/")) {
-    // Redirect based on permissions: external agents go to B2B, internal team goes to dashboard
-    const userPermissions = partnerUser?.permissions || [];
-    
-    // Check if user is restricted to own leads (external agent behavior)
-    const hasLeadCreate = userPermissions.includes("Lead Create");
-    const hasLeadManage = userPermissions.includes("Lead Manage");
-    const isRestrictedToOwnLeads = hasLeadCreate && !hasLeadManage;
-    
-    if (isRestrictedToOwnLeads) {
-      return NextResponse.redirect(new URL("/b2b", request.url));
-    }
-    // All internal team members go to dashboard
+  // Only redirect to dashboard if user is on login page or root - DON'T redirect from other pages
+  if (isAuthenticated && currentPath === "/login") {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  if (isAuthenticated && partnerUser) {
-    const userPermissions = partnerUser?.permissions || [];
-    
-    // Check if user is restricted to own leads (external agent behavior)
-    const hasLeadCreate = userPermissions.includes("Lead Create");
-    const hasLeadManage = userPermissions.includes("Lead Manage");
-    const isRestrictedToOwnLeads = hasLeadCreate && !hasLeadManage;
-
-    // Two-panel system: external agents vs internal team
-    if (isRestrictedToOwnLeads) {
-      // External agents can only access B2B panel
-      if (!currentPath.startsWith("/b2b")) {
-        return NextResponse.redirect(new URL("/b2b", request.url));
-      }
-    } else {
-      // Internal team members cannot access B2B panel
-      if (currentPath.startsWith("/b2b")) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-      // Redirect old counsellor routes to main panel
-      if (currentPath.startsWith("/counsellor")) {
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-      }
-    }
+  if (isAuthenticated && currentPath === "/") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
+  // For all other cases, let the request proceed without redirecting
   return NextResponse.next();
 }
 

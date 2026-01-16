@@ -20,6 +20,7 @@ export interface Agent {
   status: "PENDING" | "IN_REVIEW" | "APPROVED" | "REJECTED";
   is_active: boolean;
   rejection_reason?: string;
+  branch_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -27,7 +28,7 @@ export interface Agent {
 interface AgentState {
   agents: Agent[];
   loading: boolean;
-  fetchAgents: (status?: string) => Promise<void>;
+  fetchAgents: (status?: string, branch_id?: string) => Promise<void>;
   fetchAgentById: (id: string) => Promise<Agent | null>;
   addAgent: (agent: any) => Promise<void>;
   updateStatus: (id: string, status: "APPROVED" | "REJECTED", reason?: string) => Promise<void>;
@@ -39,10 +40,14 @@ export const useAgentStore = create<AgentState>((set, get) => ({
   agents: [],
   loading: false,
 
-  fetchAgents: async (status) => {
+  fetchAgents: async (status, branch_id) => {
     set({ loading: true });
     try {
-      const data = await api.AgentsAPI.getAll(status);
+      let data = await api.AgentsAPI.getAll(status);
+      // Filter by branch_id if provided
+      if (branch_id) {
+        data = (data as Agent[]).filter((agent) => agent.branch_id === branch_id);
+      }
       set({ agents: data as Agent[] });
     } catch (error: any) {
       console.error("Error fetching agents:", error);

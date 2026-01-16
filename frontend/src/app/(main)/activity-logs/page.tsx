@@ -6,8 +6,18 @@ import { TimelineItem } from "@/components/dashboard-components/timeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { PermissionGuard } from "@/components/PermissionGuard";
+import { AdministrativePermission } from "@/lib/utils";
 
 export default function ActivityLogsPage() {
+  return (
+    <PermissionGuard requiredPermissions={[AdministrativePermission.ACTIVITY_LOGS]}>
+      <ActivityLogsPageContent />
+    </PermissionGuard>
+  );
+}
+
+function ActivityLogsPageContent() {
   const { globalTimeline, fetchGlobalTimeline, loading } = useTimelineStore();
 
   useEffect(() => {

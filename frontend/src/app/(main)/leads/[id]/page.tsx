@@ -19,11 +19,8 @@ import { useSearchParams } from "next/navigation";
 import ApplicationDetailsView from "@/components/application-components/applicationDetailsView";
 import PaymentsTab from "@/components/leads-components/paymentsTab";
 
-const FollowUpsTab = () => <div className="p-4 text-gray-700">📌 Follow Ups Component</div>;
 const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
 const CoursesTab = () => <div className="p-4 text-gray-700">🎓 Courses Component</div>;
-const TasksTab = () => <div className="p-4 text-gray-700">✅ Tasks Component</div>;
-// const PaymentsTab = () => <div className="p-4 text-gray-700">💳 Payments Component</div>;
 const EmailsTab = () => <div className="p-4 text-gray-700">📧 Emails Component</div>;
 const FinancialsTab = () => <div className="p-4 text-gray-700">💰 Financials Component</div>;
 const WhatsAppTab = () => <div className="p-4 text-gray-700">💬 WhatsApp Component</div>;
@@ -120,7 +117,6 @@ export default function LeadDetailPage() {
     // Memoize token so it only changes when lead changes
     const studentPanelToken = () => {
         if (!lead) return "";
-        console.log("Generating new student panel token for lead:", generateStudentPanelToken({ id: lead.id || "", email: lead.email || "", name: lead.name || "" }));
         return generateStudentPanelToken({ id: lead.id || "", email: lead.email || "", name: lead.name || "" });
     };
 
@@ -247,10 +243,6 @@ export default function LeadDetailPage() {
 
                     <Tab key="courses" title="Courses">
                         <CoursesTab />
-                    </Tab>
-
-                    <Tab key="tasks" title="Tasks">
-                        <TasksTab />
                     </Tab>
 
                     <Tab key="payments" title="Payments">

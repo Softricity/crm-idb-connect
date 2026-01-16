@@ -87,13 +87,15 @@ export default function BranchesPage() {
                 Manage your organization's branch hierarchy and locations
               </p>
             </div>
-            <Button
-              color="primary"
-              startContent={<Plus size={20} />}
-              onPress={handleCreate}
-            >
-              Add Branch
-            </Button>
+            {hasPermission(user?.permissions || [], BranchPermission.BRANCH_CREATE) && (
+              <Button
+                color="primary"
+                startContent={<Plus size={20} />}
+                onPress={handleCreate}
+              >
+                Add Branch
+              </Button>
+            )}
           </div>
         </div>
 

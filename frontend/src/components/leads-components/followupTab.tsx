@@ -36,7 +36,7 @@ export default function FollowUpComponent({ leadId, leadName, leadPhone }: Follo
     useEffect(()=>{
         if(selectedFollowup){
             const updated = followups.find(f=>f.id===selectedFollowup.id);
-            if(updated && updated!==selectedFollowup) setSelectedFollowup(updated);
+            if(updated) setSelectedFollowup(updated);
         }
     }, [followups]);
 
@@ -72,12 +72,12 @@ export default function FollowUpComponent({ leadId, leadName, leadPhone }: Follo
 
     const handleMarkComplete = async (id:string)=>{
         await markComplete(id);
-        if(selectedFollowup?.id===id){ const updated = followups.find(f=>f.id===id); if(updated) setSelectedFollowup({...updated, completed:true}); }
+        await fetchFollowupsByLeadId(leadId);
     };
 
     const handleReopenFollowup = async (id:string)=>{
         await updateFollowup(id, { completed:false });
-        if(selectedFollowup?.id===id){ const updated = followups.find(f=>f.id===id); if(updated) setSelectedFollowup({...updated, completed:false}); }
+        await fetchFollowupsByLeadId(leadId);
     };
 
     const handleDeleteFollowup = async (id:string)=>{

@@ -20,39 +20,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     const { selectedBranch, setSelectedBranch, fetchBranches } = useBranchStore();
     const router = useRouter();
     const [selectedBranchId, setSelectedBranchId] = useState("");
+    const [hasCheckedAuth, setHasCheckedAuth] = useState(false);
 
     useEffect(() => {
-      initAuth();
+      initAuth().then(() => {
+        setHasCheckedAuth(true);
+      });
       fetchBranches();
     }, [initAuth, fetchBranches]);
 
-    // enforce permission-based access for main/admin layout
+    // enforce permission-based access for main/admin layout - only check once after initAuth completes
     useEffect(() => {
-      if (loading) return;
+      // Wait for initAuth to complete first
+      if (!hasCheckedAuth) {
+        return;
+      }
 
+      // If no user after initAuth completes, redirect to login
       if (!user) {
         router.replace("/login");
         return;
       }
 
-      if (user && user.id) {
+      // Load partner data
+      if (user.id) {
         loadCurrentPartner(user.id).catch(() => {});
       }
-
-      // Check if user has restricted access (external agent)
-      const permissions = user.permissions || [];
-      const isRestricted = permissions.includes("Lead Create") && !permissions.includes("Lead Manage");
-      
-      if (isRestricted) {
-        router.replace("/b2b");
-        return;
-      }
-      // All other users (internal team) can access main panel
-    }, [loading, user, router, loadCurrentPartner]);
+    }, [user, router, loadCurrentPartner, hasCheckedAuth]);
   return (
     <div className="min-h-screen">
       <Toaster richColors position="top-right" />
-      {loading || !user || ((user.permissions || []).includes("Lead Create") && !(user.permissions || []).includes("Lead Manage")) ? (
+      {loading || !user ? (
         <div className="flex h-screen w-screen items-center justify-center">
           <Loader2 className="animate-spin h-8 w-8 text-slate-600" />
         </div>
