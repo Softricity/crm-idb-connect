@@ -6,7 +6,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/roles.enum';
-import { Public } from '../auth/public.decorator';
+import { GetUser } from 'src/auth/get-user.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('universities')
@@ -19,10 +19,10 @@ export class UniversitiesController {
     return this.universitiesService.create(createUniversityDto);
   }
 
-  @Public() // Public for sidebar filters
   @Get()
-  findAll(@Query('country_id') countryId?: string) {
-    return this.universitiesService.findAll(countryId);
+  @UseGuards(JwtAuthGuard) // Protect endpoint
+  findAll(@GetUser() user: any) {
+    return this.universitiesService.findAll(user);
   }
 
   @Get(':id')

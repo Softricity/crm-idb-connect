@@ -1002,6 +1002,106 @@ Manages courses offered by universities.
 -   **Route:** `DELETE /courses/:id`
 -   **Authentication:** **JWT Required (Admin Only)**
 
+---
+
+## 💼 University Commission Plans
+
+This feature allows you to define a uniform commission structure for a university (e.g., "All courses give 15%" or "Flat $500"). The system then auto-calculates this amount when a commission record is created for a student application.
+
+### A. Set Commission Plan (Update University)
+
+Define the rules for a specific university.
+
+-   **Route:** `PATCH /universities/:id`
+-   **Headers:** `Authorization: Bearer <token>`
+-   **Access:** Admin / Super Admin
+-   **Request Body:**
+    ```json
+    {
+      "commission_type": "PERCENTAGE",  // Options: "PERCENTAGE" or "FIXED"
+      "commission_value": 15,           // If Percentage: 15%. If Fixed: 15 (currency units)
+      "currency": "USD"                 // Optional, defaults to "INR" if not sent. Required if type is FIXED.
+    }
+    ```
+-   **Response (200 OK):**
+    ```json
+    {
+      "id": "uuid-uni-1",
+      "name": "Technical University of Munich",
+      "commission_type": "PERCENTAGE",
+      "commission_value": "15",
+      "currency": "EUR"
+    }
+    ```
+
+### B. Create Commission (Auto-Calculation)
+
+Creates a commission record. If amount is omitted, the system calculates it automatically based on the University rules and Course fees.
+
+-   **Route:** `POST /commissions`
+-   **Headers:** `Authorization: Bearer <token>`
+-   **Access:** Admin / Partner
+-   **Request Body (Auto-Calculate Mode):**
+    ```json
+    {
+      "application_id": "uuid-app-1",
+      "amount": null,       // Send null (or omit) to trigger auto-calculation
+      "status": "PENDING",
+      "remarks": "Fall 2025 Intake"
+    }
+    ```
+-   **Request Body (Manual Override):**
+    ```json
+    {
+      "application_id": "uuid-app-1",
+      "amount": 500,        // Manually specify amount to override calculation
+      "currency": "USD"
+    }
+    ```
+-   **Logic:**
+    -   **Agent Detection:** Automatically links the Agent assigned to the Lead.
+    -   **Calculation:**
+        - If Uni has PERCENTAGE: (Course Tuition Fee * Uni Value) / 100.
+        - If Uni has FIXED: Uses the fixed value directly.
+    -   **Fallback:** If no rule exists, it defaults to 0.
+
+---
+
+## 🌍 Region & Country Access Control
+
+This module restricts Agents to viewing only Universities and Courses within their assigned Region or Country.
+
+### A. Prerequisites
+
+-   **Countries:** Must have a region set in the DB (e.g., `UPDATE countries SET region = 'Europe' WHERE name = 'Germany'`).
+-   **Agents:** Must have country OR region set in their profile.
+
+### B. Get Universities (Restricted)
+
+Fetches list of universities. The results are automatically filtered based on the user's role and location.
+
+-   **Route:** `GET /universities`
+-   **Headers:** `Authorization: Bearer <token>`
+-   **Response Behavior:**
+    -   **Admin:** Sees all universities.
+    -   **Agent (Location: India):** Returns only universities where Country = 'India'.
+    -   **Agent (Region: Europe):** Returns universities in any country where region = 'Europe' (e.g., Germany, France, Italy).
+
+### C. Get Courses (Restricted)
+
+Fetches list of courses. Access control is applied strictly on top of standard filters.
+
+-   **Route:** `GET /courses`
+-   **Headers:** `Authorization: Bearer <token>`
+-   **Query Parameters (Standard):**
+    -   `?search=Computer Science`
+    -   `?level=Masters`
+    -   `?intake=Sep`
+-   **Response Behavior:**
+    -   The system silently appends an AND condition: `AND university.country = User.Country`.
+    -   **Example:** If an Agent assigned to "India" requests `GET /courses?country=UK`, they will receive 0 results, because the query becomes: `WHERE country = 'UK' AND country = 'India'`.
+    -   The rewritten markdown content that would fit at $SELECTION_PLACEHOLDER$ wrapped with -+-+-+-+-+ is:
+
 ## Announcements API
 
 Manage announcements for user or branch

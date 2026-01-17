@@ -466,6 +466,7 @@ model Country {
   id           String       @id @default(uuid())
   name         String       @unique
   flag         String?
+  region       String?
   universities University[]
 
   @@map("countries")

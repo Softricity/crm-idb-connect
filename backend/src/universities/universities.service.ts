@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateUniversityDto } from './dto/create-university.dto';
 import { UpdateUniversityDto } from './dto/update-university.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class UniversitiesService {
@@ -22,14 +23,35 @@ export class UniversitiesService {
     });
   }
 
-  async findAll(countryId?: string) {
+  async findAll(user?: any) {
+    const where: Prisma.UniversityWhereInput = {};
+
+    // 🔒 ACCESS CONTROL LOGIC
+    if (user) {
+      // 1. If User is an AGENT
+      if (user.type === 'agent') {
+        // Priority 1: Restrict by specific Country (if agent has one)
+        if (user.country) {
+          where.country = { name: { equals: user.country, mode: 'insensitive' } };
+        } 
+        // Priority 2: Restrict by Region (if agent has no specific country)
+        else if (user.region) {
+          where.country = { region: { equals: user.region, mode: 'insensitive' } };
+        }
+      }
+      
+      // 2. If User is a PARTNER (Counselor) - Optional
+      // You can add logic here if counselors are also region-restricted
+      // if (user.role === 'counsellor' && user.zone) { ... }
+    }
+
     return this.prisma.university.findMany({
-      where: countryId ? { countryId } : undefined,
-      include: { 
-        country: true,
-        _count: { select: { courses: true } }
+      where,
+      include: {
+        country: true, // Include country details to show flags/regions
+        _count: { select: { courses: true } } // Optional: Show course count
       },
-      orderBy: { name: 'asc' },
+      orderBy: { name: 'asc' }
     });
   }
 
