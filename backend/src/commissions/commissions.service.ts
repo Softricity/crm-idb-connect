@@ -1,51 +1,82 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCommissionDto } from './dto/create-commission.dto';
 import { UpdateCommissionDto } from './dto/update-commission.dto';
+import { CommissionType } from '@prisma/client'; 
 
 @Injectable()
 export class CommissionsService {
   constructor(private prisma: PrismaService) {}
 
   async create(createDto: CreateCommissionDto) {
+    let amount = createDto.amount; 
+    let currency = createDto.currency || 'INR';
     let agentId: string | null = null;
 
-    // 1. Auto-Detect Agent Logic (Updated)
+    // 1. Auto-Detect Agent Logic
     if (createDto.lead_id) {
       const lead = await this.prisma.leads.findUnique({ 
-        where: { id: createDto.lead_id } 
+        where: { id: createDto.lead_id },
+        select: { agent_id: true } 
       });
-      
-      // ✅ FIX: Check the dedicated 'agent_id' column directly
-      if (lead && lead.agent_id) {
-        agentId = lead.agent_id;
-      }
+      if (lead && lead.agent_id) agentId = lead.agent_id;
     } 
     else if (createDto.application_id) {
       const app = await this.prisma.applications.findUnique({ 
         where: { id: createDto.application_id },
-        include: { leads: true } 
+        include: { 
+            leads: { select: { agent_id: true } } 
+        } 
       });
-      
-      // ✅ FIX: Check the lead's 'agent_id' via the application
-      if (app && app.leads && app.leads.agent_id) {
-         agentId = app.leads.agent_id;
+      if (app && app.leads && app.leads.agent_id) agentId = app.leads.agent_id;
+    }
+
+    // 2. Auto-Calculate Amount Logic
+    if (createDto.application_id && !createDto.amount) {
+      const app = await this.prisma.applications.findUnique({
+        where: { id: createDto.application_id },
+        include: { 
+          // Match existing relation name
+          preferences: {
+            take: 1, 
+            include: {
+                // Match the NEW relation created in Step 1
+                course: {
+                    include: { university: true }
+                }
+            }
+          }
+        }
+      });
+
+      // Safe Navigation
+      const preference = app?.preferences?.[0];
+      const course = preference?.course;
+      const university = course?.university;
+
+      if (university && university.commission_value) {
+        if (university.commission_type === 'FIXED') {
+          // Flat Fee
+          amount = Number(university.commission_value);
+          currency = university.currency || 'INR';
+        } 
+        else if (university.commission_type === 'PERCENTAGE') {
+          // Percentage of Tuition Fee
+          // Note: Using 'fee' based on your Course model schema
+          const tuitionFee = course?.fee || 0; 
+          amount = (Number(tuitionFee) * Number(university.commission_value)) / 100;
+        }
       }
     }
 
-    if (!agentId) {
-      // Optional: You can throw an error if a commission MUST be linked to an agent
-      // throw new BadRequestException("This Lead/Application is not linked to any Agent.");
-    }
-
-    // 2. Create Record
+    // 3. Create Record
     return this.prisma.commission.create({
       data: {
         lead_id: createDto.lead_id,
         application_id: createDto.application_id,
-        agent_id: agentId, // Automatically linked from the lead
-        amount: createDto.amount,
-        currency: createDto.currency || 'INR',
+        agent_id: agentId, 
+        amount: amount || 0,
+        currency: currency,
         status: createDto.status || 'PENDING',
         remarks: createDto.remarks
       },
@@ -56,7 +87,7 @@ export class CommissionsService {
     });
   }
 
-  // Admin: Find All
+  // ... (Keep existing findAll, findOne, update, remove methods)
   async findAll() {
     return this.prisma.commission.findMany({
       include: {
@@ -68,7 +99,6 @@ export class CommissionsService {
     });
   }
 
-  // Agent: Find My Commissions
   async findMyCommissions(agentId: string) {
     return this.prisma.commission.findMany({
       where: { agent_id: agentId },
@@ -90,10 +120,7 @@ export class CommissionsService {
   }
 
   async update(id: string, updateDto: UpdateCommissionDto) {
-    return this.prisma.commission.update({
-      where: { id },
-      data: updateDto,
-    });
+    return this.prisma.commission.update({ where: { id }, data: updateDto });
   }
 
   async remove(id: string) {

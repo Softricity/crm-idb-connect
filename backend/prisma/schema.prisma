@@ -94,6 +94,11 @@ model application_preferences {
   budget_range          String?
   scholarship_interest  Boolean?
   travel_history        String?
+  
+  // ✅ NEW: Add link to the actual Course table
+  course_id             String?      
+  course                Course?      @relation(fields: [course_id], references: [id]) 
+
   applications          applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
 }
 
@@ -475,6 +480,10 @@ model University {
   courses   Course[]
   country   Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
 
+  commission_type   CommissionType? @default(PERCENTAGE) // or FIXED
+  commission_value  Decimal?        @db.Decimal(10, 2)   // e.g., 10.00 (%) or 500.00 ($)
+  currency          String?         @default("INR")      // Optional, if FIXED type
+
   @@map("universities")
 }
 
@@ -499,6 +508,8 @@ model Course {
   universityId        String     @map("university_id")
   createdAt           DateTime   @default(now()) @map("created_at")
   university          University @relation(fields: [universityId], references: [id], onDelete: Cascade)
+
+  application_preferences application_preferences[]
 
   @@map("courses")
 }
@@ -577,6 +588,11 @@ model DropdownOption {
   created_at  DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("dropdown_options")
+}
+
+enum CommissionType {
+  PERCENTAGE
+  FIXED
 }
 
 enum SenderType {
