@@ -670,20 +670,28 @@ Manages commission tracking and payments for agents.
 ### 4. Update Preferences
 -   **Route:** `PATCH /applications/:leadId/preferences`
 -   **Content-Type:** `application/json`
--   **Description:** Updates study abroad preferences and financial info.
+-   **Description:** Updates study abroad preferences and financial info. Supports multiple preference records.
+-   **Behavior:**
+    -   Include `id` to update an existing preference record.
+    -   Omit `id` to create a new preference record.
 -   **Request Body:**
     ```json
     {
-      "preferred_country": "Canada",
-      "preferred_course_type": "Post-Graduate",
-      "preferred_course_name": "Data Science",
-      "preferred_intake": "Sept 2025",
-      "preferred_university": "University of Toronto",
-      "backup_country": "Australia",
-      "study_mode": "On-campus",
-      "budget_range": "20000-30000 USD",
-      "scholarship_interest": true,
-      "travel_history": "Visited Thailand in 2022 for tourism."
+      "records": [
+        {
+          "id": "uuid-existing-record", // Optional
+          "preferred_country": "Canada",
+          "preferred_course_type": "Post-Graduate",
+          "preferred_course_name": "Data Science",
+          "preferred_intake": "Sept 2025",
+          "preferred_university": "University of Toronto",
+          "backup_country": "Australia",
+          "study_mode": "On-campus",
+          "budget_range": "20000-30000 USD",
+          "scholarship_interest": true,
+          "travel_history": "Visited Thailand in 2022 for tourism."
+        }
+      ]
     }
     ```
 
