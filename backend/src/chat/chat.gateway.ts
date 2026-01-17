@@ -14,7 +14,8 @@ import { CreateMessageDto } from './dto/create-message.dto';
 
 @WebSocketGateway({
   cors: {
-    origin: '*', // Allow all origins (restrict this in production)
+    origin: ['http://localhost:3000', 'http://localhost:3001', 'https://idbconnect.global', 'https://student.idbconnect.global', 'https://inquiry.idbconnect.global', 'https://b2b.idbconnect.global'], // Allow frontend origins
+    credentials: true,
   },
   namespace: '/chat', // Separate namespace to avoid conflicts
 })
