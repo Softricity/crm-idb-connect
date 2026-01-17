@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Delete, Body, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Patch, Body, Param, UseGuards } from '@nestjs/common';
 import { DropdownsService } from './dropdowns.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { CreateOptionDto } from './dto/create-option.dto';
+import { UpdateOptionDto } from './dto/update-option.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -38,6 +39,12 @@ export class DropdownsController {
   @Roles(Role.Admin, Role.SuperAdmin)
   createOption(@Body() dto: CreateOptionDto) {
     return this.dropdownsService.createOption(dto);
+  }
+
+  @Patch('options/:id')
+  @Roles(Role.Admin, Role.SuperAdmin)
+  updateOption(@Param('id') id: string, @Body() dto: UpdateOptionDto) {
+    return this.dropdownsService.updateOption(id, dto);
   }
 
   @Delete('options/:id')

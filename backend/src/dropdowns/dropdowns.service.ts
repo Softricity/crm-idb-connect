@@ -56,6 +56,16 @@ export class DropdownsService {
     });
   }
 
+  async updateOption(id: string, data: { label?: string; value?: string; is_active?: boolean }) {
+    const option = await this.prisma.dropdownOption.findUnique({ where: { id } });
+    if (!option) throw new NotFoundException('Option not found');
+
+    return this.prisma.dropdownOption.update({
+      where: { id },
+      data: data
+    });
+  }
+
   async deleteOption(id: string) {
     return this.prisma.dropdownOption.delete({ where: { id } });
   }
