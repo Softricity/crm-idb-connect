@@ -230,6 +230,21 @@ export default function ApplicationDetailsView({
           );
         }
         payload = { records: updatedRecords };
+      } else if (editDialog.section === 'preferences') {
+        const preferences = currentApplication?.preferences || [];
+        let updatedRecords;
+        
+        if (editDialog.isNew) {
+          // Add new record
+          updatedRecords = [...preferences, payload];
+        } else {
+          // Update existing record
+          const recordId = editValues.id;
+          updatedRecords = preferences.map((pref: any) => 
+            pref.id === recordId ? payload : pref
+          );
+        }
+        payload = { records: updatedRecords };
       }
       
       await patchSection(leadId, editDialog.section, payload);

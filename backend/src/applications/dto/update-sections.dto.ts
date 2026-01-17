@@ -50,7 +50,8 @@ export class UpdateEducationDto {
 }
 
 // --- 3. Preference Details DTO ---
-export class UpdatePreferencesDto {
+export class PreferencesRecordDto {
+  @IsOptional() @IsString() id?: string; // If ID exists, update; else create
   @IsOptional() @IsString() preferred_country?: string;
   @IsOptional() @IsString() preferred_course_type?: string;
   @IsOptional() @IsString() preferred_course_name?: string;
@@ -61,6 +62,13 @@ export class UpdatePreferencesDto {
   @IsOptional() @IsString() budget_range?: string;
   @IsOptional() @IsBoolean() scholarship_interest?: boolean;
   @IsOptional() @IsString() travel_history?: string;
+}
+
+export class UpdatePreferencesDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => PreferencesRecordDto)
+  records: PreferencesRecordDto[];
 }
 
 // --- 4. Language / Aptitude Tests DTO (Array) ---
