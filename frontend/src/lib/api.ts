@@ -648,6 +648,70 @@ export const CommissionsAPI = {
   },
 };
 
+// --- Chat ---
+export const ChatAPI = {
+  getHistory: async (leadId: string) => {
+    const res = await fetch(`${API_BASE}/chat/history/${leadId}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  // Socket.io connection is handled in the component
+  getSocketUrl: () => {
+    return API_BASE.replace(/^https:/, 'wss:').replace(/^http:/, 'ws:');
+  },
+};
+
+// --- Dropdowns ---
+export const DropdownsAPI = {
+  // Get all categories with their options
+  getAllCategories: async () => {
+    const res = await fetch(`${API_BASE}/dropdowns/categories`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  // Create new category
+  createCategory: async (data: { name: string; label: string }) => {
+    const res = await fetch(`${API_BASE}/dropdowns/categories`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  // Delete category
+  deleteCategory: async (id: string) => {
+    const res = await fetch(`${API_BASE}/dropdowns/categories/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+  // Add option to category
+  createOption: async (data: { category_id: string; label: string; value: string }) => {
+    const res = await fetch(`${API_BASE}/dropdowns/options`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  // Update option (toggle active status or edit)
+  updateOption: async (id: string, data: { is_active?: boolean; label?: string; value?: string }) => {
+    const res = await fetch(`${API_BASE}/dropdowns/options/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  // Delete option
+  deleteOption: async (id: string) => {
+    const res = await fetch(`${API_BASE}/dropdowns/options/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+};
+
 export default {
   LeadsAPI,
   PartnersAPI,
@@ -668,5 +732,7 @@ export default {
   TodosAPI,
   OptionsAPI,
   AgentsAPI,
-  CommissionsAPI
+  CommissionsAPI,
+  ChatAPI,
+  DropdownsAPI
 };

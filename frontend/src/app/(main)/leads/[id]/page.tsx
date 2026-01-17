@@ -18,13 +18,13 @@ import ApplicantProfilePanel from "@/components/application-components/applicati
 import { useSearchParams } from "next/navigation";
 import ApplicationDetailsView from "@/components/application-components/applicationDetailsView";
 import PaymentsTab from "@/components/leads-components/paymentsTab";
+import ChatComponent from "@/components/chat/ChatComponent";
 
 const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
 const CoursesTab = () => <div className="p-4 text-gray-700">🎓 Courses Component</div>;
 const EmailsTab = () => <div className="p-4 text-gray-700">📧 Emails Component</div>;
 const FinancialsTab = () => <div className="p-4 text-gray-700">💰 Financials Component</div>;
 const WhatsAppTab = () => <div className="p-4 text-gray-700">💬 WhatsApp Component</div>;
-const ChatTab = () => <div className="p-4 text-gray-700">💭 Chat Component</div>;
 
 const InfoRow = ({ label, value }: { label: string; value?: string | null }) => (
     <div className="flex justify-between py-2 border-b border-dotted border-gray-200">
@@ -122,7 +122,7 @@ export default function LeadDetailPage() {
 
     return (
         <>
-            <div className="bg-gray-50 p-6">
+            <div className="p-6">
                 <div className="flex justify-between items-center bg-white p-6 rounded-lg shadow mb-6">
                     <div className="flex items-center gap-4">
                         <img
@@ -262,7 +262,11 @@ export default function LeadDetailPage() {
                     </Tab>
 
                     <Tab key="chat" title="Chat">
-                        <ChatTab />
+                        <ChatComponent 
+                            leadId={lead?.id ?? ""} 
+                            leadName={lead?.name ?? ""} 
+                            currentUserType="PARTNER" 
+                        />
                     </Tab>
 
                     <Tab key="timeline" title="Timeline">
