@@ -250,6 +250,15 @@ export class LeadsService {
         where: { id },
         include: {
           partners_leads_assigned_toTopartners: { select: { name: true, email: true } },
+          courses: {
+            include: {
+              university: {
+                include: {
+                  country: true,
+                },
+              },
+            },
+          },
         },
       });
 
