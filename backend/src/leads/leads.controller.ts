@@ -1,3 +1,22 @@
+  // Add a course to a lead (many-to-many)
+  @Post(':id/courses')
+  async addCourseToLead(
+    @Param('id') leadId: string,
+    @Body('courseId') courseId: string,
+    @GetUser() user?: any
+  ) {
+    return this.leadsService.addCourseToLead(leadId, courseId, user);
+  }
+
+  // Remove a course from a lead (many-to-many)
+  @Delete(':id/courses/:courseId')
+  async removeCourseFromLead(
+    @Param('id') leadId: string,
+    @Param('courseId') courseId: string,
+    @GetUser() user?: any
+  ) {
+    return this.leadsService.removeCourseFromLead(leadId, courseId, user);
+  }
 import {
   Controller,
   Get,

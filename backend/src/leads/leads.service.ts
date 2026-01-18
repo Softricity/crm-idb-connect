@@ -1,3 +1,42 @@
+  // Add a course to a lead (many-to-many implicit join)
+  async addCourseToLead(leadId: string, courseId: string, user?: any) {
+    // Validate lead and course exist
+    const lead = await this.prisma.leads.findUnique({ where: { id: leadId } });
+    if (!lead) throw new NotFoundException('Lead not found');
+    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) throw new NotFoundException('Course not found');
+
+    // Connect course to lead
+    await this.prisma.leads.update({
+      where: { id: leadId },
+      data: {
+        courses: {
+          connect: [{ id: courseId }],
+        },
+      },
+    });
+    return { success: true };
+  }
+
+  // Remove a course from a lead (many-to-many implicit join)
+  async removeCourseFromLead(leadId: string, courseId: string, user?: any) {
+    // Validate lead and course exist
+    const lead = await this.prisma.leads.findUnique({ where: { id: leadId } });
+    if (!lead) throw new NotFoundException('Lead not found');
+    const course = await this.prisma.course.findUnique({ where: { id: courseId } });
+    if (!course) throw new NotFoundException('Course not found');
+
+    // Disconnect course from lead
+    await this.prisma.leads.update({
+      where: { id: leadId },
+      data: {
+        courses: {
+          disconnect: [{ id: courseId }],
+        },
+      },
+    });
+    return { success: true };
+  }
 import {
   Injectable,
   ConflictException,
