@@ -1285,6 +1285,96 @@ Removes a specific dropdown item from a category.
 
 ---
 
+## 🛠️ Support Ticket API
+
+Manage support cases, inquiries, and issue tracking.
+
+### 1. Create Ticket
+- **Route:** `POST /support`
+- **Authentication:** JWT Required
+- **Description:** Creates a new support case.
+- **Request Body:**
+    ```json
+    {
+      "topic": "Agent Portal Management",    // From Dropdown
+      "category": "Bank Details Upload",     // From Dropdown
+      "institution_id": "uuid-uni-1",        // Optional, from Dropdown
+      "subject": "Unable to upload document",
+      "description": "I get a 500 error when uploading...",
+      "priority": "HIGH",                    // Optional (LOW, MEDIUM, HIGH, URGENT)
+      "attachment_urls": ["https://s3.../error.png"] // Optional
+    }
+    ```
+- **Returns:**
+    ```json
+    {
+      "id": "uuid",
+      "case_number": 1005,
+      "status": "OPEN",
+      "created_at": "..."
+    }
+    ```
+
+### 2. Get All Tickets
+- **Route:** `GET /support`
+- **Query Params:** `?status=OPEN` (Optional)
+- **Behavior:**
+    - **Agents:** Returns only their tickets.
+    - **Admins:** Returns all tickets.
+- **Returns:** Array of ticket summaries.
+
+### 3. Get Ticket Details (Conversation)
+- **Route:** `GET /support/:id`
+- **Description:** Fetches the ticket details along with the full conversation history.
+- **Returns:**
+    ```json
+    {
+      "id": "uuid",
+      "case_number": 1005,
+      "subject": "Unable to upload document",
+      "status": "IN_PROGRESS",
+      "partner": { "name": "Agent Smith" },
+      "comments": [
+        {
+          "id": "c1",
+          "sender_type": "PARTNER",
+          "sender_name": "Agent Smith",
+          "message": "I get a 500 error...",
+          "created_at": "..."
+        },
+        {
+          "id": "c2",
+          "sender_type": "ADMIN",
+          "sender_name": "Support Staff",
+          "message": "Can you please clear your cache?",
+          "created_at": "..."
+        }
+      ]
+    }
+    ```
+
+### 4. Add Comment (Reply)
+- **Route:** `POST /support/:id/comments`
+- **Request Body:**
+    ```json
+    {
+      "message": "Still not working. See attached.",
+      "attachment_urls": ["https://..."]
+    }
+    ```
+- **Side-effect:** This usually should trigger a notification (email/socket) to the other party (implementation dependent).
+
+### 5. Update Ticket Status
+- **Route:** `PATCH /support/:id/status`
+- **Request Body:**
+    ```json
+    {
+      "status": "RESOLVED" // OPEN, IN_PROGRESS, AWAITING_REPLY, RESOLVED, CLOSED
+    }
+    ```
+
+---
+
 ## 💬 Chat System (Socket.io)
 
 Real-time messaging system for communication between leads and counsellors.

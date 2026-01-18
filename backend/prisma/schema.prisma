@@ -345,7 +345,8 @@ model partners {
   timeline                          timeline[]
   todos                             todos[]
   sent_messages                     ChatMessage[]
-  financial_notes                      FinancialNote[]
+  financial_notes                   FinancialNote[]
+  support_tickets                   SupportTicket[]
 }
 
 model Agent {
@@ -631,6 +632,63 @@ model DropdownOption {
   @@map("dropdown_options")
 }
 
+model SupportTicket {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  
+  // Display ID (e.g. 1001, 1002) - easier for humans than UUIDs
+  case_number     Int            @default(autoincrement())
+
+  // Creator (The Partner/Agent)
+  partner_id      String         @db.Uuid
+  
+  // Dynamic Dropdown Fields (Stored as IDs or Values)
+  topic           String         // e.g., "Agent Portal Management"
+  category        String         // e.g., "Bank Details Upload"
+  
+  // Optional Link to University (if the issue is about a specific institution)
+  institution_id  String?        // Link to University table
+  
+  subject         String
+  description     String
+  
+  priority        TicketPriority @default(MEDIUM)
+  status          TicketStatus   @default(OPEN)
+  
+  // File Uploads
+  attachment_urls String[]       @default([])
+
+  created_at      DateTime       @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime       @default(now()) @updatedAt @db.Timestamptz(6)
+
+  // Relations
+  partner         partners       @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+  comments        SupportTicketComment[]
+  // university      University?    @relation(fields: [institution_id], references: [id]) // Uncomment if you want strict relation
+
+  @@map("support_tickets")
+}
+
+// 3. Conversation/Comments inside a Ticket
+model SupportTicketComment {
+  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id       String         @db.Uuid
+  
+  // Who wrote this? (Could be Partner OR Admin/Internal Team)
+  sender_id       String         @db.Uuid 
+  sender_type     String         // "PARTNER" or "ADMIN"
+  sender_name     String         // Snapshot of name for easier display
+  
+  message         String
+  attachment_urls String[]       @default([])
+  
+  created_at      DateTime       @default(now()) @db.Timestamptz(6)
+
+  // Relations
+  ticket          SupportTicket  @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+
+  @@map("support_ticket_comments")
+}
+
 enum CommissionType {
   PERCENTAGE
   FIXED
@@ -710,4 +768,19 @@ enum FinancialStatus {
   UNDER_PROCESS
   APPROVED
   DECLINED
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  AWAITING_REPLY
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }

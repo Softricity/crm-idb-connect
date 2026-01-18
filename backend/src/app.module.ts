@@ -27,6 +27,7 @@ import { CommissionsModule } from './commissions/commissions.module';
 import { ChatModule } from './chat/chat.module';
 import { DropdownsModule } from './dropdowns/dropdowns.module';
 import { FinancialsModule } from './financials/financials.module';
+import { SupportModule } from './support/support.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { FinancialsModule } from './financials/financials.module';
     ChatModule,
     DropdownsModule,
     FinancialsModule,
+    SupportModule
   ],
   controllers: [AppController],
   providers: [AppService],
