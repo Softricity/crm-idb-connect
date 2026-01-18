@@ -51,59 +51,120 @@ export class CoursesService {
     });
   }
 
-  async findAll(filters: CourseFilterDto) {
+  async findAll(filters: CourseFilterDto, user?: any) {
     const { search, country, level, university, universityId, intake } = filters;
 
     // Build dynamic where clause
     const where: Prisma.CourseWhereInput = {};
 
-    // 1. Filter by University ID (highest priority - direct filter)
+    // 1. Filter by University ID
     if (universityId) {
       where.universityId = universityId;
     }
 
-    // 2. Search (Course Name or University Name)
+    // 2. Search
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: 'insensitive' } },
-        { university: { name: { contains: search, mode: 'insensitive' } } },
+        { name: { contains: search, mode: 'insensitive' as Prisma.QueryMode } },
+        { university: { name: { contains: search, mode: 'insensitive' as Prisma.QueryMode } } },
       ];
     }
 
-    // 3. Filter by Level (e.g., ["Masters", "PhD"])
+    // 3. Filter by Level
     if (level && level.length > 0) {
       where.level = { in: level };
     }
 
-    // --- FIX: Handle University & Country Relation Filters Separately ---
-    
+    // 4 & 5. Handle University & Country Relation Filters
     const universityWhere: Prisma.UniversityWhereInput = {};
     let hasUniversityFilter = false;
 
-    // 4. Filter by University Name
     if (university && university.length > 0) {
       universityWhere.name = { in: university };
       hasUniversityFilter = true;
     }
 
-    // 5. Filter by Country (requires querying the relation)
     if (country && country.length > 0) {
       universityWhere.country = { name: { in: country } };
       hasUniversityFilter = true;
     }
 
-    // Assign the university filter if any condition was added (only if universityId is not set)
     if (hasUniversityFilter && !universityId) {
       where.university = universityWhere;
     }
 
-    // ------------------------------------------------------------------
-
-    // 6. Filter by Intake (Partial match, e.g. "Sep" in "Sep, Jan")
+    // 6. Filter by Intake
     if (intake && intake.length > 0) {
-      where.OR = intake.map((month) => ({
-        intakeMonth: { contains: month, mode: 'insensitive' },
-      }));
+      const intakeCondition: Prisma.CourseWhereInput = {
+        OR: intake.map((month) => ({
+          intakeMonth: { 
+            contains: month, 
+            mode: 'insensitive' as Prisma.QueryMode
+          },
+        })),
+      };
+      
+      if (where.OR) {
+        where.AND = Array.isArray(where.AND) 
+          ? [...where.AND, intakeCondition] 
+          : [intakeCondition];
+      } else {
+        where.OR = intakeCondition.OR;
+      }
+    }
+
+    // --- 🔒 7. ACCESS CONTROL & EXCLUSION LOGIC ---
+    
+    if (user && user.type === 'agent') {
+      // We will collect all security conditions here
+      const securityConditions: Prisma.CourseWhereInput[] = [];
+
+      // A. PERMISSION: "What Am I Allowed to See?"
+      if (user.country) {
+        // 🌍 Restrict to Agent's Assigned Country
+        securityConditions.push({
+          university: { 
+            country: { name: { equals: user.country, mode: 'insensitive' as Prisma.QueryMode } }
+          }
+        });
+      } else if (user.region) {
+        // 🗺️ Restrict to Agent's Assigned Region
+        securityConditions.push({
+          university: { 
+            country: { region: { equals: user.region, mode: 'insensitive' as Prisma.QueryMode } }
+          }
+        });
+      }
+
+      // B. EXCLUSION: "What Am I Specifically Blocked From?"
+      // Only applies if the agent has a specific country assigned
+      if (user.country) {
+        
+        // 1. Block if the COURSE explicitly excludes the agent's country
+        securityConditions.push({
+            NOT: { excluded_countries: { has: user.country } }
+        });
+
+        // 2. Block if the PARENT UNIVERSITY excludes the agent's country
+        securityConditions.push({
+            university: { 
+                NOT: { excluded_countries: { has: user.country } } 
+            }
+        });
+      }
+
+      // C. APPLY: Merge all security conditions into the main query
+      if (securityConditions.length > 0) {
+        if (where.AND) {
+          if (Array.isArray(where.AND)) {
+            (where.AND as any[]).push(...securityConditions);
+          } else {
+            where.AND = [where.AND, ...securityConditions];
+          }
+        } else {
+          where.AND = securityConditions;
+        }
+      }
     }
 
     return this.prisma.course.findMany({

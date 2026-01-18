@@ -1,12 +1,12 @@
-// src/universities/dto/create-university.dto.ts
-import { IsString, IsOptional, IsUUID } from 'class-validator'; // Best practice to add validation
+import { IsString, IsOptional, IsUUID, IsEnum, IsNumber } from 'class-validator';
+import { CommissionType } from '@prisma/client'; // ✅ FIX: Import the Enum here
 
 export class CreateUniversityDto {
   @IsString()
   name: string;
 
   @IsUUID()
-  countryId: string; // ✅ Changed from country_id to countryId
+  countryId: string;
 
   @IsOptional()
   @IsString()
@@ -15,4 +15,16 @@ export class CreateUniversityDto {
   @IsOptional()
   @IsString()
   logo?: string;
+
+  @IsOptional()
+  @IsEnum(CommissionType)
+  commission_type?: CommissionType;
+
+  @IsOptional()
+  @IsNumber()
+  commission_value?: number;
+
+  @IsOptional()
+  @IsString()
+  currency?: string;
 }

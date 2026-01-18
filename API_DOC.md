@@ -13,7 +13,7 @@ Most endpoints are protected by **JWT Authentication**.
 -   **Role Based Access Control (RBAC):** Endpoints verify if the user has the required role (`admin`, `counsellor`, `agent`) or specific permissions.
 
 ### Base URL
-All routes are relative to the NestJS server URL (e.g., `http://localhost:3000`).
+All routes are relative to the NestJS server URL (e.g., `http://localhost:5005`).
 
 ### Error Codes
 -   **400 Bad Request:** Invalid input (e.g., invalid UUID format).
@@ -901,10 +901,14 @@ Manages universities linked to countries.
 -   **Request Body:**
     ```json
     {
-      "name": "University of Helsinki",
-      "countryId": "uuid-of-country",
-      "city": "Helsinki",
-      "logo": "[https://example.com/logo.png](https://example.com/logo.png)"
+        "name": "University of Helsinki",
+        "countryId": "uuid-of-country",
+        "city": "Helsinki",
+        "logo": "https://example.com/logo.png",
+        "commission_type": "PERCENTAGE", // or "FIXED"
+        "commission_value": 15,          // 15% or Flat 1500
+        "currency": "EUR",               // Required if FIXED
+        "excluded_countries": ["Iran", "North Korea"] // Agents from these countries cannot see this university
     }
     ```
 -   **Validation:** `countryId` must be a valid UUID of an existing country.
@@ -928,8 +932,14 @@ Manages universities linked to countries.
 -   **Request Body:** (Partial)
     ```json
     {
-      "city": "Espoo",
-      "logo": "[https://new-logo-url.com](https://new-logo-url.com)"
+        "name": "Updated Uni Name",          // Optional
+        "logo": "https://...",               // Optional
+        "city": "Berlin",                    // Optional
+
+        // Commission & Access Control (Optional)
+        "commission_type": "FIXED",
+        "commission_value": 500,
+        "excluded_countries": ["Iran", "North Korea"]
     }
     ```
 
@@ -960,7 +970,8 @@ Manages courses offered by universities.
       "application_fee": 100,
       "intake_month": "September, January",
       "commission": "15%",
-      "description": "Comprehensive CS program..."
+      "description": "Comprehensive CS program...",
+      "excluded_countries": ["India", "Pakistan"] // Specific blacklist for this course
     }
     ```
 
@@ -1001,6 +1012,138 @@ Manages courses offered by universities.
 ### Delete Course
 -   **Route:** `DELETE /courses/:id`
 -   **Authentication:** **JWT Required (Admin Only)**
+
+---
+
+## 💼 University Commission Plans
+
+This feature allows you to define a uniform commission structure for a university (e.g., "All courses give 15%" or "Flat $500"). The system then auto-calculates this amount when a commission record is created for a student application.
+
+### A. Set Commission Plan (Update University)
+
+Define the rules for a specific university.
+
+-   **Route:** `PATCH /universities/:id`
+-   **Headers:** `Authorization: Bearer <token>`
+-   **Access:** Admin / Super Admin
+-   **Request Body:**
+    ```json
+    {
+      "commission_type": "PERCENTAGE",  // Options: "PERCENTAGE" or "FIXED"
+      "commission_value": 15,           // If Percentage: 15%. If Fixed: 15 (currency units)
+      "currency": "USD"                 // Optional, defaults to "INR" if not sent. Required if type is FIXED.
+    }
+    ```
+-   **Response (200 OK):**
+    ```json
+    {
+      "id": "uuid-uni-1",
+      "name": "Technical University of Munich",
+      "commission_type": "PERCENTAGE",
+      "commission_value": "15",
+      "currency": "EUR"
+    }
+    ```
+
+### B. Create Commission (Auto-Calculation)
+
+Creates a commission record. If amount is omitted, the system calculates it automatically based on the University rules and Course fees.
+
+-   **Route:** `POST /commissions`
+-   **Headers:** `Authorization: Bearer <token>`
+-   **Access:** Admin / Partner
+-   **Request Body (Auto-Calculate Mode):**
+    ```json
+    {
+      "application_id": "uuid-app-1",
+      "amount": null,       // Send null (or omit) to trigger auto-calculation
+      "status": "PENDING",
+      "remarks": "Fall 2025 Intake"
+    }
+    ```
+-   **Request Body (Manual Override):**
+    ```json
+    {
+      "application_id": "uuid-app-1",
+      "amount": 500,        // Manually specify amount to override calculation
+      "currency": "USD"
+    }
+    ```
+-   **Logic:**
+    -   **Agent Detection:** Automatically links the Agent assigned to the Lead.
+    -   **Calculation:**
+        - If Uni has PERCENTAGE: (Course Tuition Fee * Uni Value) / 100.
+        - If Uni has FIXED: Uses the fixed value directly.
+    -   **Fallback:** If no rule exists, it defaults to 0.
+
+---
+
+## Financials in A Lead's Application
+
+## 💰 Financials in A Lead's Application
+
+Manages financial documentation and approval workflow for student applications.
+
+### Get Financial Data
+-   **Route:** `GET /financials/:leadId`
+-   **Authentication:** **JWT Required**
+-   **Description:** Retrieves the financial status and all associated notes for a lead's application.
+-   **Returns:**
+    ```json
+    {
+      "id": "uuid-financial-record",
+      "status": "SENT_TO_UNIVERSITY",
+      "notes": [
+        {
+          "id": "note-uuid-1",
+          "stage": "PENDING",
+          "content": "Documents verified.",
+          "created_at": "2024-01-15T10:30:00.000Z",
+          "partner": {
+            "name": "Agent Smith"
+          }
+        },
+        {
+          "id": "note-uuid-2",
+          "stage": "APPROVED",
+          "content": "Loan sanction letter received.",
+          "created_at": "2024-01-16T14:00:00.000Z",
+          "partner": {
+            "name": "Admin"
+          }
+        }
+      ]
+    }
+    ```
+-   **Frontend Logic:** Filter the notes array by stage to render them in specific UI cards (e.g., `notes.filter(n => n.stage === 'PENDING')`).
+
+### Update Financial Status
+-   **Route:** `PATCH /financials/:leadId/status`
+-   **Authentication:** **JWT Required**
+-   **Description:** Updates the overall financial status for the lead's application.
+-   **Request Body:**
+    ```json
+    {
+      "status": "APPROVED"
+    }
+    ```
+-   **Valid Statuses:** `PENDING`, `SENT_TO_UNIVERSITY`, `APPROVED`, `REJECTED`
+-   **Returns:** Updated financial object.
+
+### Add Financial Note
+-   **Route:** `POST /financials/:leadId/notes`
+-   **Authentication:** **JWT Required**
+-   **Description:** Adds a note at a specific financial stage.
+-   **Request Body:**
+    ```json
+    {
+      "stage": "SENT_TO_UNIVERSITY",
+      "content": "Courier tracking ID: 123456"
+    }
+    ```
+-   **Returns:** Created note object with timestamp and associated partner details.
+
+---
 
 ## Announcements API
 
@@ -1142,6 +1285,96 @@ Removes a specific dropdown item from a category.
 
 ---
 
+## 🛠️ Support Ticket API
+
+Manage support cases, inquiries, and issue tracking.
+
+### 1. Create Ticket
+- **Route:** `POST /support`
+- **Authentication:** JWT Required
+- **Description:** Creates a new support case.
+- **Request Body:**
+    ```json
+    {
+      "topic": "Agent Portal Management",    // From Dropdown
+      "category": "Bank Details Upload",     // From Dropdown
+      "institution_id": "uuid-uni-1",        // Optional, from Dropdown
+      "subject": "Unable to upload document",
+      "description": "I get a 500 error when uploading...",
+      "priority": "HIGH",                    // Optional (LOW, MEDIUM, HIGH, URGENT)
+      "attachment_urls": ["https://s3.../error.png"] // Optional
+    }
+    ```
+- **Returns:**
+    ```json
+    {
+      "id": "uuid",
+      "case_number": 1005,
+      "status": "OPEN",
+      "created_at": "..."
+    }
+    ```
+
+### 2. Get All Tickets
+- **Route:** `GET /support`
+- **Query Params:** `?status=OPEN` (Optional)
+- **Behavior:**
+    - **Agents:** Returns only their tickets.
+    - **Admins:** Returns all tickets.
+- **Returns:** Array of ticket summaries.
+
+### 3. Get Ticket Details (Conversation)
+- **Route:** `GET /support/:id`
+- **Description:** Fetches the ticket details along with the full conversation history.
+- **Returns:**
+    ```json
+    {
+      "id": "uuid",
+      "case_number": 1005,
+      "subject": "Unable to upload document",
+      "status": "IN_PROGRESS",
+      "partner": { "name": "Agent Smith" },
+      "comments": [
+        {
+          "id": "c1",
+          "sender_type": "PARTNER",
+          "sender_name": "Agent Smith",
+          "message": "I get a 500 error...",
+          "created_at": "..."
+        },
+        {
+          "id": "c2",
+          "sender_type": "ADMIN",
+          "sender_name": "Support Staff",
+          "message": "Can you please clear your cache?",
+          "created_at": "..."
+        }
+      ]
+    }
+    ```
+
+### 4. Add Comment (Reply)
+- **Route:** `POST /support/:id/comments`
+- **Request Body:**
+    ```json
+    {
+      "message": "Still not working. See attached.",
+      "attachment_urls": ["https://..."]
+    }
+    ```
+- **Side-effect:** This usually should trigger a notification (email/socket) to the other party (implementation dependent).
+
+### 5. Update Ticket Status
+- **Route:** `PATCH /support/:id/status`
+- **Request Body:**
+    ```json
+    {
+      "status": "RESOLVED" // OPEN, IN_PROGRESS, AWAITING_REPLY, RESOLVED, CLOSED
+    }
+    ```
+
+---
+
 ## 💬 Chat System (Socket.io)
 
 Real-time messaging system for communication between leads and counsellors.
@@ -1247,3 +1480,37 @@ socket.on("user_typing", (data) => {
 3. **Receiving Messages:**
      - Listen for `receive_message` → Append to list
      - If chat window open → Emit `mark_read`
+
+---
+
+
+## 🌍 Region, Country & Exclusion Access Control
+
+This module restricts Agents to viewing only Universities and Courses based on their location permissions and specific blacklists.
+
+### A. Logic Hierarchy (Priority Order)
+
+**Permission Check (Can I see this region?):**
+- If Agent is assigned Region: Europe, they can see universities in Germany, France, etc.
+- If Agent is assigned Country: India, they can only see universities in India.
+
+**Exclusion Check (Am I blocked?):**
+- Even if an Agent has permission for a region, if their specific Country is listed in the `excluded_countries` array of a University or Course, that item is hidden.
+
+### B. Get Universities (Restricted)
+-   **Route:** `GET /universities`
+-   **Response Behavior:**
+    -   **Admin:** Sees all universities.
+    -   **Agent:** Filters by Agent's Region/Country AND excludes universities where `excluded_countries` contains Agent's Country.
+
+### C. Get Courses (Restricted)
+-   **Route:** `GET /courses`
+-   **Response Behavior:**
+    -   Filters by Agent's Region/Country.
+    -   Excludes courses where `excluded_countries` (on the Course OR the University) contains Agent's Country.
+
+**Example:** An Agent from India searches for courses.
+- University A (Global) → Visible.
+- University B (Global) → Visible.
+- Course 1 (MBBS) with `excluded_countries: ["India"]` → Hidden.
+- Course 2 (BBA) with `excluded_countries: []` → Visible.

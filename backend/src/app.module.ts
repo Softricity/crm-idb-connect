@@ -26,11 +26,12 @@ import { AgentsModule } from './agents/agents.module';
 import { CommissionsModule } from './commissions/commissions.module';
 import { ChatModule } from './chat/chat.module';
 import { DropdownsModule } from './dropdowns/dropdowns.module';
+import { FinancialsModule } from './financials/financials.module';
+import { SupportModule } from './support/support.module';
 
 @Module({
   imports: [
     PrismaModule,
-    StorageModule,
     MailModule,
     LeadsModule,
     PartnersModule,
@@ -53,7 +54,9 @@ import { DropdownsModule } from './dropdowns/dropdowns.module';
     AgentsModule,
     CommissionsModule,
     ChatModule,
-    DropdownsModule
+    DropdownsModule,
+    FinancialsModule,
+    SupportModule
   ],
   controllers: [AppController],
   providers: [AppService],

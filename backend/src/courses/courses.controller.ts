@@ -8,7 +8,7 @@ import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/roles.enum';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
-import { Public } from '../auth/public.decorator';
+import { GetUser } from '../auth/get-user.decorator';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('courses')
@@ -25,11 +25,11 @@ export class CoursesController {
   // GET /courses (Public or Protected, depending on your need)
   // Supports query params: ?search=MBA&country=USA&level=Masters
   @Get()
-  findAll(@Query() filters: CourseFilterDto) {
-    // Handle array params which might come as single strings
-    // e.g. ?country=USA&country=UK -> ['USA', 'UK']
-    // e.g. ?country=USA -> 'USA' (needs wrapping)
-    
+  @UseGuards(JwtAuthGuard) // 🔒 Protect this route
+  findAll(
+  @Query() filters: CourseFilterDto,
+  @GetUser() user: any // 👤 Get the logged-in user
+  ) {
     const normalizeArray = (val: any) => {
         if (!val) return undefined;
         return Array.isArray(val) ? val : [val];
@@ -43,7 +43,8 @@ export class CoursesController {
         intake: normalizeArray(filters.intake),
     };
 
-    return this.coursesService.findAll(cleanFilters);
+    // Pass the user to the service
+    return this.coursesService.findAll(cleanFilters, user);
   }
   
   // GET /courses/filters

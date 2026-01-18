@@ -19,11 +19,11 @@ import { useSearchParams } from "next/navigation";
 import ApplicationDetailsView from "@/components/application-components/applicationDetailsView";
 import PaymentsTab from "@/components/leads-components/paymentsTab";
 import ChatComponent from "@/components/chat/ChatComponent";
+import FinancialsTab from "@/components/FinancialsTab";
 
 const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
 const CoursesTab = () => <div className="p-4 text-gray-700">🎓 Courses Component</div>;
 const EmailsTab = () => <div className="p-4 text-gray-700">📧 Emails Component</div>;
-const FinancialsTab = () => <div className="p-4 text-gray-700">💰 Financials Component</div>;
 const WhatsAppTab = () => <div className="p-4 text-gray-700">💬 WhatsApp Component</div>;
 
 const InfoRow = ({ label, value }: { label: string; value?: string | null }) => (
@@ -254,7 +254,7 @@ export default function LeadDetailPage() {
                     </Tab>
 
                     <Tab key="financials" title="Financials">
-                        <FinancialsTab />
+                        <FinancialsTab leadId={lead?.id ?? ""}/>
                     </Tab>
 
                     <Tab key="whatsapp" title="WhatsApp">
