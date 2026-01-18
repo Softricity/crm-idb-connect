@@ -13,7 +13,7 @@ Most endpoints are protected by **JWT Authentication**.
 -   **Role Based Access Control (RBAC):** Endpoints verify if the user has the required role (`admin`, `counsellor`, `agent`) or specific permissions.
 
 ### Base URL
-All routes are relative to the NestJS server URL (e.g., `http://localhost:3000`).
+All routes are relative to the NestJS server URL (e.g., `http://localhost:5005`).
 
 ### Error Codes
 -   **400 Bad Request:** Invalid input (e.g., invalid UUID format).
@@ -901,10 +901,14 @@ Manages universities linked to countries.
 -   **Request Body:**
     ```json
     {
-      "name": "University of Helsinki",
-      "countryId": "uuid-of-country",
-      "city": "Helsinki",
-      "logo": "[https://example.com/logo.png](https://example.com/logo.png)"
+        "name": "University of Helsinki",
+        "countryId": "uuid-of-country",
+        "city": "Helsinki",
+        "logo": "https://example.com/logo.png",
+        "commission_type": "PERCENTAGE", // or "FIXED"
+        "commission_value": 15,          // 15% or Flat 1500
+        "currency": "EUR",               // Required if FIXED
+        "excluded_countries": ["Iran", "North Korea"] // Agents from these countries cannot see this university
     }
     ```
 -   **Validation:** `countryId` must be a valid UUID of an existing country.
@@ -928,8 +932,14 @@ Manages universities linked to countries.
 -   **Request Body:** (Partial)
     ```json
     {
-      "city": "Espoo",
-      "logo": "[https://new-logo-url.com](https://new-logo-url.com)"
+        "name": "Updated Uni Name",          // Optional
+        "logo": "https://...",               // Optional
+        "city": "Berlin",                    // Optional
+
+        // Commission & Access Control (Optional)
+        "commission_type": "FIXED",
+        "commission_value": 500,
+        "excluded_countries": ["Iran", "North Korea"]
     }
     ```
 
@@ -960,7 +970,8 @@ Manages courses offered by universities.
       "application_fee": 100,
       "intake_month": "September, January",
       "commission": "15%",
-      "description": "Comprehensive CS program..."
+      "description": "Comprehensive CS program...",
+      "excluded_countries": ["India", "Pakistan"] // Specific blacklist for this course
     }
     ```
 
@@ -1067,40 +1078,72 @@ Creates a commission record. If amount is omitted, the system calculates it auto
 
 ---
 
-## 🌍 Region & Country Access Control
+## Financials in A Lead's Application
 
-This module restricts Agents to viewing only Universities and Courses within their assigned Region or Country.
+## 💰 Financials in A Lead's Application
 
-### A. Prerequisites
+Manages financial documentation and approval workflow for student applications.
 
--   **Countries:** Must have a region set in the DB (e.g., `UPDATE countries SET region = 'Europe' WHERE name = 'Germany'`).
--   **Agents:** Must have country OR region set in their profile.
+### Get Financial Data
+-   **Route:** `GET /financials/:leadId`
+-   **Authentication:** **JWT Required**
+-   **Description:** Retrieves the financial status and all associated notes for a lead's application.
+-   **Returns:**
+    ```json
+    {
+      "id": "uuid-financial-record",
+      "status": "SENT_TO_UNIVERSITY",
+      "notes": [
+        {
+          "id": "note-uuid-1",
+          "stage": "PENDING",
+          "content": "Documents verified.",
+          "created_at": "2024-01-15T10:30:00.000Z",
+          "partner": {
+            "name": "Agent Smith"
+          }
+        },
+        {
+          "id": "note-uuid-2",
+          "stage": "APPROVED",
+          "content": "Loan sanction letter received.",
+          "created_at": "2024-01-16T14:00:00.000Z",
+          "partner": {
+            "name": "Admin"
+          }
+        }
+      ]
+    }
+    ```
+-   **Frontend Logic:** Filter the notes array by stage to render them in specific UI cards (e.g., `notes.filter(n => n.stage === 'PENDING')`).
 
-### B. Get Universities (Restricted)
+### Update Financial Status
+-   **Route:** `PATCH /financials/:leadId/status`
+-   **Authentication:** **JWT Required**
+-   **Description:** Updates the overall financial status for the lead's application.
+-   **Request Body:**
+    ```json
+    {
+      "status": "APPROVED"
+    }
+    ```
+-   **Valid Statuses:** `PENDING`, `SENT_TO_UNIVERSITY`, `APPROVED`, `REJECTED`
+-   **Returns:** Updated financial object.
 
-Fetches list of universities. The results are automatically filtered based on the user's role and location.
+### Add Financial Note
+-   **Route:** `POST /financials/:leadId/notes`
+-   **Authentication:** **JWT Required**
+-   **Description:** Adds a note at a specific financial stage.
+-   **Request Body:**
+    ```json
+    {
+      "stage": "SENT_TO_UNIVERSITY",
+      "content": "Courier tracking ID: 123456"
+    }
+    ```
+-   **Returns:** Created note object with timestamp and associated partner details.
 
--   **Route:** `GET /universities`
--   **Headers:** `Authorization: Bearer <token>`
--   **Response Behavior:**
-    -   **Admin:** Sees all universities.
-    -   **Agent (Location: India):** Returns only universities where Country = 'India'.
-    -   **Agent (Region: Europe):** Returns universities in any country where region = 'Europe' (e.g., Germany, France, Italy).
-
-### C. Get Courses (Restricted)
-
-Fetches list of courses. Access control is applied strictly on top of standard filters.
-
--   **Route:** `GET /courses`
--   **Headers:** `Authorization: Bearer <token>`
--   **Query Parameters (Standard):**
-    -   `?search=Computer Science`
-    -   `?level=Masters`
-    -   `?intake=Sep`
--   **Response Behavior:**
-    -   The system silently appends an AND condition: `AND university.country = User.Country`.
-    -   **Example:** If an Agent assigned to "India" requests `GET /courses?country=UK`, they will receive 0 results, because the query becomes: `WHERE country = 'UK' AND country = 'India'`.
-    -   The rewritten markdown content that would fit at $SELECTION_PLACEHOLDER$ wrapped with -+-+-+-+-+ is:
+---
 
 ## Announcements API
 
@@ -1347,3 +1390,37 @@ socket.on("user_typing", (data) => {
 3. **Receiving Messages:**
      - Listen for `receive_message` → Append to list
      - If chat window open → Emit `mark_read`
+
+---
+
+
+## 🌍 Region, Country & Exclusion Access Control
+
+This module restricts Agents to viewing only Universities and Courses based on their location permissions and specific blacklists.
+
+### A. Logic Hierarchy (Priority Order)
+
+**Permission Check (Can I see this region?):**
+- If Agent is assigned Region: Europe, they can see universities in Germany, France, etc.
+- If Agent is assigned Country: India, they can only see universities in India.
+
+**Exclusion Check (Am I blocked?):**
+- Even if an Agent has permission for a region, if their specific Country is listed in the `excluded_countries` array of a University or Course, that item is hidden.
+
+### B. Get Universities (Restricted)
+-   **Route:** `GET /universities`
+-   **Response Behavior:**
+    -   **Admin:** Sees all universities.
+    -   **Agent:** Filters by Agent's Region/Country AND excludes universities where `excluded_countries` contains Agent's Country.
+
+### C. Get Courses (Restricted)
+-   **Route:** `GET /courses`
+-   **Response Behavior:**
+    -   Filters by Agent's Region/Country.
+    -   Excludes courses where `excluded_countries` (on the Course OR the University) contains Agent's Country.
+
+**Example:** An Agent from India searches for courses.
+- University A (Global) → Visible.
+- University B (Global) → Visible.
+- Course 1 (MBBS) with `excluded_countries: ["India"]` → Hidden.
+- Course 2 (BBA) with `excluded_countries: []` → Visible.

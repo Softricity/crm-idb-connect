@@ -93,19 +93,18 @@ export class CoursesService {
       where.university = universityWhere;
     }
 
-    // 6. Filter by Intake (The part that caused your error)
+    // 6. Filter by Intake
     if (intake && intake.length > 0) {
       const intakeCondition: Prisma.CourseWhereInput = {
         OR: intake.map((month) => ({
           intakeMonth: { 
             contains: month, 
-            mode: 'insensitive' as Prisma.QueryMode // 👈 FIX 1: Explicit Cast
+            mode: 'insensitive' as Prisma.QueryMode
           },
         })),
       };
       
       if (where.OR) {
-        // If Search exists, Intake must ALSO match (AND logic)
         where.AND = Array.isArray(where.AND) 
           ? [...where.AND, intakeCondition] 
           : [intakeCondition];
@@ -114,37 +113,56 @@ export class CoursesService {
       }
     }
 
-    // --- 🔒 7. ACCESS CONTROL LOGIC ---
+    // --- 🔒 7. ACCESS CONTROL & EXCLUSION LOGIC ---
     
     if (user && user.type === 'agent') {
-      const accessControl: Prisma.CourseWhereInput = {};
+      // We will collect all security conditions here
+      const securityConditions: Prisma.CourseWhereInput[] = [];
 
+      // A. PERMISSION: "What Am I Allowed to See?"
       if (user.country) {
         // 🌍 Restrict to Agent's Assigned Country
-        accessControl.university = {
-          country: { 
-            name: { equals: user.country, mode: 'insensitive' as Prisma.QueryMode } // 👈 FIX 2
+        securityConditions.push({
+          university: { 
+            country: { name: { equals: user.country, mode: 'insensitive' as Prisma.QueryMode } }
           }
-        };
+        });
       } else if (user.region) {
         // 🗺️ Restrict to Agent's Assigned Region
-        accessControl.university = {
-          country: { 
-            region: { equals: user.region, mode: 'insensitive' as Prisma.QueryMode } // 👈 FIX 3
+        securityConditions.push({
+          university: { 
+            country: { region: { equals: user.region, mode: 'insensitive' as Prisma.QueryMode } }
           }
-        };
+        });
       }
 
-      // Merge into the main query securely using AND
-      if (Object.keys(accessControl).length > 0) {
+      // B. EXCLUSION: "What Am I Specifically Blocked From?"
+      // Only applies if the agent has a specific country assigned
+      if (user.country) {
+        
+        // 1. Block if the COURSE explicitly excludes the agent's country
+        securityConditions.push({
+            NOT: { excluded_countries: { has: user.country } }
+        });
+
+        // 2. Block if the PARENT UNIVERSITY excludes the agent's country
+        securityConditions.push({
+            university: { 
+                NOT: { excluded_countries: { has: user.country } } 
+            }
+        });
+      }
+
+      // C. APPLY: Merge all security conditions into the main query
+      if (securityConditions.length > 0) {
         if (where.AND) {
           if (Array.isArray(where.AND)) {
-            (where.AND as any[]).push(accessControl);
+            (where.AND as any[]).push(...securityConditions);
           } else {
-            where.AND = [where.AND, accessControl];
+            where.AND = [where.AND, ...securityConditions];
           }
         } else {
-          where.AND = [accessControl];
+          where.AND = securityConditions;
         }
       }
     }

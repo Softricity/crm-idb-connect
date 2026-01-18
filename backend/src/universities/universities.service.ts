@@ -38,6 +38,13 @@ export class UniversitiesService {
         else if (user.region) {
           where.country = { region: { equals: user.region, mode: 'insensitive' } };
         }
+
+        if (user.country) {
+         // Filter OUT universities that have the agent's country in their blacklist
+         where.NOT = {
+           excluded_countries: { has: user.country }
+         };
+        }
       }
       
       // 2. If User is a PARTNER (Counselor) - Optional

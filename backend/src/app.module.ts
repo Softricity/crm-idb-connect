@@ -26,6 +26,7 @@ import { AgentsModule } from './agents/agents.module';
 import { CommissionsModule } from './commissions/commissions.module';
 import { ChatModule } from './chat/chat.module';
 import { DropdownsModule } from './dropdowns/dropdowns.module';
+import { FinancialsModule } from './financials/financials.module';
 
 @Module({
   imports: [
@@ -53,7 +54,9 @@ import { DropdownsModule } from './dropdowns/dropdowns.module';
     AgentsModule,
     CommissionsModule,
     ChatModule,
-    DropdownsModule
+    DropdownsModule,
+    FinancialsModule,
+
   ],
   controllers: [AppController],
   providers: [AppService],

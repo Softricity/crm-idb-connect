@@ -712,6 +712,36 @@ export const DropdownsAPI = {
   },
 };
 
+export const FinancialsAPI = {
+  get: async (leadId: string) => {
+    const res = await fetch(`${API_BASE}/financials/${leadId}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  updateStatus: async (leadId: string, status: string) => {
+    const res = await fetch(`${API_BASE}/financials/${leadId}/status`, { 
+      method: 'PATCH', 
+      headers: getHeaders(), 
+      body: JSON.stringify({ status }) 
+    });
+    return handleResponse(res);
+  },
+  addNote: async (leadId: string, data: { stage: string; content: string }) => {
+    const res = await fetch(`${API_BASE}/financials/${leadId}/notes`, { 
+      method: 'POST', 
+      headers: getHeaders(), 
+      body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+  deleteNote: async (noteId: string) => {
+    const res = await fetch(`${API_BASE}/financials/notes/${noteId}`, { 
+      method: 'DELETE', 
+      headers: getHeaders() 
+    });
+    return handleResponse(res);
+  }
+};
+
 export default {
   LeadsAPI,
   PartnersAPI,
@@ -734,5 +764,6 @@ export default {
   AgentsAPI,
   CommissionsAPI,
   ChatAPI,
-  DropdownsAPI
+  DropdownsAPI,
+  FinancialsAPI
 };
