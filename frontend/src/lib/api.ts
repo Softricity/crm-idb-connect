@@ -130,6 +130,14 @@ export const LeadsAPI = {
   deleteLead: async (id: string) => {
     const res = await fetch(`${API_BASE}/leads/${id}`, { method: 'DELETE', headers: getHeaders() });
     return handleResponse(res);
+  },
+  addCourseToLead: async (leadId: string, courseId: string) => {
+    const res = await fetch(`${API_BASE}/leads/${leadId}/courses`, { method: 'POST', headers: getHeaders(), body: JSON.stringify({ courseId }) });
+    return handleResponse(res);
+  },
+  removeCourseFromLead: async (leadId: string, courseId: string) => {
+    const res = await fetch(`${API_BASE}/leads/${leadId}/courses/${courseId}`, { method: 'DELETE', headers: getHeaders() });
+    return handleResponse(res);
   }
 };
 

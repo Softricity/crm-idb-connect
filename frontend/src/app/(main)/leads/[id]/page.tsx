@@ -20,9 +20,9 @@ import ApplicationDetailsView from "@/components/application-components/applicat
 import PaymentsTab from "@/components/leads-components/paymentsTab";
 import ChatComponent from "@/components/chat/ChatComponent";
 import FinancialsTab from "@/components/FinancialsTab";
+import CoursesTab from "@/components/leads-components/coursesTab";
 
 const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
-const CoursesTab = () => <div className="p-4 text-gray-700">🎓 Courses Component</div>;
 const EmailsTab = () => <div className="p-4 text-gray-700">📧 Emails Component</div>;
 const WhatsAppTab = () => <div className="p-4 text-gray-700">💬 WhatsApp Component</div>;
 
@@ -242,7 +242,7 @@ export default function LeadDetailPage() {
                     </Tab>
 
                     <Tab key="courses" title="Courses">
-                        <CoursesTab />
+                        <CoursesTab leadId={lead?.id ?? ""} />
                     </Tab>
 
                     <Tab key="payments" title="Payments">

@@ -43,9 +43,10 @@ interface CourseCardProps {
       };
     };
   };
+  showSelect?: boolean;
 }
 
-export default function CourseCard({ course }: CourseCardProps) {
+export default function CourseCard({ course, showSelect }: CourseCardProps) {
   const [isSelected, setIsSelected] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
@@ -119,7 +120,7 @@ export default function CourseCard({ course }: CourseCardProps) {
 
           {/* Right Section: Actions and Fee */}
           <div className="flex flex-col justify-between relative min-h-[130px] items-end gap-3 min-w-[140px] md:pl-4 md:border-l">
-            <div className="flex flex-col gap-2 w-full">
+            {showSelect && <div className="flex flex-col gap-2 w-full">
               <div className="flex items-center justify-between gap-2 w-full border rounded-lg px-3 py-2 hover:bg-gray-50 transition-colors">
                 <span className="text-sm">Select</span>
                 <Checkbox
@@ -128,7 +129,7 @@ export default function CourseCard({ course }: CourseCardProps) {
                   size="sm"
                 />
               </div>
-            </div>
+            </div>}
             {course.fee && (
               <div className="text-right absolute bottom-0">
                 <p className="text-xs text-gray-500">Tuition Fee (Per Year)</p>
