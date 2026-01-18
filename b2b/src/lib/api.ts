@@ -393,6 +393,54 @@ export const CommissionsAPI = {
   },
 };
 
+// --- Support ---
+export const SupportAPI = {
+  createTicket: async (data: any, token?: string) => {
+    const res = await fetch(`${API_BASE}/support`, { 
+      method: 'POST', 
+      headers: getHeaders(true, token), 
+      body: JSON.stringify(data) 
+    });
+    return handleResponse(res);
+  },
+  getAllTickets: async (status?: string, token?: string) => {
+    const url = status ? `${API_BASE}/support?status=${status}` : `${API_BASE}/support`;
+    const res = await fetch(url, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+  getTicketById: async (id: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/support/${id}`, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+  addComment: async (ticketId: string, message: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/support/${ticketId}/comments`, { 
+      method: 'POST', 
+      headers: getHeaders(true, token), 
+      body: JSON.stringify({ message }) 
+    });
+    return handleResponse(res);
+  },
+  updateStatus: async (ticketId: string, status: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/support/${ticketId}/status`, { 
+      method: 'PATCH', 
+      headers: getHeaders(true, token), 
+      body: JSON.stringify({ status }) 
+    });
+    return handleResponse(res);
+  },
+};
+
+export const DropdownsAPI = {
+  getPriorities: async (token?: string) => {
+    const res = await fetch(`${API_BASE}/dropdowns/priorities`, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+  getList: async (name: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/dropdowns/categories?name=${name}`, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+};
+
 export default {
   AuthAPI,
   CountriesAPI,
@@ -404,4 +452,6 @@ export default {
   DashboardAPI,
   AnnouncementsAPI,
   CommissionsAPI,
+  SupportAPI,
+  DropdownsAPI,
 };
