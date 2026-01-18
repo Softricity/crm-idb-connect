@@ -31,7 +31,6 @@ import { FinancialsModule } from './financials/financials.module';
 @Module({
   imports: [
     PrismaModule,
-    StorageModule,
     MailModule,
     LeadsModule,
     PartnersModule,
@@ -56,7 +55,6 @@ import { FinancialsModule } from './financials/financials.module';
     ChatModule,
     DropdownsModule,
     FinancialsModule,
-
   ],
   controllers: [AppController],
   providers: [AppService],
