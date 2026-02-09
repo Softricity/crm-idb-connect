@@ -26,13 +26,12 @@ export class UniversitiesService {
   async findAll(user?: any, countryId?: string) {
     const where: Prisma.UniversityWhereInput = {};
 
-    // Filter by country_id if provided (from query param)
+    // Filter by country_id if provided (from query param) - this takes priority
     if (countryId) {
       where.countryId = countryId;
-    }
-
-    // 🔒 ACCESS CONTROL LOGIC
-    if (user) {
+    } 
+    // 🔒 ACCESS CONTROL LOGIC - only apply if no explicit countryId filter
+    else if (user) {
       // 1. If User is an AGENT
       if (user.type === 'agent') {
         // Priority 1: Restrict by specific Country (if agent has one)
@@ -43,18 +42,19 @@ export class UniversitiesService {
         else if (user.region) {
           where.country = { region: { equals: user.region, mode: 'insensitive' } };
         }
-
-        if (user.country) {
-         // Filter OUT universities that have the agent's country in their blacklist
-         where.NOT = {
-           excluded_countries: { has: user.country }
-         };
-        }
       }
       
       // 2. If User is a PARTNER (Counselor) - Optional
       // You can add logic here if counselors are also region-restricted
       // if (user.role === 'counsellor' && user.zone) { ... }
+    }
+
+    // Apply blacklist filter if user has a country (regardless of countryId filter)
+    if (user?.type === 'agent' && user.country) {
+      // Filter OUT universities that have the agent's country in their blacklist
+      where.NOT = {
+        excluded_countries: { has: user.country }
+      };
     }
 
     return this.prisma.university.findMany({
