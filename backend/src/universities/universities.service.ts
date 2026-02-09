@@ -24,38 +24,51 @@ export class UniversitiesService {
   }
 
   async findAll(user?: any, countryId?: string) {
+    console.log('🔍 Universities.findAll called with:', { 
+      userType: user?.type, 
+      userRole: user?.role,
+      countryId 
+    });
+    
     const where: Prisma.UniversityWhereInput = {};
 
-    // Filter by country_id if provided (from query param) - this takes priority
+    // Priority 1: If countryId is explicitly provided (UI filter), use it directly
+    // This applies to ALL user types (admin, partner, agent)
     if (countryId) {
       where.countryId = countryId;
-    } 
-    // 🔒 ACCESS CONTROL LOGIC - only apply if no explicit countryId filter
-    else if (user) {
-      // 1. If User is an AGENT
-      if (user.type === 'agent') {
-        // Priority 1: Restrict by specific Country (if agent has one)
-        if (user.country) {
-          where.country = { name: { equals: user.country, mode: 'insensitive' } };
-        } 
-        // Priority 2: Restrict by Region (if agent has no specific country)
-        else if (user.region) {
-          where.country = { region: { equals: user.region, mode: 'insensitive' } };
-        }
-      }
+      console.log('✅ Filtering by countryId:', countryId);
       
-      // 2. If User is a PARTNER (Counselor) - Optional
-      // You can add logic here if counselors are also region-restricted
-      // if (user.role === 'counsellor' && user.zone) { ... }
+      // Even with explicit countryId, still apply blacklist for agents
+      if (user?.type === 'agent' && user.country) {
+        where.NOT = {
+          excluded_countries: { has: user.country }
+        };
+        console.log('🚫 Applying blacklist filter for agent country:', user.country);
+      }
+    } 
+    // Priority 2: No explicit countryId - apply access control based on user type
+    else if (user?.type === 'agent') {
+      console.log('🔒 Applying agent access control');
+      // AGENT-specific access control
+      // Priority 1: Restrict by specific Country (if agent has one)
+      if (user.country) {
+        where.country = { name: { equals: user.country, mode: 'insensitive' } };
+        // Also apply blacklist
+        where.NOT = {
+          excluded_countries: { has: user.country }
+        };
+        console.log('🌍 Agent restricted to country:', user.country);
+      } 
+      // Priority 2: Restrict by Region (if agent has no specific country)
+      else if (user.region) {
+        where.country = { region: { equals: user.region, mode: 'insensitive' } };
+        console.log('🗺️ Agent restricted to region:', user.region);
+      }
+    } else {
+      console.log('👤 Partner/Admin - no restrictions applied');
     }
-
-    // Apply blacklist filter if user has a country (regardless of countryId filter)
-    if (user?.type === 'agent' && user.country) {
-      // Filter OUT universities that have the agent's country in their blacklist
-      where.NOT = {
-        excluded_countries: { has: user.country }
-      };
-    }
+    // For partners/admins without explicit countryId: return all universities
+    // (no restrictions applied)
 
     return this.prisma.university.findMany({
       where,
