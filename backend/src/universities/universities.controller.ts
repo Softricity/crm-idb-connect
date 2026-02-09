@@ -21,8 +21,8 @@ export class UniversitiesController {
 
   @Get()
   @UseGuards(JwtAuthGuard) // Protect endpoint
-  findAll(@GetUser() user: any) {
-    return this.universitiesService.findAll(user);
+  findAll(@GetUser() user: any, @Query('country_id') countryId?: string) {
+    return this.universitiesService.findAll(user, countryId);
   }
 
   @Get(':id')

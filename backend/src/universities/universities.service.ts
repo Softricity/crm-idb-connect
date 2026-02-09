@@ -23,8 +23,13 @@ export class UniversitiesService {
     });
   }
 
-  async findAll(user?: any) {
+  async findAll(user?: any, countryId?: string) {
     const where: Prisma.UniversityWhereInput = {};
+
+    // Filter by country_id if provided (from query param)
+    if (countryId) {
+      where.countryId = countryId;
+    }
 
     // 🔒 ACCESS CONTROL LOGIC
     if (user) {

@@ -82,9 +82,18 @@ export default function Universities() {
 
   useEffect(() => {
     if (selectedCountry) {
+      // Clear all related state first to avoid stale data
+      setUniversities([]);
+      setSelectedUniversity(null);
+      setCourses([]);
+      setSearchQuery('');
+      // Then fetch new universities for the selected country
       fetchUniversities(selectedCountry);
-      setSelectedUniversity(null); // Clear university selection when country changes
-      setCourses([]); // Clear courses when country changes
+    } else {
+      // If no country is selected, clear everything
+      setUniversities([]);
+      setSelectedUniversity(null);
+      setCourses([]);
     }
   }, [selectedCountry]);
 
@@ -520,7 +529,7 @@ export default function Universities() {
                             )}
                             <div className="text-xs text-gray-500 space-y-1">
                               {course.fee && (
-                                <div>Fee: ${course.fee}</div>
+                                <div>Fee: {course.courseCurrency} {course.fee}</div>
                               )}
                               {course.intakeMonth && (
                                 <div>Intake: {course.intakeMonth.split(", ").join(" | ")}</div>
