@@ -8,14 +8,31 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, partner } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
       router.push('/login');
+      return;
     }
-  }, [isAuthenticated, isLoading, router]);
+
+    const enforce = process.env.NEXT_PUBLIC_ENFORCE_CONTRACT_GATE === 'true';
+    if (!isLoading && isAuthenticated && enforce) {
+      const approved = partner?.contract_approved === true;
+      const onContractHub = router.pathname === '/contract-hub';
+      if (!approved && !onContractHub) {
+        router.push('/contract-hub');
+        return;
+      }
+    }
+
+    if (!isLoading && isAuthenticated && partner?.type === 'agent_team_member') {
+      if (router.pathname === '/commission-hub') {
+        router.push('/');
+      }
+    }
+  }, [isAuthenticated, isLoading, router, partner]);
 
   if (isLoading) {
     return (

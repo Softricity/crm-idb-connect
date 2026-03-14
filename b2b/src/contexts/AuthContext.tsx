@@ -11,6 +11,8 @@ interface Partner {
   branch_name?: string;
   branch_type?: string;
   permissions?: string[];
+  contract_approved?: boolean;
+  parent_agent_id?: string;
 }
 
 interface AuthContextType {
@@ -95,8 +97,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setPartner(data.partner);
       
-      // Redirect to dashboard
-      router.push('/');
+      const enforce = process.env.NEXT_PUBLIC_ENFORCE_CONTRACT_GATE === 'true';
+      if (enforce && data.partner?.contract_approved !== true) {
+        router.push('/contract-hub');
+      } else {
+        router.push('/');
+      }
     } catch (error) {
       console.error('Login error:', error);
       throw error;

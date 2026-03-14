@@ -82,15 +82,12 @@ export default function Universities() {
 
   useEffect(() => {
     if (selectedCountry) {
-      // Clear all related state first to avoid stale data
       setUniversities([]);
       setSelectedUniversity(null);
       setCourses([]);
       setSearchQuery('');
-      // Then fetch new universities for the selected country
       fetchUniversities(selectedCountry);
     } else {
-      // If no country is selected, clear everything
       setUniversities([]);
       setSelectedUniversity(null);
       setCourses([]);
@@ -101,7 +98,7 @@ export default function Universities() {
     if (selectedUniversity) {
       fetchCourses(selectedUniversity.id);
     } else {
-      setCourses([]); // Clear courses when no university is selected
+      setCourses([]);
     }
   }, [selectedUniversity]);
 
@@ -591,7 +588,6 @@ export default function Universities() {
         )}
       </div>
 
-      {/* Add Country Drawer */}
       <Drawer isOpen={isCountryOpen} onClose={() => {
         onCountryClose();
         setEditingCountry(null);
@@ -630,7 +626,6 @@ export default function Universities() {
         </DrawerContent>
       </Drawer>
 
-      {/* Add University Drawer */}
       <Drawer isOpen={isUniversityOpen} onClose={() => {
         onUniversityClose();
         setEditingUniversity(null);
@@ -673,7 +668,6 @@ export default function Universities() {
         </DrawerContent>
       </Drawer>
 
-      {/* Add Course Drawer */}
       <Drawer isOpen={isCourseOpen} onClose={() => {
         onCourseClose();
         setEditingCourse(null);
@@ -713,7 +707,6 @@ export default function Universities() {
           </div>
           <DrawerBody className="px-6 py-6">
             <div className="space-y-6">
-              {/* Basic Details Section */}
               <div>
                 <h3 className="text-lg font-semibold mb-4">Basic Details</h3>
                 <div className="grid grid-cols-2 gap-4">
@@ -794,7 +787,6 @@ export default function Universities() {
                       onChange={(e) => setCourseForm({ ...courseForm, originalFee: parseFloat(e.target.value) || 0 })}
                     />
                   </div>
-                  {/* Course Fee */}
                   <div className="grid grid-cols-[100px_1fr] col-span-2 gap-2">
                     <Select
                       label=" "
@@ -836,7 +828,6 @@ export default function Universities() {
                 </div>
               </div>
 
-              {/* Intake Months Section */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Intake Months</h3>
                 <div className="flex flex-wrap gap-3 text-sm">
@@ -858,7 +849,6 @@ export default function Universities() {
                 </div>
               </div>
 
-              {/* Commission Section */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Commission (University)</h3>
                 <div className="grid grid-cols-[100px_1fr] gap-2">
@@ -888,7 +878,6 @@ export default function Universities() {
                 </Checkbox>
               </div>
 
-              {/* Details Section */}
               <div>
                 <h3 className="text-lg font-semibold mb-3">Details</h3>
                 <div className="space-y-3">

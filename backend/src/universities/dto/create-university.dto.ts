@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsUUID, IsEnum, IsNumber } from 'class-validator';
-import { CommissionType } from '@prisma/client'; // ✅ FIX: Import the Enum here
+import { CommissionType } from '@prisma/client';
 
 export class CreateUniversityDto {
   @IsString()

@@ -1,6 +1,6 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PartnersService } from '../partners/partners.service';
-import { AgentsService } from '../agents/agents.service'; // 👈 Import AgentsService
+import { AgentsService } from '../agents/agents.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 
@@ -8,7 +8,7 @@ import * as bcrypt from 'bcrypt';
 export class AuthService {
   constructor(
     private partnersService: PartnersService,
-    private agentsService: AgentsService, // 👈 Inject it
+    private agentsService: AgentsService,
     private jwtService: JwtService,
   ) {}
 
@@ -19,24 +19,31 @@ export class AuthService {
       const isMatch = await bcrypt.compare(pass, partner.password);
       if (isMatch) {
         const { password, ...result } = partner;
-        return { ...result, type: 'partner' }; // Tag as partner
+        return { ...result, type: 'partner' };
       }
     }
 
     // 2. If not found, Try to find as Agent
     const agent = await this.agentsService.findByEmail(email);
     if (agent) {
-      // ✅ Security Check: Agent must be APPROVED and ACTIVE
       if (agent.status !== 'APPROVED' || !agent.is_active) {
-         // You might want to throw a specific error or just return null
-         // returning null triggers "Invalid Credentials" generic message
          return null; 
       }
 
       const isMatch = await bcrypt.compare(pass, agent.password);
       if (isMatch) {
         const { password, ...result } = agent;
-        return { ...result, type: 'agent' }; // Tag as agent
+        return { ...result, type: 'agent' };
+      }
+    }
+
+    // 3. Team member login
+    const teamMember = await this.agentsService.findTeamMemberByEmail(email);
+    if (teamMember) {
+      const isMatch = await bcrypt.compare(pass, teamMember.password);
+      if (isMatch && teamMember.is_active) {
+        const { password, ...result } = teamMember;
+        return { ...result, type: 'agent_team_member' };
       }
     }
 
@@ -44,12 +51,10 @@ export class AuthService {
   }
 
   async login(user: any) {
-    // 1. Define Payload based on User Type
     let payload: any = {};
     let responseUser: any = {};
 
     if (user.type === 'partner') {
-      // --- PARTNER LOGIC (Existing) ---
       const permissions = user.role?.role_permissions?.map((rp: any) => rp.permission.name) || [];
       
       payload = {
@@ -57,6 +62,7 @@ export class AuthService {
         sub: user.id,
         name: user.name,
         role: user.role.name,
+        type: 'partner',
         permissions: permissions,
         branch_id: user.branch_id,
         branch_type: user.branch?.type
@@ -72,18 +78,17 @@ export class AuthService {
         type: 'partner'
       };
 
-    } else {
-      // --- AGENT LOGIC (New) ---
-      // Agents don't have dynamic roles/permissions tables yet, so we hardcode "agent"
-      
+    } else if (user.type === 'agent') {
       payload = {
         email: user.email,
         sub: user.id,
         name: user.name,
-        role: 'agent', // Hardcoded role
-        permissions: [], // Agents generally have fixed permissions logic in FE
-        branch_id: user.branch_id, // Agents usually belong to Head Office logically or null
-        branch_type: 'agent_portal'
+        role: 'agent',
+        permissions: [],
+        branch_id: user.branch_id,
+        branch_type: 'agent_portal',
+        type: 'agent',
+        contract_approved: !!user.contract_approved,
       };
 
       responseUser = {
@@ -93,14 +98,37 @@ export class AuthService {
         role: 'agent',
         permissions: [],
         type: 'agent',
-        branch_id: user.branch_id
+        branch_id: user.branch_id,
+        contract_approved: !!user.contract_approved,
+      };
+    } else {
+      // agent_team_member
+      payload = {
+        email: user.email,
+        sub: user.id,
+        name: user.name,
+        role: 'agent',
+        permissions: [],
+        branch_type: 'agent_portal',
+        type: 'agent_team_member',
+        parent_agent_id: user.agent_id,
+        contract_approved: !!user.agent?.contract_approved,
+      };
+      responseUser = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        role: 'agent_team_member',
+        permissions: [],
+        type: 'agent_team_member',
+        parent_agent_id: user.agent_id,
+        contract_approved: !!user.agent?.contract_approved,
       };
     }
 
-    // 2. Return Token
     return {
       access_token: this.jwtService.sign(payload),
-      partner: responseUser, // Frontend expects "partner" key
+      partner: responseUser,
     };
   }
 }

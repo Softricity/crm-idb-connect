@@ -1,4 +1,4 @@
-import { create } from "domain";
+
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5005';
 
@@ -86,6 +86,10 @@ export const UniversitiesAPI = {
     const res = await fetch(url, { headers: getHeaders(true, token) });
     return handleResponse(res);
   },
+  getAllWithAccess: async (token?: string) => {
+    const res = await fetch(`${API_BASE}/universities/all-with-access`, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
   getById: async (id: string, token?: string) => {
     const res = await fetch(`${API_BASE}/universities/${id}`, { headers: getHeaders(true, token) });
     return handleResponse(res);
@@ -163,10 +167,10 @@ export const CoursesAPI = {
 // --- Auth ---
 export const AuthAPI = {
   login: async (email: string, password: string) => {
-    const res = await fetch(`${API_BASE}/auth/login`, { 
-      method: 'POST', 
-      headers: getHeaders(false), 
-      body: JSON.stringify({ email, password }) 
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: getHeaders(false),
+      body: JSON.stringify({ email, password })
     });
     return handleResponse(res);
   },
@@ -175,8 +179,8 @@ export const AuthAPI = {
 // --- Leads (Public Lead Creation) ---
 export const LeadsAPI = {
   createLead: async (lead: any) => {
-    // POST /leads is public according to API_DOC
-    const res = await fetch(`${API_BASE}/leads`, { method: 'POST', headers: getHeaders(false), body: JSON.stringify(lead) });
+    // POST /leads is public according to API_DOC, but we need auth for agent context
+    const res = await fetch(`${API_BASE}/leads`, { method: 'POST', headers: getHeaders(true), body: JSON.stringify(lead) });
     return handleResponse(res);
   },
   getAll: async (filters?: {
@@ -217,16 +221,24 @@ export const LeadsAPI = {
     const res = await fetch(`${API_BASE}/leads/${id}`, { method: 'DELETE', headers: getHeaders(true, token) });
     return handleResponse(res);
   },
+  assignToAgent: async (leadId: string, agentId: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/leads/${leadId}/assign-agent`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify({ agentId })
+    });
+    return handleResponse(res);
+  },
 };
 
 // --- Agents ---
 export const AgentsAPI = {
   onboard: async (data: any) => {
     // POST /agents/onboard is public
-    const res = await fetch(`${API_BASE}/agents/onboard`, { 
-      method: 'POST', 
-      headers: getHeaders(false), 
-      body: JSON.stringify(data) 
+    const res = await fetch(`${API_BASE}/agents/onboard`, {
+      method: 'POST',
+      headers: getHeaders(false),
+      body: JSON.stringify(data)
     });
     return handleResponse(res);
   },
@@ -240,15 +252,58 @@ export const AgentsAPI = {
     return handleResponse(res);
   },
   updateStatus: async (id: string, status: string, reason?: string, token?: string) => {
-    const res = await fetch(`${API_BASE}/agents/${id}/status`, { 
-      method: 'PATCH', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify({ status, reason }) 
+    const res = await fetch(`${API_BASE}/agents/${id}/status`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify({ status, reason })
     });
     return handleResponse(res);
   },
   delete: async (id: string, token?: string) => {
     const res = await fetch(`${API_BASE}/agents/${id}`, { method: 'DELETE', headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+  getMyTeam: async (token?: string) => {
+    const res = await fetch(`${API_BASE}/agents/my/team`, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+  createTeamMember: async (data: any, token?: string) => {
+    const res = await fetch(`${API_BASE}/agents/my/team`, {
+      method: 'POST',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data)
+    });
+    return handleResponse(res);
+  },
+  updateTeamMember: async (id: string, data: any, token?: string) => {
+    const res = await fetch(`${API_BASE}/agents/my/team/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  deleteTeamMember: async (id: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/agents/my/team/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(true, token),
+    });
+    return handleResponse(res);
+  },
+  assignLeadToTeamMember: async (leadId: string, teamMemberId: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/agents/leads/${leadId}/assign-team-member`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify({ teamMemberId }),
+    });
+    return handleResponse(res);
+  },
+  createInquiry: async (data: any) => {
+    const res = await fetch(`${API_BASE}/agents/inquiry`, {
+      method: 'POST',
+      headers: getHeaders(false),
+      body: JSON.stringify(data),
+    });
     return handleResponse(res);
   },
 };
@@ -260,50 +315,50 @@ export const ApplicationsAPI = {
     return handleResponse(res);
   },
   updatePersonal: async (leadId: string, data: any, token?: string) => {
-    const res = await fetch(`${API_BASE}/applications/${leadId}/personal`, { 
-      method: 'PATCH', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify(data) 
+    const res = await fetch(`${API_BASE}/applications/${leadId}/personal`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data)
     });
     return handleResponse(res);
   },
   updateEducation: async (leadId: string, data: any, token?: string) => {
-    const res = await fetch(`${API_BASE}/applications/${leadId}/education`, { 
-      method: 'PATCH', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify(data) 
+    const res = await fetch(`${API_BASE}/applications/${leadId}/education`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data)
     });
     return handleResponse(res);
   },
   updatePreferences: async (leadId: string, data: any, token?: string) => {
-    const res = await fetch(`${API_BASE}/applications/${leadId}/preferences`, { 
-      method: 'PATCH', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify(data) 
+    const res = await fetch(`${API_BASE}/applications/${leadId}/preferences`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data)
     });
     return handleResponse(res);
   },
   updateTests: async (leadId: string, data: any, token?: string) => {
-    const res = await fetch(`${API_BASE}/applications/${leadId}/tests`, { 
-      method: 'PATCH', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify(data) 
+    const res = await fetch(`${API_BASE}/applications/${leadId}/tests`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data)
     });
     return handleResponse(res);
   },
   updateWorkExperience: async (leadId: string, data: any, token?: string) => {
-    const res = await fetch(`${API_BASE}/applications/${leadId}/work-experience`, { 
-      method: 'PATCH', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify(data) 
+    const res = await fetch(`${API_BASE}/applications/${leadId}/work-experience`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data)
     });
     return handleResponse(res);
   },
   updateVisa: async (leadId: string, data: any, token?: string) => {
-    const res = await fetch(`${API_BASE}/applications/${leadId}/visa`, { 
-      method: 'PATCH', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify(data) 
+    const res = await fetch(`${API_BASE}/applications/${leadId}/visa`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data)
     });
     return handleResponse(res);
   },
@@ -313,10 +368,10 @@ export const ApplicationsAPI = {
     if (authToken) {
       headers['Authorization'] = `Bearer ${authToken}`;
     }
-    const res = await fetch(`${API_BASE}/applications/${leadId}/documents`, { 
-      method: 'PATCH', 
-      headers, 
-      body: formData 
+    const res = await fetch(`${API_BASE}/applications/${leadId}/documents`, {
+      method: 'PATCH',
+      headers,
+      body: formData
     });
     return handleResponse(res);
   },
@@ -342,9 +397,9 @@ export const AnnouncementsAPI = {
     return handleResponse(res);
   },
   markAsRead: async (id: string, token?: string) => {
-    const res = await fetch(`${API_BASE}/announcements/${id}/mark-read`, { 
-      method: 'POST', 
-      headers: getHeaders(true, token) 
+    const res = await fetch(`${API_BASE}/announcements/${id}/mark-read`, {
+      method: 'POST',
+      headers: getHeaders(true, token)
     });
     return handleResponse(res);
   },
@@ -357,10 +412,10 @@ export const AnnouncementsAPI = {
 // --- Commissions ---
 export const CommissionsAPI = {
   create: async (data: any, token?: string) => {
-    const res = await fetch(`${API_BASE}/commissions`, { 
-      method: 'POST', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify(data) 
+    const res = await fetch(`${API_BASE}/commissions`, {
+      method: 'POST',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data)
     });
     return handleResponse(res);
   },
@@ -377,17 +432,17 @@ export const CommissionsAPI = {
     return handleResponse(res);
   },
   update: async (id: string, data: any, token?: string) => {
-    const res = await fetch(`${API_BASE}/commissions/${id}`, { 
-      method: 'PATCH', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify(data) 
+    const res = await fetch(`${API_BASE}/commissions/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data)
     });
     return handleResponse(res);
   },
   delete: async (id: string, token?: string) => {
-    const res = await fetch(`${API_BASE}/commissions/${id}`, { 
-      method: 'DELETE', 
-      headers: getHeaders(true, token) 
+    const res = await fetch(`${API_BASE}/commissions/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(true, token)
     });
     return handleResponse(res);
   },
@@ -396,10 +451,10 @@ export const CommissionsAPI = {
 // --- Support ---
 export const SupportAPI = {
   createTicket: async (data: any, token?: string) => {
-    const res = await fetch(`${API_BASE}/support`, { 
-      method: 'POST', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify(data) 
+    const res = await fetch(`${API_BASE}/support`, {
+      method: 'POST',
+      headers: getHeaders(true, token),
+      body: JSON.stringify(data)
     });
     return handleResponse(res);
   },
@@ -413,45 +468,54 @@ export const SupportAPI = {
     return handleResponse(res);
   },
   addComment: async (ticketId: string, message: string, token?: string) => {
-    const res = await fetch(`${API_BASE}/support/${ticketId}/comments`, { 
-      method: 'POST', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify({ message }) 
+    const res = await fetch(`${API_BASE}/support/${ticketId}/comments`, {
+      method: 'POST',
+      headers: getHeaders(true, token),
+      body: JSON.stringify({ message })
     });
     return handleResponse(res);
   },
   updateStatus: async (ticketId: string, status: string, token?: string) => {
-    const res = await fetch(`${API_BASE}/support/${ticketId}/status`, { 
-      method: 'PATCH', 
-      headers: getHeaders(true, token), 
-      body: JSON.stringify({ status }) 
+    const res = await fetch(`${API_BASE}/support/${ticketId}/status`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify({ status })
     });
     return handleResponse(res);
   },
 };
 
-export const DropdownsAPI = {
-  getPriorities: async (token?: string) => {
-    const res = await fetch(`${API_BASE}/dropdowns/priorities`, { headers: getHeaders(true, token) });
+export const ContractsAPI = {
+  getTemplate: async (token?: string) => {
+    const res = await fetch(`${API_BASE}/contracts/template`, { headers: getHeaders(true, token) });
     return handleResponse(res);
   },
-  getList: async (name: string, token?: string) => {
-    const res = await fetch(`${API_BASE}/dropdowns/categories?name=${name}`, { headers: getHeaders(true, token) });
+  getMyContract: async (token?: string) => {
+    const res = await fetch(`${API_BASE}/contracts/my-contract`, { headers: getHeaders(true, token) });
     return handleResponse(res);
   },
-};
+  sign: async (id: string, signatureUrl: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/contracts/${id}/sign`, {
+      method: 'PATCH',
+      headers: getHeaders(true, token),
+      body: JSON.stringify({ signature_url: signatureUrl }),
+    });
+    return handleResponse(res);
+  },
+  downloadPdf: async (id: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/contracts/${id}/download`, { headers: getHeaders(true, token) });
+    if (!res.ok) throw new Error('Failed to download contract PDF');
+    return res.blob();
+  },
+}
 
-export default {
-  AuthAPI,
-  CountriesAPI,
-  UniversitiesAPI,
-  CoursesAPI,
-  LeadsAPI,
-  AgentsAPI,
-  ApplicationsAPI,
-  DashboardAPI,
-  AnnouncementsAPI,
-  CommissionsAPI,
-  SupportAPI,
-  DropdownsAPI,
-};
+export const DropdownsAPI = {
+  getList: async (_key?: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/dropdowns/categories`, { headers: getHeaders(true, token) });
+    const categories = await handleResponse(res);
+    return (categories || []).map((c: any) => ({
+      name: c.name,
+      options: (c.options || []).map((o: any) => o.label || o.value),
+    }));
+  },
+}

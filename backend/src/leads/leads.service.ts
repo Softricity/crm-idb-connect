@@ -41,34 +41,27 @@ export class LeadsService {
     return bcrypt.hash(password, saltRounds);
   }
 
-  // Update the method signature to accept the User object
-  // Update the method signature to accept the User object
   async create(createLeadDto: CreateLeadDto, user?: any) { 
     
     const password = this.generateRandomPassword();
     const hashedPassword = await this.hashPassword(password);
 
-    // ✅ FIX: Explicitly define type as 'string | null'
     let partnerId: string | null = null;
     let agentId: string | null = null;
 
-    // 1. If User is logged in (from Token)
     if (user?.id) {
       if (user.type === 'agent') {
         agentId = user.id;
       } else {
-        // Default to Partner for 'admin', 'counsellor', etc.
         partnerId = user.id;
       }
     } 
-    // 2. Fallback: Manual DTO Input (Public/Admin Manual Create)
     else if (createLeadDto.created_by) {
       partnerId = createLeadDto.created_by;
     } else if (createLeadDto.agent_id) {
       agentId = createLeadDto.agent_id;
     }
     
-    // Default Country Fix
     const finalPreferredCountry = createLeadDto.preferred_country || "India"; 
 
     return this.prisma.leads.create({
@@ -83,11 +76,8 @@ export class LeadsService {
         utm_source: createLeadDto.utm_source,
         utm_medium: createLeadDto.utm_medium,
         utm_campaign: createLeadDto.utm_campaign,
-        
-        // Correctly assign creator based on logic above
         created_by: partnerId, 
         agent_id: agentId,     
-        
         assigned_to: createLeadDto.assigned_to,
         password: hashedPassword,
         is_flagged: false,
@@ -99,7 +89,6 @@ export class LeadsService {
   async bulkAssign(bulkAssignDto: BulkAssignDto, user: any) {
     const { leadIds, counsellorId } = bulkAssignDto;
 
-    // Optional: Check if counsellorId is valid
     if (counsellorId) {
       const counsellor = await this.prisma.partners.findUnique({
         where: { id: counsellorId },
@@ -130,7 +119,6 @@ export class LeadsService {
       data: { status, reason: reason || null },
     });
 
-    // 2. Log events for each lead (async, don't await loop to return fast)
     leadIds.forEach(async (leadId) => {
       await this.timelineService.logStatusChange(leadId, user.id, 'Previous', status);
     });
@@ -141,7 +129,6 @@ export class LeadsService {
   async bulkSendMessage(bulkMessageDto: BulkMessageDto, user: any) {
     const { leadIds, message } = bulkMessageDto;
 
-    // 1. Fetch all leads to get their phone numbers
     const leads = await this.prisma.leads.findMany({
       where: {
         id: { in: leadIds },
@@ -153,14 +140,11 @@ export class LeadsService {
       },
     });
 
-    // 2. Loop and send messages (e.g., via Twilio, Vonage, etc.)
     let successCount = 0;
     let failCount = 0;
 
     for (const lead of leads) {
       try {
-        // --- PSEUDO-CODE for sending SMS ---
-        // await smsProvider.send({ ... });
         successCount++;
       } catch (error) {
         console.error(`Failed to send message to lead ${lead.id}:`, error);
@@ -182,8 +166,8 @@ export class LeadsService {
     type?: string,
     branchId?: string,
     email?: string,
+    source?: string, // Feature 9: segmentation
   ) {
-    // If branchId provided, override scope to that branch (authorized users only)
     let where: any = { type: type || 'lead' };
 
     if (branchId) {
@@ -196,6 +180,13 @@ export class LeadsService {
     if (assignedTo) where.assigned_to = assignedTo;
     if (createdBy) where.created_by = createdBy;
     if (email) where.email = email;
+    
+    // Feature 9: Segmentation
+    if (source === 'agent') {
+      where.agent_id = { not: null };
+    } else if (source === 'direct') {
+      where.agent_id = null;
+    }
 
     return this.prisma.leads.findMany({
       where,
@@ -203,7 +194,6 @@ export class LeadsService {
         partners_leads_assigned_toTopartners: {
           select: { name: true, email: true },
         },
-        // Include application data when fetching applications
         ...(type === 'application' && {
           applications: {
             include: {
@@ -231,7 +221,6 @@ export class LeadsService {
         throw new BadRequestException('Invalid password.');
       }
 
-      // Return lead details excluding password
       const { password: _, ...leadData } = lead;
       return leadData;
     } catch (error) {
@@ -269,9 +258,6 @@ export class LeadsService {
       return lead;
     } catch (error) {
       console.error(error);
-      if (error instanceof Prisma.PrismaClientKnownRequestError) {
-        throw new Error('')
-      }
       throw new InternalServerErrorException('Failed to retrieve lead');
     }
   }
@@ -308,17 +294,21 @@ export class LeadsService {
   }
 
   async findMyApplications(userId?: string) {
+    if (!userId) {
+       // Feature 8: Head-office Leads isolation - never return all leads for agents
+       return [];
+    }
+
     const where: Prisma.leadsWhereInput = {
       type: { in: ['lead', 'application', 'visa'] },
+      // Feature 8: isolation
+      agent_id: { not: null }
     };
 
-    if (userId) {
-      // ✅ Check BOTH fields: "Did this user create it as a Partner OR as an Agent?"
-      where.OR = [
-        { created_by: userId },
-        { agent_id: userId }
-      ];
-    }
+    where.OR = [
+      { created_by: userId },
+      { agent_id: userId }
+    ];
 
     return this.prisma.leads.findMany({
       where,
@@ -326,7 +316,6 @@ export class LeadsService {
         partners_leads_assigned_toTopartners: {
           select: { name: true, email: true },
         },
-        // Optional: Include Agent details if needed
         agent: {
           select: { name: true, agency_name: true }
         }
@@ -335,15 +324,12 @@ export class LeadsService {
     });
   }
 
-  // Add a course to a lead (many-to-many implicit join)
   async addCourseToLead(leadId: string, courseId: string, user?: any) {
-    // Validate lead and course exist
     const lead = await this.prisma.leads.findUnique({ where: { id: leadId } });
     if (!lead) throw new NotFoundException('Lead not found');
     const course = await this.prisma.course.findUnique({ where: { id: courseId } });
     if (!course) throw new NotFoundException('Course not found');
 
-    // Connect course to lead
     await this.prisma.leads.update({
       where: { id: leadId },
       data: {
@@ -355,15 +341,12 @@ export class LeadsService {
     return { success: true };
   }
 
-  // Remove a course from a lead (many-to-many implicit join)
   async removeCourseFromLead(leadId: string, courseId: string, user?: any) {
-    // Validate lead and course exist
     const lead = await this.prisma.leads.findUnique({ where: { id: leadId } });
     if (!lead) throw new NotFoundException('Lead not found');
     const course = await this.prisma.course.findUnique({ where: { id: courseId } });
     if (!course) throw new NotFoundException('Course not found');
 
-    // Disconnect course from lead
     await this.prisma.leads.update({
       where: { id: leadId },
       data: {
@@ -373,5 +356,31 @@ export class LeadsService {
       },
     });
     return { success: true };
+  }
+
+  async assignTeamMember(leadId: string, teamMemberId: string, user: any) {
+    const agentId = user?.id || user?.userId;
+    if (!agentId) throw new BadRequestException('Invalid user context');
+
+    const member = await this.prisma.agentTeamMember.findUnique({
+      where: { id: teamMemberId },
+    });
+    if (!member || member.agent_id !== agentId) {
+      throw new NotFoundException('Team member not found');
+    }
+
+    const lead = await this.prisma.leads.findUnique({ where: { id: leadId } });
+    if (!lead) throw new NotFoundException('Lead not found');
+    if (lead.agent_id && lead.agent_id !== agentId) {
+      throw new BadRequestException('Lead is not owned by the agent');
+    }
+
+    return this.prisma.leads.update({
+      where: { id: leadId },
+      data: {
+        agent_id: agentId,
+        agent_team_member_id: teamMemberId,
+      },
+    });
   }
 }

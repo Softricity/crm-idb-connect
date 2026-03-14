@@ -70,15 +70,12 @@ export default function LeadFiltersDrawer({
   onOpenChange,
   compact = false,
 }: Props) {
-  // ---------- Local staged state (for smooth UX)
   const [draft, setDraft] = useState<LeadFilterState>(value);
 
-  // Sync draft when drawer opens (so re-open reflects latest applied filters)
   useEffect(() => {
     if (isOpen) setDraft(value);
   }, [isOpen, value]);
 
-  // Helpers that update draft only (no parent churn)
   const setDraftField = useCallback(
     <K extends keyof LeadFilterState>(key: K, val: LeadFilterState[K]) =>
       setDraft((prev) => ({ ...prev, [key]: val })),
@@ -97,7 +94,6 @@ export default function LeadFiltersDrawer({
     });
   }, []);
 
-  // Apply staged changes
   const apply = useCallback(
     (close: () => void) => {
       onChange(draft);
@@ -106,7 +102,6 @@ export default function LeadFiltersDrawer({
     [draft, onChange]
   );
 
-  // Active count (based on draft so user sees live state)
   const activeCount = useMemo(
     () =>
       (draft.search ? 1 : 0) +
@@ -119,7 +114,6 @@ export default function LeadFiltersDrawer({
     [draft]
   );
 
-  // Memoized selectedKey Sets (avoids Set re-allocations on each render)
   const coursesKeys = useMemo(() => new Set(draft.courses), [draft.courses]);
   const ownersKeys = useMemo(() => new Set(draft.owners), [draft.owners]);
   const statusesKeys = useMemo(() => new Set(draft.statuses), [draft.statuses]);
@@ -147,7 +141,6 @@ export default function LeadFiltersDrawer({
       >
         {(onClose) => (
           <>
-            {/* Header */}
             <DrawerHeader
               className="
                 sticky top-0 z-20 flex items-center justify-between
@@ -176,9 +169,7 @@ export default function LeadFiltersDrawer({
               </Button>
             </DrawerHeader>
 
-            {/* Body */}
             <DrawerBody className={`${compact ? "gap-4" : "gap-6"} p-5 sm:p-6`}>
-              {/* Quick Search */}
               <Card shadow="sm" className="border border-default-200 bg-background/70 backdrop-blur">
                 <CardBody className="gap-3 sm:gap-4">
                   <h3 className="text-sm font-semibold tracking-tight text-foreground">Quick Search</h3>
@@ -193,7 +184,6 @@ export default function LeadFiltersDrawer({
                 </CardBody>
               </Card>
 
-              {/* Core Filters */}
               <Card shadow="sm" className="border border-default-200 bg-background/70 backdrop-blur">
                 <CardBody className="gap-4">
                   <h3 className="text-sm font-semibold tracking-tight text-foreground">Core Filters</h3>
@@ -267,7 +257,7 @@ export default function LeadFiltersDrawer({
 
                     <DateRangePicker
                       label="Date Range"
-                      value={toRangeValue(draft.dateRange)} // controlled, no key -> smoother
+                      value={toRangeValue(draft.dateRange)}
                       onChange={(range) => {
                         if (!range || (!range.start && !range.end)) {
                           setDraftField("dateRange", undefined);
@@ -283,7 +273,6 @@ export default function LeadFiltersDrawer({
                     />
                   </div>
 
-                  {/* Active chips row */}
                   <Divider className="my-1" />
                   <div className="flex flex-wrap items-center gap-2 text-xs sm:text-sm">
                     {draft.search && (
@@ -346,7 +335,6 @@ export default function LeadFiltersDrawer({
               </Card>
             </DrawerBody>
 
-            {/* Footer */}
             <DrawerFooter
               className="
                 sticky bottom-0 z-20 bg-background

@@ -277,6 +277,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     }, {} as Record<string, string>);
 
     const token = cookies?.['auth-token'];
+    const userStr = cookies?.['auth-user'];
 
     if (!token) {
         return {
@@ -285,6 +286,22 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
                 permanent: false,
             },
         };
+    }
+
+    if (userStr) {
+        try {
+            const user = JSON.parse(userStr);
+            if (user?.type === 'agent_team_member') {
+                return {
+                    redirect: {
+                        destination: '/',
+                        permanent: false,
+                    },
+                };
+            }
+        } catch {
+            // ignore malformed cookie and continue normal auth flow
+        }
     }
 
     try {

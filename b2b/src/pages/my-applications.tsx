@@ -6,10 +6,12 @@ import { Select, SelectItem, Button, Input } from '@heroui/react';
 import { Plus, Search } from 'lucide-react';
 import { useState, useMemo } from 'react';
 import { useRouter } from 'next/router';
-import { LeadsAPI } from '@/lib/api';
+import { AgentsAPI, LeadsAPI } from '@/lib/api';
 
 interface MyApplicationsProps {
     allLeads: Lead[];
+    teamMembers: { id: string; name: string }[];
+    userType?: string;
     initialSearch?: string;
     initialStatus?: string;
     initialSortBy?: string;
@@ -19,6 +21,8 @@ interface MyApplicationsProps {
 
 const MyApplications = ({ 
     allLeads, 
+    teamMembers,
+    userType = 'agent',
     initialSearch = '', 
     initialStatus = '', 
     initialSortBy = 'created_at', 
@@ -32,14 +36,13 @@ const MyApplications = ({
     const [selectedOrder, setSelectedOrder] = useState(initialSortOrder);
     const [currentPage, setCurrentPage] = useState(initialPage);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+    const isTeamMember = userType === 'agent_team_member';
     
     const limit = 20;
 
-    // Client-side filtering, sorting, and pagination
     const { filteredLeads, totalPages, totalCount } = useMemo(() => {
         let filtered = [...allLeads];
 
-        // Apply search filter
         if (searchInput) {
             const searchLower = searchInput.toLowerCase();
             filtered = filtered.filter(lead => 
@@ -49,31 +52,25 @@ const MyApplications = ({
             );
         }
 
-        // Apply status filter
         if (selectedStatus) {
             filtered = filtered.filter(lead => lead.status?.toLowerCase() === selectedStatus.toLowerCase());
         }
 
-        // Apply sorting
         filtered.sort((a, b) => {
             let aValue: any = a[selectedSort as keyof Lead];
             let bValue: any = b[selectedSort as keyof Lead];
 
-            // Handle null/undefined values
             if (aValue === null || aValue === undefined) return 1;
             if (bValue === null || bValue === undefined) return -1;
 
-            // Convert to lowercase for string comparison
             if (typeof aValue === 'string') aValue = aValue.toLowerCase();
             if (typeof bValue === 'string') bValue = bValue.toLowerCase();
 
-            // Compare
             if (aValue < bValue) return selectedOrder === 'asc' ? -1 : 1;
             if (aValue > bValue) return selectedOrder === 'asc' ? 1 : -1;
             return 0;
         });
 
-        // Calculate pagination
         const totalCount = filtered.length;
         const totalPages = Math.ceil(totalCount / limit);
         const startIndex = (currentPage - 1) * limit;
@@ -120,16 +117,12 @@ const MyApplications = ({
 
     const handleSort = (columnKey: string) => {
         setCurrentPage(1);
-        
-        // Toggle order if clicking the same column, otherwise default to desc
         let newOrder = 'desc';
         if (selectedSort === columnKey) {
             newOrder = selectedOrder === 'desc' ? 'asc' : 'desc';
         }
-        
         setSelectedSort(columnKey);
         setSelectedOrder(newOrder);
-        
         const params = new URLSearchParams();
         if (searchInput) params.set('search', searchInput);
         if (selectedStatus) params.set('status', selectedStatus);
@@ -138,19 +131,17 @@ const MyApplications = ({
         router.push(`/my-applications?${params.toString()}`, undefined, { shallow: true });
     };
 
-    const handleClearFilters = () => {
-        setSearchInput('');
-        setSelectedStatus('');
-        setCurrentPage(1);
-        const params = new URLSearchParams();
-        params.set('sortBy', selectedSort);
-        params.set('sortOrder', selectedOrder);
-        router.push(`/my-applications?${params.toString()}`, undefined, { shallow: true });
+    const handleCreateSuccess = () => {
+        router.replace(router.asPath);
     };
 
-    const handleCreateSuccess = () => {
-        // Refresh the page to show new application
-        router.replace(router.asPath);
+    const handleAssignTeamMember = async (leadId: string, teamMemberId: string) => {
+        try {
+            await AgentsAPI.assignLeadToTeamMember(leadId, teamMemberId);
+            router.replace(router.asPath);
+        } catch (error: any) {
+            alert(error?.message || 'Failed to assign team member');
+        }
     };
 
     return (
@@ -165,10 +156,8 @@ const MyApplications = ({
                         Create New Application
                     </Button>
                 </div>
-                {/* Filters Section */}
                 <div className="bg-linear-to-br from-blue-700/80 to-blue-950 rounded-xl p-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-                        {/* Status Filter */}
                         <Select
                             label="Status"
                             placeholder="Select status"
@@ -190,19 +179,7 @@ const MyApplications = ({
                             ))}
                         </Select>
 
-                        {/* Search Input */}
                         <div className="md:col-span-2 flex items-center gap-2">
-                            {/* <div className="flex grow items-center bg-white px-3 py-1 rounded-xl focus-within:ring-2 focus-within:ring-white/50">
-                                <Search className="w-5 h-5 stroke-[1.25px] mr-1 text-gray-400" />
-                                <input
-                                    type="text"
-                                    className="grow focus:ring-0 focus:outline-none border-0 p-2"
-                                    placeholder="Search by name, email, or phone..."
-                                    value={searchInput}
-                                    onChange={(e) => setSearchInput(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                                />
-                            </div> */}
                             <Input
                                 isClearable
                                 classNames={{
@@ -219,7 +196,6 @@ const MyApplications = ({
                                         "dark:group-data-[focus=true]:bg-white",
                                         "cursor-text!",
                                     ],
-                                    mainWrapper: "",
                                 }}
                                 label="Search"
                                 startContent={<Search className="w-4 h-5 stroke-[1.25px] text-gray-400" />}
@@ -243,7 +219,6 @@ const MyApplications = ({
                     </div>
                 </div>
 
-                {/* Table */}
                 <ApplicationsTable
                     leads={filteredLeads}
                     totalPages={totalPages}
@@ -252,9 +227,11 @@ const MyApplications = ({
                     sortBy={selectedSort}
                     sortOrder={selectedOrder as 'asc' | 'desc'}
                     onSort={handleSort}
+                    teamMembers={teamMembers}
+                    onAssignTeamMember={handleAssignTeamMember}
+                    hideTeamAssignment={isTeamMember}
                 />
 
-                {/* Create Application Modal */}
                 <CreateApplicationModal
                     isOpen={isCreateModalOpen}
                     onClose={() => setIsCreateModalOpen(false)}
@@ -268,7 +245,6 @@ const MyApplications = ({
 export const getServerSideProps: GetServerSideProps = async (ctx) => {
     const { req, query } = ctx;
     
-    // Get auth token and user data from cookies
     const cookies = req.headers.cookie?.split(';').reduce((acc, cookie) => {
         const [key, value] = cookie.trim().split('=');
         acc[key] = decodeURIComponent(value);
@@ -287,7 +263,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         };
     }
 
-    // Parse user data to check permissions
     let user;
     try {
         user = JSON.parse(userStr);
@@ -300,17 +275,18 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         };
     }
 
-    const hasBranchManagePermission = user?.permissions?.some(
-        (perm: any) => perm.name === 'Branch Manage' || perm === 'Branch Manage'
-    );
-
     try {
-        const createdBy = hasBranchManagePermission ? undefined : user.id;
-        const data = await LeadsAPI.getMyApplications(createdBy, token);
+        const createdBy = user.id;
+        const [data, teamMembers] = await Promise.all([
+            LeadsAPI.getMyApplications(createdBy, token),
+            user.type === 'agent' ? AgentsAPI.getMyTeam(token) : Promise.resolve([]),
+        ]);
 
         return {
             props: {
                 allLeads: data || [],
+                teamMembers: (teamMembers || []).map((m: any) => ({ id: m.id, name: m.name })),
+                userType: user.type || 'agent',
                 initialSearch: (query.search as string) || '',
                 initialStatus: (query.status as string) || '',
                 initialSortBy: (query.sortBy as string) || 'created_at',
@@ -323,6 +299,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         return {
             props: {
                 allLeads: [],
+                teamMembers: [],
+                userType: user.type || 'agent',
                 initialSearch: '',
                 initialStatus: '',
                 initialSortBy: 'created_at',

@@ -28,21 +28,17 @@ import { BulkDeleteDto } from './dto/bulk-update.dto';
 export class LeadsController {
   constructor(private readonly leadsService: LeadsService) { }
   
-  // Public & Internal Lead Creation
-  // POST /leads
   @Public()
   @Post()
   async create(@Body() createLeadDto: CreateLeadDto, @GetUser() user?: any) {
     return this.leadsService.create(createLeadDto, user);
   }
   
-  // Get My Applications
   @Get('my-applications')
   findMyApplications(@Query('created_by') createdBy?: string) {
     return this.leadsService.findMyApplications(createdBy);
   }
   
-  // Get All Leads
   @Get()
   findAll(
     @GetUser() user: any,
@@ -51,17 +47,16 @@ export class LeadsController {
     @Query('type') type?: string,
     @Query('branch_id') branchId?: string,
     @Query('email') email?: string,
+    @Query('source') source?: string,
   ) {
-    return this.leadsService.findAll(user, assignedTo, createdBy, type, branchId, email);
+    return this.leadsService.findAll(user, assignedTo, createdBy, type, branchId, email, source);
   }
   
-  // Get Single Lead
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.leadsService.findOne(id);
   }
   
-  // Update Lead
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateLeadDto: Partial<CreateLeadDto>) {
     return this.leadsService.update(id, updateLeadDto);
@@ -102,7 +97,7 @@ export class LeadsController {
   bulkDelete(@Body() bulkDeleteDto: BulkDeleteDto) {
     return this.leadsService.bulkDelete(bulkDeleteDto);
   }
-  // Add a course to a lead (many-to-many)
+
   @Post(':id/courses')
   async addCourseToLead(
     @Param('id') leadId: string,
@@ -112,7 +107,6 @@ export class LeadsController {
     return this.leadsService.addCourseToLead(leadId, courseId, user);
   }
   
-  // Remove a course from a lead (many-to-many)
   @Delete(':id/courses/:courseId')
   async removeCourseFromLead(
     @Param('id') leadId: string,
@@ -120,5 +114,15 @@ export class LeadsController {
     @GetUser() user?: any
   ) {
     return this.leadsService.removeCourseFromLead(leadId, courseId, user);
+  }
+
+  @Patch(':id/assign-team-member')
+  @Roles(Role.Agent)
+  async assignTeamMember(
+    @Param('id') leadId: string,
+    @Body('teamMemberId') teamMemberId: string,
+    @GetUser() user: any,
+  ) {
+    return this.leadsService.assignTeamMember(leadId, teamMemberId, user);
   }
 }

@@ -72,10 +72,9 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
   useEffect(() => {
     if (preferredCountry) {
       const filtered = universities.filter(
-        (uni) => (uni as any).country.name === preferredCountry
+        (uni) => (uni as any).country?.name === preferredCountry
       );
       setFilteredUniversities(filtered);
-      // Reset university selection if it's not in the filtered list
       if (preferredUniversity && !filtered.find((u) => (u as any).name === preferredUniversity)) {
         setPreferredUniversity("");
       }
@@ -93,7 +92,6 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
           (course) => (course as any).universityId === selectedUni.id
         );
         setFilteredCourses(filtered);
-        // Reset course selection if it's not in the filtered list
         if (preferredCourse && !filtered.find((c) => c.name === preferredCourse)) {
           setPreferredCourse("");
         }
@@ -116,7 +114,6 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
   const fetchUniversities = async () => {
     try {
       const data = await UniversitiesAPI.getAll();
-      console.log("Fetched universities:", data);
       setUniversities(data || []);
       setFilteredUniversities(data || []);
     } catch (error) {
@@ -127,7 +124,6 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
   const fetchCourses = async () => {
     try {
       const data = await CoursesAPI.getAll();
-      console.log("Fetched courses:", data);
       setCourses(data || []);
     } catch (error) {
       console.error("Failed to fetch courses:", error);
@@ -135,7 +131,6 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
   };
 
   const handleSubmit = async () => {
-    // Validation
     if (!name || !email || !mobile || !preferredCourse) {
       alert("Please fill in all required fields");
       return;
@@ -144,43 +139,38 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
     setLoading(true);
 
     try {
-      // Get user data from cookies
-      const userStr = document.cookie
+      const userStr = typeof document !== 'undefined' ? document.cookie
         .split("; ")
         .find((row) => row.startsWith("auth-user="))
-        ?.split("=")[1];
+        ?.split("=")[1] : null;
       
-      let userId = null;
       let user: any = null;
       if (userStr) {
         try {
           user = JSON.parse(decodeURIComponent(userStr));
-          userId = user.id;
         } catch (e) {
           console.error("Failed to parse user data:", e);
         }
       }
 
-      // Step 1: Create lead
       const leadData = {
         name,
         email,
         mobile,
         preferred_course: preferredCourse,
         preferred_country: preferredCountry || undefined,
-        agent_id: userId,
-        branch_id: user.branch_id,
+        // Feature 7 Fix: derivational injection handled by backend via JWT
+        branch_id: user?.branch_id,
         type: "application",
         status: "new",
         utm_campaign: "B2B Portal",
         utm_source: "Referral",
-        utm_medium: userId ? user.name : "Agent",
+        utm_medium: user?.name || "Agent",
       };
 
       const createdLead = await LeadsAPI.createLead(leadData);
       const leadId = createdLead.id;
 
-      // Step 2: Create/Update application preferences with university
       if (preferredUniversity) {
         await ApplicationsAPI.updatePreferences(leadId, {
           preferred_country: preferredCountry || undefined,
@@ -190,7 +180,6 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
 
       alert("Application created successfully!");
       
-      // Reset form
       setName("");
       setEmail("");
       setMobile("");
@@ -206,8 +195,6 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
       }
     } catch (error: any) {
       console.error("Failed to create application:", error);
-      
-      // Handle duplicate errors
       if (error.status === 409) {
         if (error.field === 'email') {
           alert("A lead with this email already exists");
@@ -226,7 +213,6 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
 
   const handleClose = () => {
     if (!loading) {
-      // Reset form
       setName("");
       setEmail("");
       setMobile("");

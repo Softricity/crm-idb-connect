@@ -17,6 +17,8 @@ import {
   ModalBody,
   Button,
   Tooltip,
+  Select,
+  SelectItem,
 } from "@heroui/react";
 import { format } from "date-fns";
 import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
@@ -59,6 +61,9 @@ interface ApplicationsTableProps {
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
   onSort?: (columnKey: string) => void;
+  teamMembers?: { id: string; name: string }[];
+  onAssignTeamMember?: (leadId: string, teamMemberId: string) => Promise<void> | void;
+  hideTeamAssignment?: boolean;
 }
 
 export default function ApplicationsTable({
@@ -70,9 +75,13 @@ export default function ApplicationsTable({
   sortBy,
   sortOrder = 'desc',
   onSort,
+  teamMembers = [],
+  onAssignTeamMember,
+  hideTeamAssignment = false,
 }: ApplicationsTableProps) {
   const [studentPanelOpen, setStudentPanelOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [assigningLeadId, setAssigningLeadId] = useState<string | null>(null);
 
   const handleOpenStudentPanel = (lead: Lead) => {
     setSelectedLead(lead);
@@ -108,9 +117,7 @@ export default function ApplicationsTable({
     { key: "preferred_country", label: "COUNTRY", sortable: true },
     { key: "status", label: "STATUS", sortable: true },
     { key: "actions", label: "ACTIONS", sortable: false },
-  ];
-
-
+  ].concat(!hideTeamAssignment && teamMembers.length > 0 ? [{ key: "team", label: "TEAM ASSIGN", sortable: false }] : []);
 
   const renderCell = (lead: Lead, columnKey: React.Key) => {
     switch (columnKey) {
@@ -175,6 +182,31 @@ export default function ApplicationsTable({
               </Button>
             </Tooltip>
           </div>
+        );
+
+      case "team":
+        return (
+          <Select
+            size="sm"
+            placeholder="Assign member"
+            selectedKeys={[]}
+            isDisabled={assigningLeadId === lead.id}
+            onChange={async (e) => {
+              const teamMemberId = e.target.value;
+              if (!teamMemberId || !onAssignTeamMember) return;
+              try {
+                setAssigningLeadId(lead.id);
+                await onAssignTeamMember(lead.id, teamMemberId);
+              } finally {
+                setAssigningLeadId(null);
+              }
+            }}
+            className="min-w-[180px]"
+          >
+            {teamMembers.map((m) => (
+              <SelectItem key={m.id}>{m.name}</SelectItem>
+            ))}
+          </Select>
         );
 
       default:

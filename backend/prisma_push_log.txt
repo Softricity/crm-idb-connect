@@ -1,0 +1,12 @@
+Environment variables loaded from .env
+Prisma schema loaded from prisma\schema.prisma
+Datasource "db": PostgreSQL database "postgres", schema "public" at "localhost:5432"
+
+ΓÜá∩╕Å  There might be data loss when applying the changes:
+
+  ΓÇó You are about to drop the column `agent_role` on the `agents` table, which still contains 2 non-null values.
+
+  ΓÇó You are about to drop the column `allowed_countries` on the `universities` table, which still contains 7 non-null values.
+
+
+

@@ -39,7 +39,6 @@ model announcement_reads {
   @@unique([announcement_id, partner_id])
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model announcements {
   id                 String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   title              String
@@ -95,7 +94,6 @@ model application_preferences {
   scholarship_interest  Boolean?
   travel_history        String?
   
-  // ✅ NEW: Add link to the actual Course table
   course_id             String?      
   course                Course?      @relation(fields: [course_id], references: [id]) 
 
@@ -148,26 +146,21 @@ model ApplicationFinancials {
   created_at     DateTime        @default(now()) @db.Timestamptz(6)
   updated_at     DateTime        @default(now()) @updatedAt @db.Timestamptz(6)
 
-  // Relations
   application    applications    @relation(fields: [application_id], references: [id], onDelete: Cascade)
   notes          FinancialNote[]
 
   @@map("application_financials")
 }
 
-// 3. Create Model for Stage-Specific Notes
 model FinancialNote {
   id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   financial_id   String          @db.Uuid
-  
-  // The stage this note belongs to (e.g., note added under "Sent to Uni" block)
   stage          FinancialStatus 
   content        String
   
   created_by     String?         @db.Uuid
   created_at     DateTime        @default(now()) @db.Timestamptz(6)
 
-  // Relations
   financials     ApplicationFinancials @relation(fields: [financial_id], references: [id], onDelete: Cascade)
   partner        partners?             @relation(fields: [created_by], references: [id])
 
@@ -269,12 +262,14 @@ model leads {
   utm_medium                           String?
   utm_campaign                         String?
   assigned_to                          String?            @db.Uuid
+  assigned_agent_id                    String?            @db.Uuid
   created_at                           DateTime           @default(now()) @db.Timestamptz(6)
   created_by                           String?            @db.Uuid
-  agent_id                             String?             @db.Uuid 
-  agent                                Agent?              @relation(fields: [agent_id], references: [id])
+  agent_id                             String?            @db.Uuid 
+  agent                                Agent?             @relation(fields: [agent_id], references: [id])
+  assigned_agent                       Agent?             @relation("LegacyAssignedAgent", fields: [assigned_agent_id], references: [id])
   reason                               String?
-  courses               Course[]           @relation("LeadCourses")
+  courses                              Course[]           @relation("LeadCourses")
   password                             String?            @default("")
   is_flagged                           Boolean            @default(false)
   branch_id                            String?            @db.Uuid
@@ -288,6 +283,9 @@ model leads {
   timeline                             timeline[]
   commissions                          Commission[]
   chat_messages                        ChatMessage[]
+  
+  agent_team_member_id                 String?           @db.Uuid
+  agent_team_member                    AgentTeamMember?  @relation(fields: [agent_team_member_id], references: [id])
 }
 
 model notes {
@@ -316,7 +314,6 @@ model offline_payments {
   partners     partners? @relation(fields: [receiver], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model partners {
   id                                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   role_id                           String               @db.Uuid
@@ -351,45 +348,45 @@ model partners {
 }
 
 model Agent {
-  id             String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  // Login Credentials
-  email          String   @unique
-  mobile         String   @unique
-  password       String
-  
-  // Profile Info
-  name           String
-  agency_name    String
-  website        String?
-  
-  // Location & Access Control
-  region         String   // 👈 Requested for Region-based access control
-  country        String
-  state          String
-  city           String
-  address        String
-  postal_code    String?
-  
-  // Business Details
-  business_reg_no String? // Tax ID or Registration Number
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email            String   @unique
+  mobile           String   @unique
+  password         String
+  name             String
+  agency_name      String
+  website          String?
+  region           String   
+  country          String
+  state            String
+  city             String
+  address          String
+  postal_code      String?
+  business_reg_no  String?
   established_year Int?
-  
-  // Onboarding Status
-  status         AgentStatus @default(PENDING) // PENDING -> IN_REVIEW -> APPROVED
-  is_active      Boolean     @default(true)
+  status           AgentStatus @default(PENDING)
+  agent_role       AgentRole?  @default(OWNER)
+  parent_id        String?     @db.Uuid
+  is_active        Boolean     @default(true)
   rejection_reason String?
 
-  // Relations
-  documents      AgentDocument[]
-  commissions    Commission[]
-  sent_messages   ChatMessage[]
+  documents        AgentDocument[]
+  commissions      Commission[]
+  sent_messages    ChatMessage[]
 
-  branch_id      String?         @db.Uuid
-  branch         Branch?         @relation(fields: [branch_id], references: [id])
+  branch_id        String?         @db.Uuid
+  branch           Branch?         @relation(fields: [branch_id], references: [id])
+  parent_agent     Agent?          @relation("LegacyAgentHierarchy", fields: [parent_id], references: [id])
+  child_agents     Agent[]         @relation("LegacyAgentHierarchy")
   
-  created_at     DateTime @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  created_at       DateTime @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime @default(now()) @updatedAt @db.Timestamptz(6)
   leads            leads[]
+  legacy_assigned_leads leads[] @relation("LegacyAssignedAgent")
+
+  university_access AgentUniversityAccess[]
+  contracts         AgentContract[]
+  contract_approved Boolean @default(false)
+  team_members      AgentTeamMember[]
 
   @@map("agents")
 }
@@ -397,16 +394,80 @@ model Agent {
 model AgentDocument {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   agent_id    String   @db.Uuid
-  title       String   // e.g., "Business License", "ID Proof"
+  title       String   
   file_url    String
   uploaded_at DateTime @default(now()) @db.Timestamptz(6)
-  
-  // Verification for individual documents
   is_verified Boolean  @default(false)
-  
   agent       Agent    @relation(fields: [agent_id], references: [id], onDelete: Cascade)
 
   @@map("agent_documents")
+}
+
+model AgentUniversityAccess {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id      String   @db.Uuid
+  university_id String
+  granted_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  agent      Agent      @relation(fields: [agent_id], references: [id], onDelete: Cascade)
+  university University @relation(fields: [university_id], references: [id], onDelete: Cascade)
+
+  @@unique([agent_id, university_id])
+  @@map("agent_university_access")
+}
+
+model AgentContract {
+  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id        String              @db.Uuid
+  title           String
+  content         String              
+  is_signed       Boolean             @default(false)
+  signature_url   String?             
+  signed_at       DateTime?           @db.Timestamptz(6)
+  status          AgentContractStatus @default(PENDING)
+  approved_by     String?             @db.Uuid
+  approved_at     DateTime?           @db.Timestamptz(6)
+  rejection_note  String?
+  created_at      DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+  agent           Agent               @relation(fields: [agent_id], references: [id], onDelete: Cascade)
+
+  @@map("agent_contracts")
+}
+
+model AgentTeamMember {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id    String   @db.Uuid
+  name        String
+  email       String   @unique
+  mobile      String   @unique
+  password    String
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  agent       Agent    @relation(fields: [agent_id], references: [id], onDelete: Cascade)
+  leads       leads[]
+
+  @@map("agent_team_members")
+}
+
+model AgentInquiry {
+  id               String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String
+  email            String
+  mobile           String
+  company_name     String?
+  website          String?
+  country          String?
+  city             String?
+  experience_years Int?
+  student_volume   String?       
+  message          String?
+  status           InquiryStatus @default(NEW)
+  created_at       DateTime      @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime      @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("agent_inquiries")
 }
 
 enum AgentStatus {
@@ -415,6 +476,25 @@ enum AgentStatus {
   APPROVED
   REJECTED
   SUSPENDED
+}
+
+enum AgentRole {
+  OWNER
+  MEMBER
+}
+
+enum AgentContractStatus {
+  PENDING
+  SIGNED
+  APPROVED
+  REJECTED
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  CONVERTED
+  REJECTED
 }
 
 model timeline {
@@ -436,26 +516,16 @@ model timeline {
 
 model Commission {
   id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  
-  // Context: What is this commission for?
   lead_id         String?          @db.Uuid
   application_id  String?          @db.Uuid
-  
-  // Beneficiary: Who receives it?
   agent_id        String?          @db.Uuid
-  
-  // Financial Details
   amount          Decimal          @db.Decimal(10, 2)
   currency        String           @default("INR")
-  
-  // Status Tracking
   status          CommissionStatus @default(PENDING)
   remarks         String?
-  
   created_at      DateTime         @default(now()) @db.Timestamptz(6)
   updated_at      DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
 
-  // Relations
   lead            leads?           @relation(fields: [lead_id], references: [id])
   application     applications?    @relation(fields: [application_id], references: [id])
   agent           Agent?           @relation(fields: [agent_id], references: [id]) 
@@ -520,11 +590,13 @@ model University {
   courses   Course[]
   country   Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
 
-  commission_type   CommissionType? @default(PERCENTAGE) // or FIXED
-  commission_value  Decimal?        @db.Decimal(10, 2)   // e.g., 10.00 (%) or 500.00 ($)
-  currency          String?         @default("INR")      // Optional, if FIXED type
+  commission_type   CommissionType? @default(PERCENTAGE) 
+  commission_value  Decimal?        @db.Decimal(10, 2)   
+  currency          String?         @default("INR")      
 
   excluded_countries  String[]   @default([])
+  allowed_countries   String[]   @default([])
+  agent_access        AgentUniversityAccess[]
 
   @@map("universities")
 }
@@ -559,7 +631,7 @@ model Course {
 }
 
 model todos {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid // Changed from just @id
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid 
   title      String
   created_by String    @db.Uuid
   completed  Boolean   @default(false)
@@ -579,55 +651,40 @@ model OptionList {
 
 model ChatMessage {
   id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  
-  // The Room (Always linked to a specific Lead/Student)
   lead_id         String      @db.Uuid
-  
-  // Who sent it? (Nullable Foreign Keys for Data Integrity)
   partner_id      String?     @db.Uuid
   agent_id        String?     @db.Uuid
-  // Note: If both partner_id and agent_id are null, it implies the Student (Lead) sent it.
-  
   sender_type     SenderType
   message         String
   is_read         Boolean     @default(false)
-  
   created_at      DateTime    @default(now()) @db.Timestamptz(6)
 
-  // Relations
   lead            leads       @relation(fields: [lead_id], references: [id], onDelete: Cascade)
   partner         partners?   @relation(fields: [partner_id], references: [id])
   agent           Agent?      @relation(fields: [agent_id], references: [id])
 
-  @@index([lead_id]) // Crucial for fetching chat history quickly
+  @@index([lead_id]) 
   @@map("chat_messages")
 }
 
-// 1. Create the Category Model
 model DropdownCategory {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String   @unique // e.g. "reasons", "visa_status"
-  label       String?  // e.g. "Rejection Reasons" (Human readable)
-  is_system   Boolean  @default(false) // If true, cannot be deleted (e.g. built-ins)
-  
+  name        String   @unique 
+  label       String?  
+  is_system   Boolean  @default(false) 
   options     DropdownOption[]
-  
   created_at  DateTime @default(now()) @db.Timestamptz(6)
   updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
 
   @@map("dropdown_categories")
 }
 
-// 2. Update existing Option Model
 model DropdownOption {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   label       String
   value       String
-  
-  // Link to the new Category table
   category_id String   @db.Uuid
   category    DropdownCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
-
   is_active   Boolean  @default(true)
   created_at  DateTime @default(now()) @db.Timestamptz(6)
 
@@ -636,56 +693,34 @@ model DropdownOption {
 
 model SupportTicket {
   id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  
-  // Display ID (e.g. 1001, 1002) - easier for humans than UUIDs
   case_number     Int            @default(autoincrement())
-
-  // Creator (The Partner/Agent)
   partner_id      String         @db.Uuid
-  
-  // Dynamic Dropdown Fields (Stored as IDs or Values)
-  topic           String         // e.g., "Agent Portal Management"
-  category        String         // e.g., "Bank Details Upload"
-  
-  // Optional Link to University (if the issue is about a specific institution)
-  institution_id  String?        // Link to University table
-  
+  topic           String         
+  category        String         
+  institution_id  String?        
   subject         String
   description     String
-  
   priority        TicketPriority @default(MEDIUM)
   status          TicketStatus   @default(OPEN)
-  
-  // File Uploads
   attachment_urls String[]       @default([])
-
   created_at      DateTime       @default(now()) @db.Timestamptz(6)
   updated_at      DateTime       @default(now()) @updatedAt @db.Timestamptz(6)
 
-  // Relations
   partner         partners       @relation(fields: [partner_id], references: [id], onDelete: Cascade)
   comments        SupportTicketComment[]
-  // university      University?    @relation(fields: [institution_id], references: [id]) // Uncomment if you want strict relation
 
   @@map("support_tickets")
 }
 
-// 3. Conversation/Comments inside a Ticket
 model SupportTicketComment {
   id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   ticket_id       String         @db.Uuid
-  
-  // Who wrote this? (Could be Partner OR Admin/Internal Team)
   sender_id       String         @db.Uuid 
-  sender_type     String         // "PARTNER" or "ADMIN"
-  sender_name     String         // Snapshot of name for easier display
-  
+  sender_type     String         
+  sender_name     String         
   message         String
   attachment_urls String[]       @default([])
-  
   created_at      DateTime       @default(now()) @db.Timestamptz(6)
-
-  // Relations
   ticket          SupportTicket  @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
 
   @@map("support_ticket_comments")
@@ -697,9 +732,9 @@ enum CommissionType {
 }
 
 enum SenderType {
-  PARTNER // Counsellor/Admin
-  LEAD    // Student
-  AGENT   // (Future proofing)
+  PARTNER 
+  LEAD    
+  AGENT   
 }
 
 enum academic_level_enum {

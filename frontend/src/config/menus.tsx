@@ -16,7 +16,7 @@ import {
   Settings,
   ShieldUser,
   Link,
-  SlidersHorizontal, // Imported for Customise icon
+  SlidersHorizontal,
 } from "lucide-react";
 import {
   CoursesPermission,
@@ -73,7 +73,7 @@ export const menus: MenuItem[] = [
   // Settings (Super Admin Only)
   { title: "Settings", type: "title" },
   { title: "Branches", icon: <Building size={20} />, type: "link", link: "/settings/branches", requiredPermissions: ["Branch Manage"] },
-  { title: "Customise", icon: <SlidersHorizontal size={20} />, type: "link", link: "/customise" }, // ✅ Added here
+  { title: "Customise", icon: <SlidersHorizontal size={20} />, type: "link", link: "/customise" },
 ];
 
 

@@ -60,12 +60,10 @@ export const useLeadStore = create<LeadState>((set, get) => ({
   fetchLeadsBasedOnPermission: async (userId: string, permissions: string[], branchId?: string) => {
     set({ loading: true });
     try {
-      // If user has LEAD_VIEW permission, fetch all leads
       if (canViewAllLeads(permissions)) {
         const data = await api.LeadsAPI.fetchLeads(branchId);
         set({ leads: data as Lead[] });
       } else {
-        // Otherwise, fetch only leads assigned to this user
         console.log("User is restricted to their own leads.");
         const data = await api.LeadsAPI.getCounsellorLeads(userId, branchId);
         set({ leads: data as Lead[] });
@@ -114,7 +112,6 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     try {
       const newLead = await api.LeadsAPI.createLead(lead);
       set((state) => ({ leads: [...state.leads, newLead] }));
-      // timeline logging will be handled by the backend
     } catch (err) {
       console.error("Error adding lead:", err);
       throw err;
@@ -128,10 +125,7 @@ export const useLeadStore = create<LeadState>((set, get) => ({
 
   updateLead: async (id, updates) => {
     try {
-      // Backend API handles both the update and timeline logging
       const updatedLead = await api.LeadsAPI.updateLead(id, updates);
-      
-      // Update the local Zustand state
       set((state) => ({
         leads: state.leads.map((lead) =>
           lead.id === id ? { ...lead, ...updatedLead } : lead

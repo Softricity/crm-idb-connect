@@ -113,6 +113,12 @@ export default function LoginPage() {
                 Register as Agent
               </a>
             </p>
+            <p className="text-sm text-gray-600 mt-2">
+              Want to partner with us?{' '}
+              <a href="/become-an-agent" className="text-blue-600 hover:text-blue-700 font-semibold">
+                Become an Agent
+              </a>
+            </p>
           </div>
         </CardBody>
       </Card>

@@ -320,8 +320,8 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         const status = query.status as string || '';
         const data = await SupportAPI.getAllTickets(status, token);
         const list = await DropdownsAPI.getList("", token);
-        const topics = list.find(item => item.name === "ticket_topics") || { options: [] };
-        const categories = list.find(item => item.name === "ticket_category") || { options: [] };
+        const topics = list.find((item: any) => item.name === "ticket_topics") || { options: [] };
+        const categories = list.find((item: any) => item.name === "ticket_category") || { options: [] };
         console.log(topics, categories);
 
         return {

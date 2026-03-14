@@ -1,9 +1,8 @@
 import CourseSearching from '@/components/home/CourseSearching';
-import { Plus } from 'lucide-react';
+import UniversityGrid, { HomeUniversity } from '@/components/home/UniversityGrid';
 import { GetServerSideProps } from 'next';
-import Link from 'next/link';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { CountriesAPI, CoursesAPI } from '@/lib/api';
+import { CountriesAPI, CoursesAPI, UniversitiesAPI } from '@/lib/api';
 
 interface Country {
   id: string;
@@ -20,12 +19,19 @@ interface FilterOptions {
 interface HomeProps {
   countries: Country[];
   filterOptions: FilterOptions;
+  universities: HomeUniversity[];
 }
 
-const Home = ({ countries, filterOptions }: HomeProps) => {
+const Home = ({ countries, filterOptions, universities }: HomeProps) => {
   return (
     <ProtectedRoute>
-      <CourseSearching initialCountries={countries} initialFilterOptions={filterOptions} /> 
+      <div className="space-y-8">
+        <CourseSearching initialCountries={countries} initialFilterOptions={filterOptions} />
+        <div className="space-y-3">
+          <h2 className="text-xl font-semibold">Universities</h2>
+          <UniversityGrid universities={universities} />
+        </div>
+      </div>
     </ProtectedRoute>
   );
 }
@@ -51,19 +57,18 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     };
   }
 
-  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5005';
-
   try {
-    // Fetch countries and filter options using centralized API
-    const [countries, filterOptions] = await Promise.all([
+    const [countries, filterOptions, universities] = await Promise.all([
       CountriesAPI.getAll(token),
       CoursesAPI.getFilters(token),
+      UniversitiesAPI.getAllWithAccess(token),
     ]);
 
     return {
       props: {
         countries: countries || [],
         filterOptions: filterOptions || { countries: [], universities: [], levels: [] },
+        universities: universities || [],
       },
     };
   } catch (error) {
@@ -72,6 +77,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
       props: {
         countries: [],
         filterOptions: { countries: [], universities: [], levels: [] },
+        universities: [],
       },
     };
   }

@@ -9,15 +9,20 @@ import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Badge } from "@h
 
 export default function Header() {
   const { partner, logout } = useAuth();
+  const enforce = process.env.NEXT_PUBLIC_ENFORCE_CONTRACT_GATE === 'true';
+  const contractApproved = partner?.contract_approved === true;
+  const restrictByContract = enforce && !contractApproved;
+  const isTeamMember = partner?.type === 'agent_team_member';
   
   const urls = [
     { name: "Home", path: "/" },
+    { name: "Contract Hub", path: "/contract-hub" }, // Feature 3: Swapped
     { name: "My Applications", path: "/my-applications" },
-    { name: "Contract Hub", path: "/contract-hub" },
     { name: "Commission Hub", path: "/commission-hub" },
+    { name: "Team", path: "/team" },
     { name: "Analytics", path: "/analytics" },
     { name: "Support", path: "/support" },
-  ];
+  ].filter((u) => !(isTeamMember && u.path === '/commission-hub'));
 
   const current = usePathname();
 
@@ -77,11 +82,15 @@ export default function Header() {
               {urls.map((url) => {
                 const isActive = current === url.path;
 
+                const locked = restrictByContract && url.path !== '/contract-hub';
+
                 return (
                   <Link
                     key={url.name}
-                    href={url.path}
-                    className="relative mx-2 px-4 py-2 text-nowrap"
+                    href={locked ? '#' : url.path}
+                    className={`relative mx-2 px-4 py-2 text-nowrap ${locked ? 'opacity-40 pointer-events-none' : ''}`}
+                    aria-disabled={locked}
+                    title={locked ? 'Sign and get approval in Contract Hub to unlock' : undefined}
                   >
                     {isActive && (
                       <motion.div
