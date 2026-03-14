@@ -19,7 +19,7 @@ interface ContractHubProps {
 }
 
 export default function ContractHub({ contract, token }: ContractHubProps) {
-  const [signatureUrl, setSignatureUrl] = useState('');
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
   const stateLabel = useMemo(() => {
@@ -31,10 +31,11 @@ export default function ContractHub({ contract, token }: ContractHubProps) {
   }, [contract]);
 
   const handleSign = async () => {
-    if (!contract || !signatureUrl.trim()) return;
+    if (!contract || !signatureFile) return;
     setLoading(true);
     try {
-      await ContractsAPI.sign(contract.id, signatureUrl, token);
+      const uploaded = await ContractsAPI.uploadSignature(contract.id, signatureFile, token);
+      await ContractsAPI.sign(contract.id, uploaded.signature_url, token);
       window.location.reload();
     } catch (err: any) {
       alert(err?.message || 'Failed to sign contract');
@@ -99,10 +100,10 @@ export default function ContractHub({ contract, token }: ContractHubProps) {
               {(contract.status === 'PENDING' || contract.status === 'REJECTED') ? (
                 <div className="flex gap-2 items-end">
                   <Input
-                    label="Signature Image URL"
-                    value={signatureUrl}
-                    onChange={(e) => setSignatureUrl(e.target.value)}
-                    placeholder="https://..."
+                    type="file"
+                    label="Upload Signature File"
+                    accept="image/*,.pdf"
+                    onChange={(e) => setSignatureFile(e.target.files?.[0] || null)}
                   />
                   <Button color="primary" onPress={handleSign} isLoading={loading} className="text-white">
                     Sign Contract

@@ -257,6 +257,8 @@ model leads {
   type                                 String
   preferred_country                    String
   preferred_course                     String?
+  exam_taken                           String?
+  exam_score                           String?
   status                               String
   utm_source                           String?
   utm_medium                           String?

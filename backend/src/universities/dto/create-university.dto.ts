@@ -1,4 +1,4 @@
-import { IsString, IsOptional, IsUUID, IsEnum, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsUUID, IsEnum, IsNumber, IsArray } from 'class-validator';
 import { CommissionType } from '@prisma/client';
 
 export class CreateUniversityDto {
@@ -27,4 +27,9 @@ export class CreateUniversityDto {
   @IsOptional()
   @IsString()
   currency?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  allowed_countries?: string[];
 }

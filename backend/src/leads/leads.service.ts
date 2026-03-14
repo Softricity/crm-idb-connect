@@ -73,6 +73,8 @@ export class LeadsService {
         status: createLeadDto.status || 'new',
         preferred_country: finalPreferredCountry,
         preferred_course: createLeadDto.preferred_course,
+        exam_taken: createLeadDto.exam_taken,
+        exam_score: createLeadDto.exam_score,
         utm_source: createLeadDto.utm_source,
         utm_medium: createLeadDto.utm_medium,
         utm_campaign: createLeadDto.utm_campaign,

@@ -79,6 +79,32 @@ export default function ApplicationPreferences({
           </Select>
         </div>
 
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Exam Taken</Label>
+          <Select
+            placeholder="Select Exam"
+            selectedKeys={new Set([formData.exam_taken ?? ""])}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, exam_taken: e.target.value || "" }))
+            }
+          >
+            <SelectItem key="">None</SelectItem>
+            <SelectItem key="IELTS">IELTS</SelectItem>
+            <SelectItem key="PTE">PTE</SelectItem>
+          </Select>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-sm font-medium">Exam Score</Label>
+          <Input
+            placeholder="e.g. 7.5 / 65"
+            value={formData.exam_score || ""}
+            onChange={(e) =>
+              setFormData((prev) => ({ ...prev, exam_score: e.target.value }))
+            }
+          />
+        </div>
+
         {!isRestrictedToOwnLeads(user?.permissions || []) && (
           <div className="space-y-2">
             <Label className="text-sm font-medium">Assign to Counsellor</Label>

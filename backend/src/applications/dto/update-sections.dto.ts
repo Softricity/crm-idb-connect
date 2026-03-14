@@ -65,10 +65,25 @@ export class PreferencesRecordDto {
 }
 
 export class UpdatePreferencesDto {
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => PreferencesRecordDto)
-  records: PreferencesRecordDto[];
+  records?: PreferencesRecordDto[];
+
+  // Backward-compatible flat payload support:
+  // { preferred_country: "...", preferred_university: "..." }
+  @IsOptional() @IsString() id?: string;
+  @IsOptional() @IsString() preferred_country?: string;
+  @IsOptional() @IsString() preferred_course_type?: string;
+  @IsOptional() @IsString() preferred_course_name?: string;
+  @IsOptional() @IsString() preferred_intake?: string;
+  @IsOptional() @IsString() preferred_university?: string;
+  @IsOptional() @IsString() backup_country?: string;
+  @IsOptional() @IsString() study_mode?: string;
+  @IsOptional() @IsString() budget_range?: string;
+  @IsOptional() @IsBoolean() scholarship_interest?: boolean;
+  @IsOptional() @IsString() travel_history?: string;
 }
 
 // --- 4. Language / Aptitude Tests DTO (Array) ---

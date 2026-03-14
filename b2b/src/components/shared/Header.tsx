@@ -22,7 +22,7 @@ export default function Header() {
     { name: "Team", path: "/team" },
     { name: "Analytics", path: "/analytics" },
     { name: "Support", path: "/support" },
-  ].filter((u) => !(isTeamMember && u.path === '/commission-hub'));
+  ].filter((u) => !(isTeamMember && (u.path === '/commission-hub' || u.path === '/team')));
 
   const current = usePathname();
 

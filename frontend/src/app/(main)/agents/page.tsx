@@ -15,14 +15,15 @@ export default function Page() {
   const [inquiries, setInquiries] = useState<any[]>([]);
 
   const load = async () => {
-    const [a, u, iq] = await Promise.all([
+    const [aRes, uRes, iqRes] = await Promise.allSettled([
       AgentsAPI.getAll(),
       UniversitiesAPI.getAll(),
       AgentsAPI.getInquiries(),
     ]);
-    setAgents(a || []);
-    setUniversities(u || []);
-    setInquiries(iq || []);
+
+    setAgents(aRes.status === 'fulfilled' ? (aRes.value || []) : []);
+    setUniversities(uRes.status === 'fulfilled' ? (uRes.value || []) : []);
+    setInquiries(iqRes.status === 'fulfilled' ? (iqRes.value || []) : []);
   };
 
   useEffect(() => {

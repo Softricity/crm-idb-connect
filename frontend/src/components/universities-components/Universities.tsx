@@ -19,6 +19,7 @@ interface University {
   name: string;
   logo?: string;
   city?: string;
+  allowed_countries?: string[];
   countryId: string;
   country?: Country;
   _count?: { courses: number };
@@ -61,7 +62,7 @@ export default function Universities() {
   const { isOpen: isCourseOpen, onOpen: onCourseOpen, onClose: onCourseClose } = useDisclosure();
 
   const [countryForm, setCountryForm] = useState({ name: '', flag: '' });
-  const [universityForm, setUniversityForm] = useState({ name: '', logo: '', city: '' });
+  const [universityForm, setUniversityForm] = useState({ name: '', logo: '', city: '', allowed_countries: [] as string[] });
   const [courseForm, setCourseForm] = useState({
     name: '', level: '', category: '', duration: 0,
     feeType: 'Per Year', feeCurrency: 'PLN', originalFee: 0,
@@ -182,7 +183,7 @@ export default function Universities() {
           countryId: selectedCountry,
         });
       }
-      setUniversityForm({ name: '', logo: '', city: '' });
+      setUniversityForm({ name: '', logo: '', city: '', allowed_countries: [] });
       setEditingUniversity(null);
       onUniversityClose();
       fetchUniversities(selectedCountry);
@@ -424,6 +425,11 @@ export default function Universities() {
                             {uni._count?.courses || 0} courses
                             {uni.city && ` • ${uni.city}`}
                           </p>
+                          {uni.allowed_countries && uni.allowed_countries.length > 0 ? (
+                            <p className="text-xs text-blue-600 mt-1">
+                              Visible For: {uni.allowed_countries.join(', ')}
+                            </p>
+                          ) : null}
                         </div>
                         <div className="flex gap-1 flex-shrink-0">
                           {hasPermission(userPermissions, UniversityPermission.UNIVERSITY_UPDATE) && (
@@ -433,7 +439,12 @@ export default function Universities() {
                               variant="light"
                               onPress={() => {
                                 setEditingUniversity(uni);
-                                setUniversityForm({ name: uni.name, logo: uni.logo || '', city: uni.city || '' });
+                                setUniversityForm({
+                                  name: uni.name,
+                                  logo: uni.logo || '',
+                                  city: uni.city || '',
+                                  allowed_countries: uni.allowed_countries || [],
+                                });
                                 onUniversityOpen();
                               }}
                             >
@@ -629,7 +640,7 @@ export default function Universities() {
       <Drawer isOpen={isUniversityOpen} onClose={() => {
         onUniversityClose();
         setEditingUniversity(null);
-        setUniversityForm({ name: '', logo: '', city: '' });
+        setUniversityForm({ name: '', logo: '', city: '', allowed_countries: [] });
       }} placement="right" size="md">
         <DrawerContent className="p-6">
           <DrawerHeader className="text-xl font-semibold mb-4">
@@ -653,12 +664,28 @@ export default function Universities() {
                 value={universityForm.logo}
                 onChange={(e) => setUniversityForm({ ...universityForm, logo: e.target.value })}
               />
+              <Select
+                label="Visible For Countries (Optional)"
+                placeholder="Select countries"
+                selectionMode="multiple"
+                selectedKeys={new Set(universityForm.allowed_countries)}
+                onSelectionChange={(keys) => {
+                  const values = keys === 'all'
+                    ? countries.map((country) => country.name)
+                    : Array.from(keys as Set<React.Key>).map(String);
+                  setUniversityForm({ ...universityForm, allowed_countries: values });
+                }}
+              >
+                {countries.map((country) => (
+                  <SelectItem key={country.name}>{country.name}</SelectItem>
+                ))}
+              </Select>
             </div>
             <div className="flex gap-2 mt-6">
               <Button variant="light" onPress={() => {
                 onUniversityClose();
                 setEditingUniversity(null);
-                setUniversityForm({ name: '', logo: '', city: '' });
+                setUniversityForm({ name: '', logo: '', city: '', allowed_countries: [] });
               }} className="flex-1">Cancel</Button>
               <Button color="primary" onPress={handleAddUniversity} className="flex-1 text-white">
                 {editingUniversity ? 'Update' : 'Add'}

@@ -202,6 +202,8 @@ export default function LeadDetailPage() {
                                 <InfoRow label="Lead Type" value={lead.type} />
                                 <InfoRow label="Lead Prefered Course" value={lead.preferred_course} />
                                 <InfoRow label="Preferred Country" value={lead.preferred_country} />
+                                <InfoRow label="Exam Taken" value={lead.exam_taken} />
+                                <InfoRow label="Exam Score" value={lead.exam_score} />
                             </div>
 
                             <div className="bg-white p-6 rounded-lg shadow">

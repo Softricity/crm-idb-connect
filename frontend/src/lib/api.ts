@@ -529,6 +529,16 @@ export const ContractsAPI = {
     });
     return handleResponse(res);
   },
+  uploadSignature: async (id: string, file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${API_BASE}/contracts/${id}/signature-upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getAuthToken()}` },
+      body: form,
+    });
+    return handleResponse(res);
+  },
   approve: async (id: string) => {
     const res = await fetch(`${API_BASE}/contracts/${id}/approve`, {
       method: 'PATCH',

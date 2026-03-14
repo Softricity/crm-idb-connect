@@ -10,6 +10,8 @@ export interface Lead {
   type: string;
   preferred_country: string;
   preferred_course?: string | null;
+  exam_taken?: string | null;
+  exam_score?: string | null;
   status: string;
   utm_source?: string | null;
   utm_medium?: string | null;

@@ -502,6 +502,21 @@ export const ContractsAPI = {
     });
     return handleResponse(res);
   },
+  uploadSignature: async (id: string, file: File, token?: string) => {
+    const authToken = token || getAuthToken();
+    const headers: HeadersInit = {};
+    if (authToken) headers['Authorization'] = `Bearer ${authToken}`;
+
+    const form = new FormData();
+    form.append('file', file);
+
+    const res = await fetch(`${API_BASE}/contracts/${id}/signature-upload`, {
+      method: 'POST',
+      headers,
+      body: form,
+    });
+    return handleResponse(res);
+  },
   downloadPdf: async (id: string, token?: string) => {
     const res = await fetch(`${API_BASE}/contracts/${id}/download`, { headers: getHeaders(true, token) });
     if (!res.ok) throw new Error('Failed to download contract PDF');

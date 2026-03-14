@@ -50,6 +50,14 @@ export class CreateLeadDto {
   preferred_course?: string;
 
   @IsOptional()
+  @IsString()
+  exam_taken?: string;
+
+  @IsOptional()
+  @IsString()
+  exam_score?: string;
+
+  @IsOptional()
   @IsUUID() // 👈 ADD THIS
   created_by?: string; 
 

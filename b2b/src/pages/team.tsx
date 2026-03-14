@@ -1,6 +1,8 @@
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import { useAuth } from '@/contexts/AuthContext';
 import { AgentsAPI } from '@/lib/api';
 import { Button, Card, CardBody, Input, Switch } from '@heroui/react';
+import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 
 interface TeamMember {
@@ -12,6 +14,8 @@ interface TeamMember {
 }
 
 export default function TeamPage() {
+  const { partner } = useAuth();
+  const router = useRouter();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: '', email: '', mobile: '', password: '' });
@@ -27,8 +31,12 @@ export default function TeamPage() {
   };
 
   useEffect(() => {
+    if (partner?.type === 'agent_team_member') {
+      router.replace('/');
+      return;
+    }
     load();
-  }, []);
+  }, [partner?.type]);
 
   const createMember = async () => {
     if (!form.name || !form.email || !form.mobile || !form.password) {

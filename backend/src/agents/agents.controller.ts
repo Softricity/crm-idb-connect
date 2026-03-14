@@ -57,37 +57,6 @@ export class AgentsController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Admin, Role.SuperAdmin)
-  @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.agentsService.findOne(id);
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Admin, Role.SuperAdmin)
-  @Patch(':id/status')
-  async updateStatus(
-    @Param('id') id: string,
-    @Body() body: { status: 'APPROVED' | 'REJECTED'; reason?: string },
-  ) {
-    return this.agentsService.updateStatus(id, body.status, body.reason);
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Admin, Role.SuperAdmin)
-  @Put(':id/universities')
-  async setUniversityAccess(@Param('id') id: string, @Body('universityIds') universityIds: string[]) {
-    return this.agentsService.setUniversityAccess(id, universityIds || []);
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.Admin, Role.SuperAdmin)
-  @Get(':id/universities')
-  async getUniversityAccess(@Param('id') id: string) {
-    return this.agentsService.getUniversityAccess(id);
-  }
-
-  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Agent)
   @Get('my/team')
   async getMyTeam(@GetUser() user: any) {
@@ -124,6 +93,37 @@ export class AgentsController {
     @Body('teamMemberId') teamMemberId: string,
   ) {
     return this.agentsService.assignLeadToTeamMember(user.id || user.userId, leadId, teamMemberId);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    return this.agentsService.findOne(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Patch(':id/status')
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() body: { status: 'APPROVED' | 'REJECTED'; reason?: string },
+  ) {
+    return this.agentsService.updateStatus(id, body.status, body.reason);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Put(':id/universities')
+  async setUniversityAccess(@Param('id') id: string, @Body('universityIds') universityIds: string[]) {
+    return this.agentsService.setUniversityAccess(id, universityIds || []);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Get(':id/universities')
+  async getUniversityAccess(@Param('id') id: string) {
+    return this.agentsService.getUniversityAccess(id);
   }
 
   @Delete(':id')

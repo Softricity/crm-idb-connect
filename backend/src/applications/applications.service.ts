@@ -202,16 +202,24 @@ export class ApplicationsService {
   async updatePreferences(leadId: string, dto: UpdatePreferencesDto, user: any) {
     await this.validateLeadAccess(leadId, user);
     const app = await this.getOrCreateApplication(leadId, user);
-    
-    for (const record of dto.records) {
+
+    const records = Array.isArray((dto as any)?.records)
+      ? (dto as any).records
+      : [dto].filter((entry: any) =>
+          entry &&
+          Object.keys(entry).some((k) => k !== 'records' && entry[k] !== undefined),
+        );
+
+    for (const record of records) {
+      const { id, records: _ignoredRecords, ...payload } = record as any;
       if (record.id) {
         await this.prisma.application_preferences.update({
           where: { id: record.id },
-          data: { ...record, id: undefined },
+          data: payload,
         });
       } else {
         await this.prisma.application_preferences.create({
-          data: { ...record, application_id: app.id },
+          data: { ...payload, application_id: app.id },
         });
       }
     }

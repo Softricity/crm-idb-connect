@@ -7,10 +7,13 @@ import {
   Post,
   Query,
   Res,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
 import { AgentContractStatus } from '@prisma/client';
 import type { Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { GetUser } from '../auth/get-user.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Role } from '../auth/roles.enum';
@@ -65,6 +68,17 @@ export class ContractsController {
   @Roles(Role.Agent, Role.Admin, Role.SuperAdmin)
   sign(@Param('id') id: string, @Body() dto: SignContractDto, @GetUser() user: any) {
     return this.contractsService.sign(id, dto, user);
+  }
+
+  @Post(':id/signature-upload')
+  @Roles(Role.Agent, Role.Admin, Role.SuperAdmin)
+  @UseInterceptors(FileInterceptor('file'))
+  uploadSignature(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @GetUser() user: any,
+  ) {
+    return this.contractsService.uploadSignature(id, file, user);
   }
 
   @Patch(':id/approve')

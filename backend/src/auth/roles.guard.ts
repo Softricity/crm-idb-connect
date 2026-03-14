@@ -30,6 +30,10 @@ export class RolesGuard implements CanActivate {
 
     return requiredRoles.some((role) => {
       const requiredRole = role.toLowerCase();
+
+      if (requiredRole === 'agent' && user?.type === 'agent_team_member') {
+        return true;
+      }
       
       // ✅ Allow "Super Admin" to access "Admin" routes
       if (userRole === 'super admin' && requiredRole === 'admin') {

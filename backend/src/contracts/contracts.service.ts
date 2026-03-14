@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { AgentContractStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { SupabaseService } from '../storage/supabase.service';
 import { CreateTemplateDto } from './dto/create-template.dto';
 import {
   RejectContractDto,
@@ -14,7 +15,10 @@ import {
 
 @Injectable()
 export class ContractsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private supabaseService: SupabaseService,
+  ) {}
 
   private resolveAgentIdFromUser(user: any): string {
     if (user?.type === 'agent_team_member' && user?.parent_agent_id) {
@@ -116,6 +120,24 @@ export class ContractsService {
         rejection_note: null,
       },
     });
+  }
+
+  async uploadSignature(id: string, file: Express.Multer.File | undefined, user: any) {
+    if (!file) throw new BadRequestException('Signature file is required');
+    const agentId = this.resolveAgentIdFromUser(user);
+    const contract = await this.prisma.agentContract.findUnique({ where: { id } });
+    if (!contract) throw new NotFoundException('Contract not found');
+    if (contract.agent_id !== agentId) {
+      throw new BadRequestException('You can only upload signature for your own contract');
+    }
+
+    const signatureUrl = await this.supabaseService.uploadFile(
+      file,
+      `contracts/${contract.agent_id}`,
+      'idb-student-documents',
+    );
+
+    return { signature_url: signatureUrl };
   }
 
   async approve(id: string, user: any) {
