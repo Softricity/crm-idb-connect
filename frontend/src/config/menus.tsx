@@ -5,7 +5,6 @@ import {
   GraduationCap,
   Bell,
   Users,
-  MessageCircle,
   School,
   FileCheck,
   Building,
@@ -13,8 +12,6 @@ import {
   CheckSquare,
   Clock,
   HelpCircle,
-  Settings,
-  ShieldUser,
   Link,
   SlidersHorizontal,
 } from "lucide-react";
@@ -22,11 +19,8 @@ import {
   CoursesPermission,
   AgentsPermission,
   ApplicationPermission,
-  AgencyPermission,
   CommissionPermission,
-  UniversityPermission,
   LeadPermission,
-  AdministrativePermission,
   EmployeePermission,
 } from "@/lib/utils";
 
@@ -44,8 +38,7 @@ export const menus: MenuItem[] = [
   // Main
   { title: "Main", type: "title" },
   { title: "Dashboard", icon: <LayoutDashboard size={20} />, type: "link", link: "/dashboard" },
-  { title: "Reports", icon: <FileText size={20} />, type: "link", link: "/reports", requiredPermissions: [AdministrativePermission.REPORTS_VIEW] },
-  { title: "Activity Logs", icon: <Activity size={20} />, type: "link", link: "/activity-logs", requiredPermissions: [AdministrativePermission.ACTIVITY_LOGS] },
+  { title: "Activity Logs", icon: <Activity size={20} />, type: "link", link: "/activity-logs" },
 
   // Study Abroad
   { title: "Study Abroad", type: "title" },
@@ -57,8 +50,7 @@ export const menus: MenuItem[] = [
   // Business
   { title: "Business", type: "title" },
   { title: "Agents", icon: <Users size={20} />, type: "link", link: "/agents", requiredPermissions: [AgentsPermission.AGENTS_CREATE, AgentsPermission.AGENTS_UPDATE] },
-  { title: "Agreements", icon: <FileText size={20} />, type: "link", link: "/agents/agreements", requiredPermissions: [AgentsPermission.AGENTS_UPDATE] },
-  { title: "Approvals", icon: <FileCheck size={20} />, type: "link", link: "/agents/approvals", requiredPermissions: [AgentsPermission.AGENTS_UPDATE] },
+  { title: "Agreements", icon: <FileCheck size={20} />, type: "link", link: "/agents/agreements" },
   { title: "Internal Team", icon: <Users size={20} />, type: "link", link: "/team", requiredPermissions: [EmployeePermission.EMPLOYEE_MANAGE, EmployeePermission.EMPLOYEE_CREATE] },
   { title: "Commissions", icon: <DollarSign size={20} />, type: "link", link: "/commissions", requiredPermissions: [CommissionPermission.COMMISSION_MANAGE] },
   { title: "Referrals", icon: <Link size={20} />, type: "link", link: "/referrals" },
@@ -68,10 +60,6 @@ export const menus: MenuItem[] = [
   { title: "Tasks", icon: <CheckSquare size={20} />, type: "link", link: "/tasks", badge: "1" },
   { title: "Follow Ups", icon: <Clock size={20} />, type: "link", link: "/follow-ups", badge: "25" },
 
-  // Support
-  { title: "Support", type: "title" },
-  { title: "Helpdesk", icon: <HelpCircle size={20} />, type: "link", link: "/helpdesk" },
-  
   // Settings (Super Admin Only)
   { title: "Settings", type: "title" },
   { title: "Branches", icon: <Building size={20} />, type: "link", link: "/settings/branches", requiredPermissions: ["Branch Manage"] },

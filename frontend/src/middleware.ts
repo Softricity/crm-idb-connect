@@ -19,8 +19,8 @@ export async function middleware(request: NextRequest) {
   }
 
   // 2. Handle Page requests (JWT token-based authentication)
-  const authToken = request.cookies.get("auth-token");
-  const partnerSession = request.cookies.get("partner-session");
+  const authToken = request.cookies.get("crm-auth-token") || request.cookies.get("auth-token");
+  const partnerSession = request.cookies.get("crm-partner-session") || request.cookies.get("partner-session");
   let partnerUser = null;
 
   // Check if both token and session exist
@@ -32,6 +32,8 @@ export async function middleware(request: NextRequest) {
       const responseWithClearedCookie = NextResponse.next({
         request: { headers: request.headers },
       });
+      responseWithClearedCookie.cookies.delete("crm-partner-session");
+      responseWithClearedCookie.cookies.delete("crm-auth-token");
       responseWithClearedCookie.cookies.delete("partner-session");
       responseWithClearedCookie.cookies.delete("auth-token");
       return responseWithClearedCookie;

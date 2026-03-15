@@ -6,7 +6,9 @@ const API_BASE = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5005';
 function getAuthToken(): string | null {
   if (typeof document === 'undefined') return null;
   const cookies = document.cookie.split(';');
-  const tokenCookie = cookies.find(c => c.trim().startsWith('auth-token='));
+  const tokenCookie =
+    cookies.find(c => c.trim().startsWith('b2b-auth-token=')) ||
+    cookies.find(c => c.trim().startsWith('auth-token='));
   if (!tokenCookie) return null;
   try {
     const value = tokenCookie.split('=')[1];

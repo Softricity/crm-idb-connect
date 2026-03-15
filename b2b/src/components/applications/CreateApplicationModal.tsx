@@ -141,7 +141,7 @@ const CreateApplicationModal: React.FC<CreateApplicationModalProps> = ({
     try {
       const userStr = typeof document !== 'undefined' ? document.cookie
         .split("; ")
-        .find((row) => row.startsWith("auth-user="))
+        .find((row) => row.startsWith("b2b-auth-user=") || row.startsWith("auth-user="))
         ?.split("=")[1] : null;
       
       let user: any = null;

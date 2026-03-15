@@ -29,7 +29,7 @@ interface AuthState {
 
 // Token and session helpers
 const setAuthToken = (token: string) => {
-  document.cookie = `auth-token=${encodeURIComponent(
+  document.cookie = `crm-auth-token=${encodeURIComponent(
     token
   )}; path=/; max-age=${60 * 60 * 24 * 7}; secure; samesite=strict`;
 };
@@ -37,7 +37,9 @@ const setAuthToken = (token: string) => {
 const getAuthToken = (): string | null => {
   if (typeof document === "undefined") return null;
   const cookies = document.cookie.split(";");
-  const tokenCookie = cookies.find((c) => c.trim().startsWith("auth-token="));
+  const tokenCookie =
+    cookies.find((c) => c.trim().startsWith("crm-auth-token=")) ||
+    cookies.find((c) => c.trim().startsWith("auth-token="));
   if (!tokenCookie) return null;
   try {
     const value = tokenCookie.split("=")[1];
@@ -48,27 +50,30 @@ const getAuthToken = (): string | null => {
 };
 
 const clearAuthToken = () => {
+  document.cookie = "crm-auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+  // Backward-compat cleanup
   document.cookie = "auth-token=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
 };
 
 const setPartnerCookie = (user: AuthUser) => {
-  document.cookie = `partner-session=${encodeURIComponent(
+  document.cookie = `crm-partner-session=${encodeURIComponent(
     JSON.stringify(user)
   )}; path=/; max-age=${60 * 60 * 24 * 7}; secure; samesite=strict`;
 };
 
 const clearPartnerCookie = () => {
-  document.cookie =
-    "partner-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+  document.cookie = "crm-partner-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
+  // Backward-compat cleanup
+  document.cookie = "partner-session=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT";
 };
 
 const getPartnerCookie = (): AuthUser | null => {
   if (typeof document === "undefined") return null;
 
   const cookies = document.cookie.split(";");
-  const partnerCookie = cookies.find((c) =>
-    c.trim().startsWith("partner-session=")
-  );
+  const partnerCookie =
+    cookies.find((c) => c.trim().startsWith("crm-partner-session=")) ||
+    cookies.find((c) => c.trim().startsWith("partner-session="));
 
   if (!partnerCookie) return null;
 

@@ -46,7 +46,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     return acc;
   }, {} as Record<string, string>);
 
-  const token = cookies?.['auth-token'];
+  const token = cookies?.['b2b-auth-token'] || cookies?.['auth-token'];
 
   if (!token) {
     return {

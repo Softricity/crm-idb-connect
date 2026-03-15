@@ -6,6 +6,9 @@ import {
 import { AgentContractStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from '../storage/supabase.service';
+import { promises as fs } from 'fs';
+import * as path from 'path';
+import PDFDocument = require('pdfkit');
 import { CreateTemplateDto } from './dto/create-template.dto';
 import {
   RejectContractDto,
@@ -27,35 +30,118 @@ export class ContractsService {
     return user?.id || user?.userId || user?.sub;
   }
 
-  private ensureContractHtml(content: string, signatureUrl?: string): string {
-    const signatureTag = signatureUrl
-      ? `<div style="margin-top:16px;"><img src="${signatureUrl}" alt="Signature" style="max-height:120px;max-width:300px;" /></div>`
-      : '<div style="margin-top:16px;">________________________</div>';
-    if (content.includes('<!-- SIGNATURE_PLACEHOLDER -->')) {
-      return content.replace('<!-- SIGNATURE_PLACEHOLDER -->', signatureTag);
-    }
-    return `${content}<hr/><h4>Signature</h4>${signatureTag}`;
+  private stripHtml(input: string): string {
+    return input
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|h[1-6]|li)>/gi, '\n')
+      .replace(/<li>/gi, '- ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/[ \t]+\n/g, '\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
   }
 
-  private toPdfBuffer(text: string): Buffer {
-    // Minimal single-page PDF fallback without external runtime deps.
-    const escaped = text
-      .replace(/\\/g, '\\\\')
-      .replace(/\(/g, '\\(')
-      .replace(/\)/g, '\\)')
-      .replace(/\r?\n/g, ' ');
-    const stream = `BT /F1 11 Tf 40 760 Td (${escaped.slice(0, 3000)}) Tj ET`;
-    const body = [
-      '%PDF-1.4',
-      '1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj',
-      '2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj',
-      '3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >> endobj',
-      `4 0 obj << /Length ${stream.length} >> stream ${stream} endstream endobj`,
-      '5 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj',
-    ].join('\n');
-    const xrefStart = body.length + 1;
-    const xref = `xref\n0 6\n0000000000 65535 f \n0000000010 00000 n \n0000000060 00000 n \n0000000117 00000 n \n0000000263 00000 n \n0000000366 00000 n \ntrailer << /Size 6 /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
-    return Buffer.from(`${body}\n${xref}`, 'utf-8');
+  private async resolveSignatureBuffer(signatureUrl?: string | null): Promise<Buffer | null> {
+    if (!signatureUrl) return null;
+
+    try {
+      if (signatureUrl.startsWith('data:')) {
+        const commaIndex = signatureUrl.indexOf(',');
+        if (commaIndex === -1) return null;
+        const payload = signatureUrl.slice(commaIndex + 1);
+        return Buffer.from(payload, 'base64');
+      }
+
+      const extractLocalUploadPath = (urlOrPath: string): string | null => {
+        if (urlOrPath.startsWith('/uploads/')) {
+          return path.join(process.cwd(), urlOrPath.slice(1));
+        }
+        if (urlOrPath.startsWith('uploads/')) {
+          return path.join(process.cwd(), urlOrPath);
+        }
+        if (urlOrPath.startsWith('http://') || urlOrPath.startsWith('https://')) {
+          try {
+            const pathname = new URL(urlOrPath).pathname;
+            if (pathname.startsWith('/uploads/')) {
+              return path.join(process.cwd(), pathname.slice(1));
+            }
+          } catch {
+            return null;
+          }
+        }
+        return null;
+      };
+
+      const localPath = extractLocalUploadPath(signatureUrl);
+      if (localPath) {
+        const stat = await fs.stat(localPath);
+        if (stat.isFile()) {
+          return fs.readFile(localPath);
+        }
+      }
+
+      if (signatureUrl.startsWith('http://') || signatureUrl.startsWith('https://')) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const res = await fetch(signatureUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (!res.ok) return null;
+        const contentType = (res.headers.get('content-type') || '').toLowerCase();
+        if (contentType.includes('pdf')) return null;
+        const bytes = await res.arrayBuffer();
+        return Buffer.from(bytes);
+      }
+    } catch {
+      return null;
+    }
+
+    return null;
+  }
+
+  private async toPdfBuffer(contract: {
+    title: string;
+    status: string;
+    content: string;
+    signature_url?: string | null;
+    agentName: string;
+  }): Promise<Buffer> {
+    const signatureBuffer = await this.resolveSignatureBuffer(contract.signature_url);
+
+    return new Promise<Buffer>((resolve, reject) => {
+      const chunks: Buffer[] = [];
+      const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+      doc.on('error', reject);
+      doc.on('end', () => resolve(Buffer.concat(chunks)));
+
+      doc.fontSize(18).text(contract.title, { align: 'left' });
+      doc.moveDown(0.5);
+      doc.fontSize(10).fillColor('#555555').text(`Agent: ${contract.agentName}`);
+      doc.text(`Status: ${contract.status}`);
+      doc.moveDown();
+
+      doc.fillColor('#000000').fontSize(11);
+      doc.text(this.stripHtml(contract.content), { align: 'left' });
+
+      doc.moveDown(1.5);
+      doc.fontSize(12).text('Signature');
+      doc.moveDown(0.5);
+
+      if (signatureBuffer) {
+        try {
+          doc.image(signatureBuffer, { fit: [220, 120] });
+        } catch {
+          doc.fontSize(10).fillColor('#666666').text('Signature file attached but could not be rendered as image.');
+        }
+      } else if (contract.signature_url) {
+        doc.fontSize(10).fillColor('#666666').text(`Signature URL: ${contract.signature_url}`);
+      } else {
+        doc.fontSize(10).fillColor('#666666').text('No signature available.');
+      }
+
+      doc.end();
+    });
   }
 
   async create(dto: CreateTemplateDto) {
@@ -131,13 +217,40 @@ export class ContractsService {
       throw new BadRequestException('You can only upload signature for your own contract');
     }
 
-    const signatureUrl = await this.supabaseService.uploadFile(
-      file,
-      `contracts/${contract.agent_id}`,
-      'idb-student-documents',
-    );
+    let signatureUrl: string;
+    try {
+      const bucket = process.env.SUPABASE_BUCKET || 'idb-student-documents';
+      signatureUrl = await this.supabaseService.uploadFile(
+        file,
+        `contracts/${contract.agent_id}`,
+        bucket,
+      );
+    } catch {
+      // Fallback keeps signing flow working even if storage/env is misconfigured.
+      const uploadsDir = path.join(process.cwd(), 'uploads', 'contracts', contract.agent_id);
+      await fs.mkdir(uploadsDir, { recursive: true });
+      const safeName = `${Date.now()}-${(file.originalname || 'signature').replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const fullPath = path.join(uploadsDir, safeName);
+      await fs.writeFile(fullPath, file.buffer);
+      const baseUrl = process.env.API_BASE_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:5005';
+      signatureUrl = `${baseUrl}/uploads/contracts/${contract.agent_id}/${safeName}`;
+    }
+    const updated = await this.prisma.agentContract.update({
+      where: { id },
+      data: {
+        signature_url: signatureUrl,
+        is_signed: true,
+        signed_at: new Date(),
+        status: AgentContractStatus.SIGNED,
+        rejection_note: null,
+      },
+    });
 
-    return { signature_url: signatureUrl };
+    return {
+      id: updated.id,
+      status: updated.status,
+      signature_url: updated.signature_url,
+    };
   }
 
   async approve(id: string, user: any) {
@@ -198,10 +311,13 @@ export class ContractsService {
       throw new BadRequestException('Unauthorized contract access');
     }
 
-    const html = this.ensureContractHtml(contract.content, contract.signature_url || undefined);
-    const pdf = this.toPdfBuffer(
-      `${contract.title}\n\nAgent: ${contract.agent?.name || contract.agent_id}\nStatus: ${contract.status}\n\n${html.replace(/<[^>]+>/g, ' ')}`
-    );
+    const pdf = await this.toPdfBuffer({
+      title: contract.title,
+      status: contract.status,
+      content: contract.content,
+      signature_url: contract.signature_url,
+      agentName: contract.agent?.name || contract.agent_id,
+    });
     return {
       filename: `contract-${contract.id}.pdf`,
       mimeType: 'application/pdf',

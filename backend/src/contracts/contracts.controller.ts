@@ -72,7 +72,7 @@ export class ContractsController {
 
   @Post(':id/signature-upload')
   @Roles(Role.Agent, Role.Admin, Role.SuperAdmin)
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 5 * 1024 * 1024 } }))
   uploadSignature(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,

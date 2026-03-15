@@ -230,9 +230,42 @@ export class AgentsService {
   }
 
   async updateInquiryStatus(id: string, status: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'REJECTED') {
-    return this.prisma.agentInquiry.update({
+    const inquiry = await this.prisma.agentInquiry.update({
       where: { id },
       data: { status },
     });
+
+    if (status === 'CONVERTED') {
+      const existingAgent = await this.prisma.agent.findFirst({
+        where: {
+          OR: [
+            { email: inquiry.email },
+            { mobile: inquiry.mobile },
+          ],
+        },
+      });
+
+      if (!existingAgent) {
+        const tempPassword = await bcrypt.hash(`Temp@${Date.now()}`, 10);
+        await this.prisma.agent.create({
+          data: {
+            name: inquiry.name,
+            email: inquiry.email,
+            mobile: inquiry.mobile,
+            password: tempPassword,
+            agency_name: inquiry.company_name || inquiry.name,
+            website: inquiry.website || undefined,
+            country: inquiry.country || 'Unknown',
+            state: 'Unknown',
+            city: inquiry.city || 'Unknown',
+            address: 'Unknown',
+            region: inquiry.country || 'Unknown',
+            status: 'PENDING',
+          },
+        });
+      }
+    }
+
+    return inquiry;
   }
 }

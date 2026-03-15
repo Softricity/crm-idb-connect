@@ -12,18 +12,15 @@ export default function Page() {
   const [universities, setUniversities] = useState<any[]>([]);
   const [selectedAgent, setSelectedAgent] = useState('');
   const [selectedUniIds, setSelectedUniIds] = useState<Set<string>>(new Set());
-  const [inquiries, setInquiries] = useState<any[]>([]);
 
   const load = async () => {
-    const [aRes, uRes, iqRes] = await Promise.allSettled([
+    const [aRes, uRes] = await Promise.allSettled([
       AgentsAPI.getAll(),
       UniversitiesAPI.getAll(),
-      AgentsAPI.getInquiries(),
     ]);
 
     setAgents(aRes.status === 'fulfilled' ? (aRes.value || []) : []);
     setUniversities(uRes.status === 'fulfilled' ? (uRes.value || []) : []);
-    setInquiries(iqRes.status === 'fulfilled' ? (iqRes.value || []) : []);
   };
 
   useEffect(() => {
@@ -40,11 +37,6 @@ export default function Page() {
     if (!selectedAgent) return;
     await AgentsAPI.setUniversityAccess(selectedAgent, Array.from(selectedUniIds));
     alert('University access updated');
-  };
-
-  const updateInquiry = async (id: string, status: string) => {
-    await AgentsAPI.updateInquiryStatus(id, status);
-    load();
   };
 
   const grouped = useMemo(() => {
@@ -107,31 +99,6 @@ export default function Page() {
           </CardBody>
         </Card>
 
-        <Card>
-          <CardBody className="space-y-4">
-            <h2 className="text-lg font-semibold">Agent Inquiries</h2>
-            <div className="space-y-2">
-              {inquiries.map((q) => (
-                <div key={q.id} className="border rounded p-3 flex items-center justify-between gap-3">
-                  <div>
-                    <div className="font-medium">{q.name} ({q.email})</div>
-                    <div className="text-sm text-gray-500">{q.mobile} • {q.company_name || 'No company'}</div>
-                  </div>
-                  <Select
-                    selectedKeys={[q.status]}
-                    onChange={(e) => updateInquiry(q.id, e.target.value)}
-                    className="w-48"
-                  >
-                    {['NEW', 'CONTACTED', 'CONVERTED', 'REJECTED'].map((s) => (
-                      <SelectItem key={s}>{s}</SelectItem>
-                    ))}
-                  </Select>
-                </div>
-              ))}
-              {inquiries.length === 0 ? <div className="text-sm text-gray-500">No inquiries yet.</div> : null}
-            </div>
-          </CardBody>
-        </Card>
       </div>
     </PermissionGuard>
   );

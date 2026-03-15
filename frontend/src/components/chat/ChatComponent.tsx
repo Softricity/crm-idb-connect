@@ -32,7 +32,9 @@ interface ChatComponentProps {
 function getAuthToken(): string | null {
   if (typeof document === 'undefined') return null;
   const cookies = document.cookie.split(';');
-  const tokenCookie = cookies.find(c => c.trim().startsWith('auth-token='));
+  const tokenCookie =
+    cookies.find(c => c.trim().startsWith('crm-auth-token=')) ||
+    cookies.find(c => c.trim().startsWith('auth-token='));
   if (!tokenCookie) return null;
   try {
     const value = tokenCookie.split('=')[1];

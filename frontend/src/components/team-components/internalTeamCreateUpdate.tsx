@@ -112,7 +112,9 @@ export function InternalTeamCreateUpdate({
     const getAuthToken = () => {
         if (typeof document === 'undefined') return null;
         const cookies = document.cookie.split(';');
-        const tokenCookie = cookies.find(c => c.trim().startsWith('auth-token='));
+        const tokenCookie =
+            cookies.find(c => c.trim().startsWith('crm-auth-token=')) ||
+            cookies.find(c => c.trim().startsWith('auth-token='));
         if (!tokenCookie) return null;
         try {
             return decodeURIComponent(tokenCookie.split('=')[1]);

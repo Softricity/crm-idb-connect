@@ -34,8 +34,7 @@ export default function ContractHub({ contract, token }: ContractHubProps) {
     if (!contract || !signatureFile) return;
     setLoading(true);
     try {
-      const uploaded = await ContractsAPI.uploadSignature(contract.id, signatureFile, token);
-      await ContractsAPI.sign(contract.id, uploaded.signature_url, token);
+      await ContractsAPI.uploadSignature(contract.id, signatureFile, token);
       window.location.reload();
     } catch (err: any) {
       alert(err?.message || 'Failed to sign contract');
@@ -103,7 +102,15 @@ export default function ContractHub({ contract, token }: ContractHubProps) {
                     type="file"
                     label="Upload Signature File"
                     accept="image/*,.pdf"
-                    onChange={(e) => setSignatureFile(e.target.files?.[0] || null)}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      if (file && file.size > 5 * 1024 * 1024) {
+                        alert('File size must be 5MB or less');
+                        setSignatureFile(null);
+                        return;
+                      }
+                      setSignatureFile(file);
+                    }}
                   />
                   <Button color="primary" onPress={handleSign} isLoading={loading} className="text-white">
                     Sign Contract
@@ -130,7 +137,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
     return acc;
   }, {} as Record<string, string>);
 
-  const token = cookies?.['auth-token'];
+  const token = cookies?.['b2b-auth-token'] || cookies?.['auth-token'];
   if (!token) {
     return {
       redirect: {

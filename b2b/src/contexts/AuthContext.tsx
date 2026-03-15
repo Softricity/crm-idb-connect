@@ -57,8 +57,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Load user from cookie on mount
   useEffect(() => {
-    const token = getCookie('auth-token');
-    const userData = getCookie('auth-user');
+    const token = getCookie('b2b-auth-token') || getCookie('auth-token');
+    const userData = getCookie('b2b-auth-user') || getCookie('auth-user');
     
     if (token && userData) {
       try {
@@ -66,6 +66,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setPartner(user);
       } catch (error) {
         console.error('Failed to parse user data:', error);
+        deleteCookie('b2b-auth-token');
+        deleteCookie('b2b-auth-user');
         deleteCookie('auth-token');
         deleteCookie('auth-user');
       }
@@ -92,8 +94,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const data = await response.json();
       
       // Store token and user data
-      setCookie('auth-token', data.access_token, 7);
-      setCookie('auth-user', JSON.stringify(data.partner), 7);
+      setCookie('b2b-auth-token', data.access_token, 7);
+      setCookie('b2b-auth-user', JSON.stringify(data.partner), 7);
       
       setPartner(data.partner);
       
@@ -110,6 +112,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = () => {
+    deleteCookie('b2b-auth-token');
+    deleteCookie('b2b-auth-user');
     deleteCookie('auth-token');
     deleteCookie('auth-user');
     setPartner(null);

@@ -1,5 +1,5 @@
 "use client"
-import React, { useEffect } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { useDashboardStore } from '@/stores/useDashboardStore'
 import DashboardTile from './dashboardTiles'
 import StatusChart from './statusChart'
@@ -10,14 +10,17 @@ import { useLeadStore } from '@/stores/useLeadStore'
 
 export default function DashboardLeads() {
   const { loading, metrics, bySource, byStatus, last7Days, refresh } = useDashboardStore();
-  const { fetchLeads, getLeadIds } = useLeadStore.getState();
+  const fetchLeads = useLeadStore((s) => s.fetchLeads);
+  const leads = useLeadStore((s) => s.leads);
+  const leadIds = useMemo(
+    () => leads.map((lead) => lead.id!).filter(Boolean),
+    [leads]
+  );
 
   useEffect(() => {
     refresh();
-  }, [refresh]);
-
-  fetchLeads();
-  const ids = getLeadIds();
+    fetchLeads();
+  }, [refresh, fetchLeads]);
 
 
   return (
@@ -34,7 +37,7 @@ export default function DashboardLeads() {
 
         <StatusChart data={byStatus} />
         <SourceChart data={bySource} />
-        <DashboardTimeline leadIds={ids} />
+        <DashboardTimeline leadIds={leadIds} />
         <LeadsLast7Days data={last7Days} />
       </div>
 

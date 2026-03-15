@@ -33,8 +33,12 @@ export default function ApprovalsPage() {
   }, [status, agentId]);
 
   const approve = async (id: string) => {
-    await ContractsAPI.approve(id);
-    load();
+    try {
+      await ContractsAPI.approve(id);
+      load();
+    } catch (e: any) {
+      alert(e?.body?.message || e?.message || 'Failed to approve contract');
+    }
   };
 
   const reject = async (id: string) => {
@@ -70,7 +74,7 @@ export default function ApprovalsPage() {
             { id: 'REJECTED', label: 'REJECTED' },
           ]}
         >
-          {(item) => <SelectItem key={item.id}>{item.label}</SelectItem>}
+          {(item) => <SelectItem key={item.id} textValue={item.label}>{item.label}</SelectItem>}
         </Select>
         <Select
           label="Agent"
@@ -78,7 +82,7 @@ export default function ApprovalsPage() {
           onChange={(e) => setAgentId(e.target.value === '__all__' ? '' : e.target.value)}
           items={[{ id: '__all__', name: 'All Agents' }, ...agents.map((a) => ({ id: a.id, name: a.name }))]}
         >
-          {(item) => <SelectItem key={item.id}>{item.name}</SelectItem>}
+          {(item) => <SelectItem key={item.id} textValue={item.name}>{item.name}</SelectItem>}
         </Select>
       </div>
 
@@ -96,7 +100,7 @@ export default function ApprovalsPage() {
                 </Chip>
               </div>
               <div className="flex gap-2">
-                {r.status !== 'APPROVED' ? <Button size="sm" color="success" className="text-white" onPress={() => approve(r.id)}>Approve</Button> : null}
+                {r.status === 'SIGNED' ? <Button size="sm" color="success" className="text-white" onPress={() => approve(r.id)}>Approve</Button> : null}
                 {r.status !== 'REJECTED' ? <Button size="sm" color="danger" variant="flat" onPress={() => reject(r.id)}>Reject</Button> : null}
                 <Button size="sm" variant="flat" onPress={() => download(r.id)}>Download PDF</Button>
               </div>
