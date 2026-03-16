@@ -112,7 +112,15 @@ export const useLeadStore = create<LeadState>((set, get) => ({
 
   addLead: async (lead) => {
     try {
-      const newLead = await api.LeadsAPI.createLead(lead);
+      // Strip internal/redundant fields before sending to CreateLeadDto
+      const { 
+        id, 
+        created_at, 
+        partners_leads_assigned_toTopartners, 
+        ...payload 
+      } = lead as any;
+      
+      const newLead = await api.LeadsAPI.createLead(payload);
       set((state) => ({ leads: [...state.leads, newLead] }));
     } catch (err) {
       console.error("Error adding lead:", err);
@@ -127,7 +135,15 @@ export const useLeadStore = create<LeadState>((set, get) => ({
 
   updateLead: async (id, updates) => {
     try {
-      const updatedLead = await api.LeadsAPI.updateLead(id, updates);
+      // Strip internal/redundant fields before sending to UpdateLeadDto
+      const { 
+        id: _id, 
+        created_at, 
+        partners_leads_assigned_toTopartners, 
+        ...payload 
+      } = updates as any;
+
+      const updatedLead = await api.LeadsAPI.updateLead(id, payload);
       set((state) => ({
         leads: state.leads.map((lead) =>
           lead.id === id ? { ...lead, ...updatedLead } : lead

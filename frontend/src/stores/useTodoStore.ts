@@ -55,7 +55,11 @@ export const useTodoStore = create<TodoState>((set) => ({
 
   createTodo: async (todo) => {
     try {
-      const newTodo = await api.TodosAPI.create(todo);
+      const payload = {
+        title: todo.title,
+        dueDate: todo.dueDate,
+      };
+      const newTodo = await api.TodosAPI.create(payload);
       set((state) => ({ todos: [newTodo, ...state.todos] }));
     } catch (error) {
       console.error("Error creating todo:", error);
@@ -65,7 +69,8 @@ export const useTodoStore = create<TodoState>((set) => ({
 
   updateTodo: async (id, updates) => {
     try {
-      const updatedTodo = await api.TodosAPI.update(id, updates);
+      const { id: _id, created_at, created_by, partners, ...payload } = updates as any;
+      const updatedTodo = await api.TodosAPI.update(id, payload);
       set((state) => ({
         todos: state.todos.map((todo) =>
           todo.id === id ? { ...todo, ...updatedTodo } : todo

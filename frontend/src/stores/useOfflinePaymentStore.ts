@@ -68,7 +68,18 @@ import { OfflinePaymentsAPI } from "@/lib/api";
           const { user } = useAuthStore.getState();
           if (!user) throw new Error("User not authenticated");
           try {
-            const data = await OfflinePaymentsAPI.createPayment(payment);
+            const payload = {
+              payment_mode: payment.payment_mode,
+              currency: payment.currency,
+              amount: payment.amount,
+              payment_type: payment.payment_type,
+              reference_id: payment.reference_id,
+              receiver: payment.receiver,
+              lead_id: payment.lead_id,
+              status: payment.status,
+              file: payment.file,
+            };
+            const data = await OfflinePaymentsAPI.createPayment(payload);
             set((state) => ({ payments: [data, ...state.payments] }));
             return data;
           } catch (err) {

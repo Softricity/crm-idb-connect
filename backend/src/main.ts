@@ -22,14 +22,14 @@ async function bootstrap() {
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
-      forbidNonWhitelisted: true,
+      forbidNonWhitelisted: false,
       transform: true,
     }),
   );
   app.useGlobalFilters(new PrismaExceptionFilter());
 
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://localhost:3000', "https://tw1lcrj1-3000.inc1.devtunnels.ms", "https://idbconnect.global", "https://student.idbconnect.global", "https://inquiry.idbconnect.global", "https://b2b.idbconnect.global"], // Your Next.js app's URL
+    origin: ['http://localhost:3001', 'http://localhost:3000', "https://tw1lcrj1-3000.inc1.devtunnels.ms", "https://idbconnect.global", "https://student.idbconnect.global", "https://inquiry.idbconnect.global", "https://b2b.idbconnect.global", "http://localhost:3002"], // Your Next.js app's URL
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });

@@ -40,7 +40,11 @@ export const useNoteStore = create<NoteState>((set) => ({
 
   addNote: async (note) => {
     try {
-      const data = await api.NotesAPI.createNote(note);
+      const payload = {
+        text: note.text,
+        lead_id: note.lead_id,
+      };
+      const data = await api.NotesAPI.createNote(payload);
       set((state) => ({ notes: [data, ...state.notes] }));
       // Timeline logging handled by backend
     } catch (error: any) {
@@ -51,7 +55,10 @@ export const useNoteStore = create<NoteState>((set) => ({
 
   updateNote: async (id, updates) => {
     try {
-      const data = await api.NotesAPI.updateNote(id, updates);
+      const payload = {
+        text: updates.text,
+      };
+      const data = await api.NotesAPI.updateNote(id, payload);
       set((state) => ({
         notes: state.notes.map((note) => (note.id === id ? data : note)),
       }));

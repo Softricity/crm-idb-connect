@@ -1,4 +1,7 @@
-// src/notes/dto/update-note.dto.ts
+import { IsString, IsNotEmpty } from 'class-validator';
+
 export class UpdateNoteDto {
+  @IsString()
+  @IsNotEmpty()
   text: string;
 }

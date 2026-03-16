@@ -73,7 +73,13 @@ export const useFollowupStore = create<FollowupState>((set, get) => ({
 
   addFollowup: async (followup) => {
     try {
-      const data = await api.FollowupsAPI.createFollowup(followup);
+      // Send only whitelisted properties expected by CreateFollowupDto
+      const payload = {
+        title: followup.title,
+        lead_id: followup.lead_id,
+        due_date: followup.due_date,
+      };
+      const data = await api.FollowupsAPI.createFollowup(payload);
       set((state) => ({ followups: [data, ...state.followups] }));
       // Timeline logging handled by backend
     } catch (error) {
@@ -106,8 +112,15 @@ export const useFollowupStore = create<FollowupState>((set, get) => ({
     if (!user) throw new Error("User not authenticated");
 
     try {
-      const commentToInsert = { ...comment, created_by: user.id };
-      const data = await api.FollowupsAPI.createComment(commentToInsert);
+      // Only send 'text' property in body as expected by CreateFollowupCommentDto
+      // followup_id is used by the API in the URL, not the body
+      const payload = { 
+        text: comment.text 
+      };
+      const data = await api.FollowupsAPI.createComment({ 
+        ...payload, 
+        followup_id: comment.followup_id // API uses this for the URL
+      });
       
       set((state) => ({
         followups: state.followups.map((f) =>
