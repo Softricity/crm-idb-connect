@@ -14,8 +14,9 @@ export interface ReportDataResponse {
 export class ReportsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getReportData(type: string, query: ReportQueryDto, rawQuery: Record<string, any>, user: any): Promise<ReportDataResponse> {
+  async getReportData(type: string, rawQuery: Record<string, any>, user: any): Promise<ReportDataResponse> {
     this.assertType(type);
+    const query = this.normalizeQuery(rawQuery);
 
     const reportType = type as ReportType;
     const rows = await this.getFilteredRows(reportType, query, rawQuery, user);
@@ -32,8 +33,9 @@ export class ReportsService {
     };
   }
 
-  async getFilterOptions(type: string, query: ReportQueryDto, user: any): Promise<Record<string, string[]>> {
+  async getFilterOptions(type: string, rawQuery: Record<string, any>, user: any): Promise<Record<string, string[]>> {
     this.assertType(type);
+    const query = this.normalizeQuery(rawQuery);
 
     const reportType = type as ReportType;
     const rawRows = await this.getBaseRows(reportType, query, user);
@@ -60,8 +62,9 @@ export class ReportsService {
     return options;
   }
 
-  async exportReport(type: string, query: ReportQueryDto, rawQuery: Record<string, any>, user: any) {
+  async exportReport(type: string, rawQuery: Record<string, any>, user: any) {
     this.assertType(type);
+    const query = this.normalizeQuery(rawQuery);
     const reportType = type as ReportType;
     const rows = await this.getFilteredRows(reportType, query, rawQuery, user);
 
@@ -549,5 +552,30 @@ export class ReportsService {
     if (!REPORT_TYPES.includes(type as ReportType)) {
       throw new BadRequestException(`Unsupported report type: ${type}`);
     }
+  }
+
+  private normalizeQuery(rawQuery: Record<string, any>): ReportQueryDto {
+    const pageRaw = Number(rawQuery?.page ?? 1);
+    const pageSizeRaw = Number(rawQuery?.pageSize ?? 25);
+    const sortOrderRaw = String(rawQuery?.sortOrder ?? 'desc').toLowerCase();
+
+    const page = Number.isFinite(pageRaw) ? Math.max(1, Math.floor(pageRaw)) : 1;
+    const pageSize = Number.isFinite(pageSizeRaw)
+      ? Math.max(1, Math.min(100, Math.floor(pageSizeRaw)))
+      : 25;
+    const sortOrder: 'asc' | 'desc' = sortOrderRaw === 'asc' ? 'asc' : 'desc';
+
+    const normalized: ReportQueryDto = {
+      page,
+      pageSize,
+      sortOrder,
+    };
+
+    if (rawQuery?.sortBy) normalized.sortBy = String(rawQuery.sortBy);
+    if (rawQuery?.branch_id) normalized.branch_id = String(rawQuery.branch_id);
+    if (rawQuery?.columns) normalized.columns = String(rawQuery.columns);
+    if (rawQuery?.search) normalized.search = String(rawQuery.search);
+
+    return normalized;
   }
 }
