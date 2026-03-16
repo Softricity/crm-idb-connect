@@ -81,12 +81,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <Loader2 className="animate-spin h-8 w-8 text-slate-600" />
         </div>
       ) : (
-        <div className="flex h-screen w-full">
+        <div className="flex h-screen w-full overflow-x-hidden">
           {/* Desktop Sidebar */}
           <Sidebar />
 
           {/* Main Content */}
-          <div className="flex flex-col flex-1">
+          <div className="flex flex-col flex-1 min-w-0 overflow-x-hidden">
             {/* Mobile Navbar */}
             <div className="lg:hidden">
               <Navbar menus={menus} />
@@ -109,7 +109,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </div>
 
             {/* Page Content */}
-            <main className="flex-1 overflow-y-auto p-4 sm:p-6">
+            <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6">
               {children}
             </main>
           </div>

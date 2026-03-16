@@ -93,7 +93,7 @@ export default function ReportPageView({ type }: { type: ReportType }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 w-full min-w-0 overflow-x-hidden">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-4xl font-bold">{definition.title}</h1>
         <div className="flex items-center gap-2">
@@ -133,7 +133,7 @@ export default function ReportPageView({ type }: { type: ReportType }) {
         {filtersLoading && <span className="text-sm text-gray-500">Loading filters...</span>}
       </div>
 
-      <div className="flex flex-col md:flex-row gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-[18rem_minmax(0,1fr)] gap-4 min-w-0">
         <ReportFiltersPanel
           sections={definition.filters}
           options={filterOptions}
@@ -142,7 +142,7 @@ export default function ReportPageView({ type }: { type: ReportType }) {
           onClear={clearFilters}
         />
 
-        <div className="flex-1 space-y-3">
+        <div className="flex-1 min-w-0 space-y-3">
           <ReportTable loading={loading} error={error} columns={columns} rows={items} />
           <div className="flex items-center justify-between text-sm">
             <span>Showing {start} to {end} of {total} records</span>
