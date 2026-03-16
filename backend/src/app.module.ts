@@ -29,6 +29,7 @@ import { DropdownsModule } from './dropdowns/dropdowns.module';
 import { FinancialsModule } from './financials/financials.module';
 import { SupportModule } from './support/support.module';
 import { ContractsModule } from './contracts/contracts.module';
+import { ReportsModule } from './reports/reports.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { ContractsModule } from './contracts/contracts.module';
     FinancialsModule,
     SupportModule,
     ContractsModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -23,6 +23,7 @@ import {
   LeadPermission,
   EmployeePermission,
   SupportPermission,
+  AdministrativePermission,
 } from "@/lib/utils";
 
 export interface MenuItem {
@@ -39,6 +40,7 @@ export const menus: MenuItem[] = [
   // Main
   { title: "Main", type: "title" },
   { title: "Dashboard", icon: <LayoutDashboard size={20} />, type: "link", link: "/dashboard" },
+  { title: "Reports", icon: <FileText size={20} />, type: "link", link: "/reports", requiredPermissions: [AdministrativePermission.REPORTS_VIEW] },
   { title: "Activity Logs", icon: <Activity size={20} />, type: "link", link: "/activity-logs" },
 
   // Study Abroad
@@ -74,7 +76,7 @@ export const b2bMenus: MenuItem[] = [
   { title: "Home", icon: <LayoutDashboard size={20} />, type: "link", link: "/b2b" },
   { title: "Course Wiz", icon: <GraduationCap size={20} />, type: "link", link: "#" },
   { title: "Agents Leads", icon: <Users size={20} />, type: "link", link: "/b2b/agent-leads" },
-  { title: "Reports", icon: <FileText size={20} />, type: "link", link: "#" },
+  { title: "Reports", icon: <FileText size={20} />, type: "link", link: "/reports" },
   { title: "Announcements", icon: <Bell size={20} />, type: "link", link: "#" },
   { title: "University Commissions", icon: <Building size={20} />, type: "link", link: "#" },
   { title: "B2B Commissions", icon: <DollarSign size={20} />, type: "link", link: "#" },

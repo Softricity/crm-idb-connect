@@ -12,6 +12,7 @@ import { usePartnerStore } from "./usePartnerStore";
 import { useApplicationStore } from "./useApplicationStore";
 import { useDashboardStore } from "./useDashboardStore";
 import { useSupportStore } from "./useSupportStore";
+import { useReportStore } from "./useReportStore";
 
 export function resetAllStores() {
   // Call reset on all stores that expose it. Use optional chaining to be safe.
@@ -91,5 +92,11 @@ export function resetAllStores() {
     useSupportStore.getState().reset?.();
   } catch (e) {
     console.warn("Failed to reset support store:", e);
+  }
+
+  try {
+    useReportStore.getState().reset?.();
+  } catch (e) {
+    console.warn("Failed to reset report store:", e);
   }
 }

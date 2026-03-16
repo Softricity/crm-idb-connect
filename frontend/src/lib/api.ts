@@ -156,6 +156,70 @@ export const LeadsAPI = {
   }
 };
 
+export const ReportsAPI = {
+  getReportData: async (type: string, query: Record<string, any>) => {
+    const params = new URLSearchParams();
+    Object.entries(query || {}).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === "") return;
+      if (Array.isArray(value)) {
+        if (value.length > 0) {
+          params.append(key, value.join(","));
+        }
+      } else {
+        params.append(key, String(value));
+      }
+    });
+
+    const url = params.toString() ? `${API_BASE}/reports/${type}?${params}` : `${API_BASE}/reports/${type}`;
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getReportFilterOptions: async (type: string, query?: Record<string, any>) => {
+    const params = new URLSearchParams();
+    Object.entries(query || {}).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === "") return;
+      params.append(key, String(value));
+    });
+    const url = params.toString()
+      ? `${API_BASE}/reports/${type}/filters?${params}`
+      : `${API_BASE}/reports/${type}/filters`;
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  downloadReportXlsx: async (type: string, query: Record<string, any>) => {
+    const params = new URLSearchParams();
+    Object.entries(query || {}).forEach(([key, value]) => {
+      if (value === undefined || value === null || value === "") return;
+      if (Array.isArray(value)) {
+        if (value.length > 0) {
+          params.append(key, value.join(","));
+        }
+      } else {
+        params.append(key, String(value));
+      }
+    });
+
+    const url = params.toString()
+      ? `${API_BASE}/reports/${type}/export?${params}`
+      : `${API_BASE}/reports/${type}/export`;
+    const res = await fetch(url, { headers: getHeaders() });
+    if (!res.ok) {
+      throw new Error("Failed to export report");
+    }
+
+    const blob = await res.blob();
+    const contentDisposition = res.headers.get("content-disposition");
+    let filename = `${type}_report.xlsx`;
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename=\"?([^\";]+)\"?/i);
+      if (match?.[1]) {
+        filename = match[1];
+      }
+    }
+    return { blob, filename };
+  },
+};
+
 export const PartnersAPI = {
   getCurrentUser: async () => {
     const res = await fetch(`${API_BASE}/partners/me`, { headers: getHeaders() });
@@ -909,6 +973,7 @@ export const TodosAPI = {
 };
 
 export default {
+  ReportsAPI,
   LeadsAPI,
   PartnersAPI,
   AuthAPI,
