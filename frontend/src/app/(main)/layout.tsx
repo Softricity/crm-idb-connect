@@ -14,6 +14,7 @@ import { Loader2 } from "lucide-react";
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
     const initAuth = useAuthStore((state) => state.initAuth);
+    const refreshSession = useAuthStore((state) => state.refreshSession);
     const loading = useAuthStore((s) => s.loading);
     const user = useAuthStore((s) => s.user);
     const loadCurrentPartner = usePartnerStore((s) => s.loadCurrentPartner);
@@ -28,6 +29,31 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       });
       fetchBranches();
     }, [initAuth, fetchBranches]);
+
+    useEffect(() => {
+      if (!user) return;
+
+      const refresh = () => {
+        refreshSession().catch(() => {});
+      };
+
+      const interval = setInterval(refresh, 60_000);
+      const onFocus = () => refresh();
+      const onVisibility = () => {
+        if (document.visibilityState === "visible") {
+          refresh();
+        }
+      };
+
+      window.addEventListener("focus", onFocus);
+      document.addEventListener("visibilitychange", onVisibility);
+
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener("focus", onFocus);
+        document.removeEventListener("visibilitychange", onVisibility);
+      };
+    }, [user?.id, refreshSession]);
 
     // enforce permission-based access for main/admin layout - only check once after initAuth completes
     useEffect(() => {

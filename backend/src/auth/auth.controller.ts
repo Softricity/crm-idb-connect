@@ -1,9 +1,10 @@
 // src/auth/auth.controller.ts
-import { Controller, Request, Post, UseGuards, Body } from '@nestjs/common';
+import { Controller, Request, Post, UseGuards, Body, Get } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Public } from './public.decorator';
+import { GetUser } from './get-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -21,5 +22,10 @@ export class AuthController {
     // If LocalStrategy passes, req.user is populated.
     // We just need to sign the token.
     return this.authService.login(req.user);
+  }
+
+  @Get('me')
+  async me(@GetUser() user: any) {
+    return this.authService.getCurrentSession(user);
   }
 }

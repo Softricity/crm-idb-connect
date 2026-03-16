@@ -346,7 +346,8 @@ model partners {
   todos                             todos[]
   sent_messages                     ChatMessage[]
   financial_notes                   FinancialNote[]
-  support_tickets                   SupportTicket[]
+  support_tickets                   SupportTicket[] @relation("LegacySupportTicketPartner")
+  requested_support_tickets         SupportTicket[] @relation("SupportTicketRequesterPartner")
 }
 
 model Agent {
@@ -389,6 +390,8 @@ model Agent {
   contracts         AgentContract[]
   contract_approved Boolean @default(false)
   team_members      AgentTeamMember[]
+  requested_support_tickets SupportTicket[] @relation("SupportTicketRequesterAgent")
+  team_scope_support_tickets SupportTicket[] @relation("SupportTicketRequesterParentAgent")
 
   @@map("agents")
 }
@@ -449,6 +452,7 @@ model AgentTeamMember {
   updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
   agent       Agent    @relation(fields: [agent_id], references: [id], onDelete: Cascade)
   leads       leads[]
+  requested_support_tickets SupportTicket[] @relation("SupportTicketRequesterTeamMember")
 
   @@map("agent_team_members")
 }
@@ -696,7 +700,12 @@ model DropdownOption {
 model SupportTicket {
   id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   case_number     Int            @default(autoincrement())
-  partner_id      String         @db.Uuid
+  partner_id      String?        @db.Uuid
+  requester_type  TicketRequesterType?
+  requester_partner_id String?   @db.Uuid
+  requester_agent_id String?     @db.Uuid
+  requester_team_member_id String? @db.Uuid
+  requester_parent_agent_id String? @db.Uuid
   topic           String         
   category        String         
   institution_id  String?        
@@ -708,9 +717,18 @@ model SupportTicket {
   created_at      DateTime       @default(now()) @db.Timestamptz(6)
   updated_at      DateTime       @default(now()) @updatedAt @db.Timestamptz(6)
 
-  partner         partners       @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+  partner         partners?      @relation("LegacySupportTicketPartner", fields: [partner_id], references: [id], onDelete: SetNull)
+  requester_partner partners?    @relation("SupportTicketRequesterPartner", fields: [requester_partner_id], references: [id], onDelete: SetNull)
+  requester_agent Agent?         @relation("SupportTicketRequesterAgent", fields: [requester_agent_id], references: [id], onDelete: SetNull)
+  requester_team_member AgentTeamMember? @relation("SupportTicketRequesterTeamMember", fields: [requester_team_member_id], references: [id], onDelete: SetNull)
+  requester_parent_agent Agent?  @relation("SupportTicketRequesterParentAgent", fields: [requester_parent_agent_id], references: [id], onDelete: SetNull)
   comments        SupportTicketComment[]
 
+  @@index([requester_type, requester_partner_id], map: "idx_support_tickets_req_partner")
+  @@index([requester_type, requester_agent_id], map: "idx_support_tickets_req_agent")
+  @@index([requester_type, requester_team_member_id], map: "idx_support_tickets_req_team_member")
+  @@index([requester_parent_agent_id], map: "idx_support_tickets_req_parent_agent")
+  @@index([status, created_at(sort: Desc)], map: "idx_support_tickets_status_created")
   @@map("support_tickets")
 }
 
@@ -822,4 +840,10 @@ enum TicketPriority {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum TicketRequesterType {
+  PARTNER
+  AGENT
+  AGENT_TEAM_MEMBER
 }

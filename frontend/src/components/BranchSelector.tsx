@@ -68,11 +68,17 @@ export default function BranchSelector({
     ? branches.filter((b) => b.id === user?.branch_id)
     : branches;
 
+  const hasCurrentValueInOptions =
+    !!currentValue && visibleBranches.some((branch) => branch.id === currentValue);
+  const selectedKeys: Set<string> = hasCurrentValueInOptions
+    ? new Set<string>([currentValue])
+    : new Set<string>();
+
   return (
     <Select
       label="Branch"
       placeholder={isDisabled ? (user?.branch_name || "Branch") : "Select branch"}
-      selectedKeys={currentValue ? new Set([currentValue]) : new Set()}
+      selectedKeys={selectedKeys}
       onSelectionChange={handleChange}
       isDisabled={isDisabled}
       className={className}

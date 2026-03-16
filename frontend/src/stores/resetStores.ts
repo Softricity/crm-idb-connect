@@ -11,6 +11,7 @@ import { useTodoStore } from "./useTodoStore";
 import { usePartnerStore } from "./usePartnerStore";
 import { useApplicationStore } from "./useApplicationStore";
 import { useDashboardStore } from "./useDashboardStore";
+import { useSupportStore } from "./useSupportStore";
 
 export function resetAllStores() {
   // Call reset on all stores that expose it. Use optional chaining to be safe.
@@ -84,5 +85,11 @@ export function resetAllStores() {
     useDashboardStore.getState().reset?.();
   } catch (e) {
     console.warn("Failed to reset dashboard store:", e);
+  }
+
+  try {
+    useSupportStore.getState().reset?.();
+  } catch (e) {
+    console.warn("Failed to reset support store:", e);
   }
 }

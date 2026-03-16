@@ -19,8 +19,8 @@ interface CreateTicketModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
-    topics?: string[];
-    categories?: string[];
+  topics?: Array<string | { label?: string; value?: string }>;
+  categories?: Array<string | { label?: string; value?: string }>;
 }
 
 export default function CreateTicketModal({ isOpen, onClose, onSuccess, topics, categories }: CreateTicketModalProps) {
@@ -33,7 +33,23 @@ export default function CreateTicketModal({ isOpen, onClose, onSuccess, topics, 
     priority: 'MEDIUM',
   });
 
-  const topicOptions = topics ? topics.map(topic => ({ value: (topic as any).value, label: (topic as any).label })) : [
+  const normalizeOptions = (
+    options?: Array<string | { label?: string; value?: string }>,
+  ) => {
+    if (!options || options.length === 0) return [];
+    return options
+      .map((option) => {
+        if (typeof option === 'string') {
+          return { label: option, value: option };
+        }
+        const label = option?.label || option?.value || '';
+        const value = option?.value || option?.label || '';
+        return { label, value };
+      })
+      .filter((option) => option.label && option.value);
+  };
+
+  const topicOptions = normalizeOptions(topics).length > 0 ? normalizeOptions(topics) : [
     { value: "Agent Portal Management", label: "Agent Portal Management" },
     { value: "Commission & Payments", label: "Commission & Payments" },
     { value: "Application Status", label: "Application Status" },
@@ -42,7 +58,7 @@ export default function CreateTicketModal({ isOpen, onClose, onSuccess, topics, 
     { value: "Other", label: "Other" },
   ];
 
-  const categoryOptions = categories ? categories.map(category => ({ value: (category as any).value, label: (category as any).label })) : [
+  const categoryOptions = normalizeOptions(categories).length > 0 ? normalizeOptions(categories) : [
     { value: "Bank Details Upload", label: "Bank Details Upload" },
     { value: "Commission Query", label: "Commission Query" },
     { value: "Login Issues", label: "Login Issues" },
@@ -121,9 +137,14 @@ export default function CreateTicketModal({ isOpen, onClose, onSuccess, topics, 
                     setFormData({ ...formData, topic: value });
                   }}
                   isDisabled={loading}
+                  classNames={{
+                    value: 'text-black',
+                    listbox: 'text-black',
+                    popoverContent: 'text-black',
+                  }}
                 >
                   {topicOptions.map((option) => (
-                    <SelectItem key={option.value}>
+                    <SelectItem key={option.value} className="text-black">
                       {option.label}
                     </SelectItem>
                   ))}
@@ -139,9 +160,14 @@ export default function CreateTicketModal({ isOpen, onClose, onSuccess, topics, 
                     setFormData({ ...formData, category: value });
                   }}
                   isDisabled={loading}
+                  classNames={{
+                    value: 'text-black',
+                    listbox: 'text-black',
+                    popoverContent: 'text-black',
+                  }}
                 >
                   {categoryOptions.map((option) => (
-                    <SelectItem key={option.value}>
+                    <SelectItem key={option.value} className="text-black">
                       {option.label}
                     </SelectItem>
                   ))}

@@ -131,4 +131,67 @@ export class AuthService {
       partner: responseUser,
     };
   }
+
+  async getCurrentSession(authUser: any) {
+    const userId = authUser?.id || authUser?.userId;
+    const type = authUser?.type || 'partner';
+
+    if (!userId) {
+      return { partner: null };
+    }
+
+    if (type === 'partner') {
+      const user = await this.partnersService.findOneForAuthById(userId);
+      if (!user) return { partner: null };
+
+      const permissions =
+        user.role?.role_permissions?.map((rp: any) => rp.permission.name) || [];
+
+      return {
+        partner: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role?.name,
+          permissions,
+          branch_id: user.branch_id,
+          branch_name: user.branch?.name || null,
+          branch_type: user.branch?.type || null,
+          type: 'partner',
+        },
+      };
+    }
+
+    if (type === 'agent') {
+      const agent = await this.agentsService.findOne(userId);
+      if (!agent) return { partner: null };
+      return {
+        partner: {
+          id: agent.id,
+          name: agent.name,
+          email: agent.email,
+          role: 'agent',
+          permissions: [],
+          type: 'agent',
+          branch_id: agent.branch_id || null,
+          contract_approved: !!agent.contract_approved,
+        },
+      };
+    }
+
+    const teamMember = await this.agentsService.findTeamMemberById(userId);
+    if (!teamMember) return { partner: null };
+    return {
+      partner: {
+        id: teamMember.id,
+        name: teamMember.name,
+        email: teamMember.email,
+        role: 'agent_team_member',
+        permissions: [],
+        type: 'agent_team_member',
+        parent_agent_id: teamMember.agent_id,
+        contract_approved: !!teamMember.agent?.contract_approved,
+      },
+    };
+  }
 }

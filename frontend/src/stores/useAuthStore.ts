@@ -7,7 +7,7 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
-  type: "partner"; // all auth based on partner table
+  type: "partner" | "agent" | "agent_team_member";
   role: string; // "agent" for external agents, other custom roles for internal team
   permissions: string[]; // Array of permission names from role_permissions
   branch_id?: string | null; // Branch ID
@@ -24,6 +24,7 @@ interface AuthState {
   logout: () => Promise<void>;
   setUser: (user: AuthUser | null, token?: string | null) => void;
   initAuth: () => Promise<void>;
+  refreshSession: () => Promise<void>;
   getToken: () => string | null;
 }
 
@@ -109,6 +110,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         token,
         loading: false,
       });
+      try {
+        await get().refreshSession();
+      } catch (e) {
+        console.warn("Session refresh failed during init:", e);
+      }
       return;
     }
 
@@ -172,6 +178,38 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
 
     set({ isAuthenticated: false, user: null, token: null, loading: false });
+  },
+
+  refreshSession: async () => {
+    const token = get().token || getAuthToken();
+    if (!token) return;
+
+    try {
+      const response = await api.AuthAPI.me();
+      const payload = response?.partner;
+      if (!payload) return;
+
+      const refreshedUser: AuthUser = {
+        id: payload.id,
+        email: payload.email,
+        name: payload.name || payload.email?.split("@")[0] || "",
+        type: payload.type || "partner",
+        role: payload.role,
+        permissions: payload.permissions || [],
+        branch_id: payload.branch_id || null,
+        branch_name: payload.branch_name || null,
+        branch_type: payload.branch_type || null,
+      };
+
+      setPartnerCookie(refreshedUser);
+      set((state) => ({
+        ...state,
+        isAuthenticated: true,
+        user: refreshedUser,
+      }));
+    } catch (error) {
+      console.warn("Failed to refresh session:", error);
+    }
   },
 
   setUser: (user, token = null) => {

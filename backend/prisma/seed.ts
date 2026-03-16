@@ -38,6 +38,12 @@ const PERMISSIONS = {
   'Administrative Module': [
     'Reports View', 'Activity Logs'
   ],
+  'Support Module': [
+    'Support Ticket View',
+    'Support Ticket Reply',
+    'Support Ticket Status Update',
+    'Support Ticket Manage'
+  ],
   'Permission Module': [
     'Roles Create', 'Roles Permission', 'Permission Delete'
   ]

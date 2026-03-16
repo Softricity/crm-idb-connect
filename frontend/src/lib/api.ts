@@ -192,6 +192,10 @@ export const AuthAPI = {
     const res = await fetch(`${API_BASE}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
     return handleResponse(res);
   },
+  me: async () => {
+    const res = await fetch(`${API_BASE}/auth/me`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
   logout: async () => {
     const res = await fetch(`${API_BASE}/auth/logout`, { method: 'POST', headers: getHeaders() });
     return handleResponse(res);
@@ -572,8 +576,29 @@ export const SupportAPI = {
     });
     return handleResponse(res);
   },
-  getAllTickets: async () => {
-    const res = await fetch(`${API_BASE}/support`, { headers: getHeaders() });
+  getAllTickets: async (status?: string) => {
+    const url = status ? `${API_BASE}/support?status=${status}` : `${API_BASE}/support`;
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getTicketById: async (id: string) => {
+    const res = await fetch(`${API_BASE}/support/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  addComment: async (ticketId: string, message: string, attachment_urls?: string[]) => {
+    const res = await fetch(`${API_BASE}/support/${ticketId}/comments`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ message, attachment_urls: attachment_urls || [] }),
+    });
+    return handleResponse(res);
+  },
+  updateStatus: async (ticketId: string, status: string) => {
+    const res = await fetch(`${API_BASE}/support/${ticketId}/status`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ status }),
+    });
     return handleResponse(res);
   },
 };

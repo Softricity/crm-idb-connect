@@ -51,6 +51,7 @@ export enum PermissionGroup {
   COMMISSION_MODULE = "Commission Module",
   EMPLOYEE_MODULE = "Employee Module",
   ADMINISTRATIVE_MODULE = "Administrative Module",
+  SUPPORT_MODULE = "Support Module",
 }
 
 // Lead Module Permissions
@@ -148,6 +149,13 @@ export enum PermissionPermission {
   PERMISSION_DELETE = "Permission Delete",
 }
 
+export enum SupportPermission {
+  SUPPORT_TICKET_VIEW = "Support Ticket View",
+  SUPPORT_TICKET_REPLY = "Support Ticket Reply",
+  SUPPORT_TICKET_STATUS_UPDATE = "Support Ticket Status Update",
+  SUPPORT_TICKET_MANAGE = "Support Ticket Manage",
+}
+
 // All Permissions Combined
 export const ALL_PERMISSIONS = {
   [PermissionGroup.LEAD_MODULE]: Object.values(LeadPermission),
@@ -162,6 +170,7 @@ export const ALL_PERMISSIONS = {
   [PermissionGroup.COMMISSION_MODULE]: Object.values(CommissionPermission),
   [PermissionGroup.EMPLOYEE_MODULE]: Object.values(EmployeePermission), // Will be populated when needed
   [PermissionGroup.ADMINISTRATIVE_MODULE]: Object.values(AdministrativePermission), // Will be populated when needed
+  [PermissionGroup.SUPPORT_MODULE]: Object.values(SupportPermission),
 } as const;
 
 // Helper function to get all permission values

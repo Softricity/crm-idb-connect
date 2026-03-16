@@ -93,6 +93,13 @@ export class AgentsService {
     });
   }
 
+  async findTeamMemberById(id: string) {
+    return this.prisma.agentTeamMember.findUnique({
+      where: { id },
+      include: { agent: true },
+    });
+  }
+
   async setUniversityAccess(agentId: string, universityIds: string[]) {
     const agent = await this.prisma.agent.findUnique({ where: { id: agentId } });
     if (!agent) throw new NotFoundException('Agent not found');

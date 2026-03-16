@@ -172,4 +172,20 @@ export class PartnersService {
       }
     });
   }
+
+  async findOneForAuthById(id: string) {
+    return this.prisma.partners.findUnique({
+      where: { id },
+      include: {
+        branch: true,
+        role: {
+          include: {
+            role_permissions: {
+              include: { permission: true },
+            },
+          },
+        },
+      },
+    });
+  }
 }

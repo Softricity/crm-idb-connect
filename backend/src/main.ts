@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
+import { ValidationPipe } from '@nestjs/common';
 
 // Fix BigInt serialization issue
 (BigInt.prototype as any).toJSON = function () {
@@ -18,6 +19,13 @@ async function bootstrap() {
 
   const reflector = app.get(Reflector);
   app.useGlobalGuards(new JwtAuthGuard(reflector));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
   app.useGlobalFilters(new PrismaExceptionFilter());
 
   app.enableCors({

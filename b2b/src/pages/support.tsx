@@ -18,8 +18,8 @@ interface SupportProps {
     initialSortOrder?: string;
     initialPage?: number;
     userRole?: string;
-    topics?: string[];
-    categories?: string[];
+    topics?: Array<string | { label?: string; value?: string }>;
+    categories?: Array<string | { label?: string; value?: string }>;
 }
 
 const Support = ({ 
@@ -322,7 +322,6 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
         const list = await DropdownsAPI.getList("", token);
         const topics = list.find((item: any) => item.name === "ticket_topics") || { options: [] };
         const categories = list.find((item: any) => item.name === "ticket_category") || { options: [] };
-        console.log(topics, categories);
 
         return {
             props: {

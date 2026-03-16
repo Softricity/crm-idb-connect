@@ -532,7 +532,10 @@ export const DropdownsAPI = {
     const categories = await handleResponse(res);
     return (categories || []).map((c: any) => ({
       name: c.name,
-      options: (c.options || []).map((o: any) => o.label || o.value),
+      options: (c.options || []).map((o: any) => ({
+        label: o?.label || o?.value || '',
+        value: o?.value || o?.label || '',
+      })),
     }));
   },
 }
