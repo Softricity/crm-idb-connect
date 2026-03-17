@@ -13,7 +13,7 @@ export class TimelineService {
   private async log(
     leadId: string,
     eventType: timeline_event,
-    userId: string,
+    userId: string | null,
     newState?: any,
     oldState?: any,
   ) {
@@ -66,7 +66,7 @@ export class TimelineService {
     );
   }
 
-  async logNoteAdded(note: any, userId: string) {
+  async logNoteAdded(note: any, userId: string | null) {
     await this.log(
       note.lead_id, 
       'LEAD_NOTE_ADDED',
@@ -75,7 +75,7 @@ export class TimelineService {
     );
   }
   
-  async logFollowupAdded(followup: any, userId: string) {
+  async logFollowupAdded(followup: any, userId: string | null) {
       await this.log(
           followup.lead_id,
           'LEAD_FOLLOWUP_ADDED',
@@ -84,7 +84,7 @@ export class TimelineService {
       );
   }
   
-  async logFollowupCompleted(followup: any, userId: string) {
+  async logFollowupCompleted(followup: any, userId: string | null) {
       await this.log(
           followup.lead_id,
           'LEAD_FOLLOWUP_COMPLETED',
@@ -93,7 +93,7 @@ export class TimelineService {
       );
   }
   
-  async logCommentAdded(leadId: string, commentText: string, userId: string) {
+  async logCommentAdded(leadId: string, commentText: string, userId: string | null) {
       await this.log(
           leadId,
           'LEAD_FOLLOWUP_COMMENT_ADDED',
@@ -102,7 +102,7 @@ export class TimelineService {
       );
   }
 
-  async logStatusChange(leadId: string, userId: string, oldStatus: string, newStatus: string) {
+  async logStatusChange(leadId: string, userId: string | null, oldStatus: string, newStatus: string) {
     await this.log(
       leadId,
       'LEAD_STATUS_CHANGED',
@@ -112,7 +112,47 @@ export class TimelineService {
     );
   }
 
-  async logAssignmentChange(leadId: string, userId: string, newOwnerName: string) {
+  async logNameChange(leadId: string, userId: string | null, oldName: string, newName: string) {
+    await this.log(
+      leadId,
+      'LEAD_NAME_CHANGED',
+      userId,
+      newName,
+      oldName,
+    );
+  }
+
+  async logPhoneChange(leadId: string, userId: string | null, oldPhone: string, newPhone: string) {
+    await this.log(
+      leadId,
+      'LEAD_PHONE_CHANGED',
+      userId,
+      newPhone,
+      oldPhone,
+    );
+  }
+
+  async logEmailChange(leadId: string, userId: string | null, oldEmail: string, newEmail: string) {
+    await this.log(
+      leadId,
+      'LEAD_EMAIL_CHANGED',
+      userId,
+      newEmail,
+      oldEmail,
+    );
+  }
+
+  async logPurposeChange(leadId: string, userId: string | null, oldValue: string, newValue: string) {
+    await this.log(
+      leadId,
+      'LEAD_PURPOSE_CHANGED',
+      userId,
+      newValue,
+      oldValue,
+    );
+  }
+
+  async logAssignmentChange(leadId: string, userId: string | null, newOwnerName: string) {
     await this.log(
       leadId,
       'LEAD_OWNER_CHANGED',

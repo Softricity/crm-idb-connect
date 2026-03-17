@@ -264,11 +264,127 @@ export class LeadsService {
     }
   }
 
-  async update(id: string, updateLeadDto: Prisma.leadsUpdateInput) {
-    return this.prisma.leads.update({
+  private buildLeadDetailsSnapshot(lead: {
+    preferred_country?: string | null;
+    preferred_course?: string | null;
+    exam_taken?: string | null;
+    exam_score?: string | null;
+    utm_source?: string | null;
+    utm_medium?: string | null;
+    utm_campaign?: string | null;
+    type?: string | null;
+  }) {
+    return [
+      `country:${lead.preferred_country || '-'}`,
+      `course:${lead.preferred_course || '-'}`,
+      `exam:${lead.exam_taken || '-'}`,
+      `score:${lead.exam_score || '-'}`,
+      `source:${lead.utm_source || '-'}`,
+      `medium:${lead.utm_medium || '-'}`,
+      `campaign:${lead.utm_campaign || '-'}`,
+      `type:${lead.type || '-'}`,
+    ].join(' | ');
+  }
+
+  private async resolveTimelineActorId(user?: any): Promise<string | null> {
+    const actorId = user?.id || user?.userId;
+    if (!actorId) {
+      return null;
+    }
+
+    const partner = await this.prisma.partners.findUnique({
+      where: { id: actorId },
+      select: { id: true },
+    });
+
+    return partner?.id || null;
+  }
+
+  async update(id: string, updateLeadDto: Prisma.leadsUpdateInput, user?: any) {
+    const existingLead = await this.prisma.leads.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        mobile: true,
+        email: true,
+        status: true,
+        assigned_to: true,
+        preferred_country: true,
+        preferred_course: true,
+        exam_taken: true,
+        exam_score: true,
+        utm_source: true,
+        utm_medium: true,
+        utm_campaign: true,
+        type: true,
+      },
+    });
+
+    if (!existingLead) {
+      throw new NotFoundException(`Lead with ID ${id} not found.`);
+    }
+
+    const updatedLead = await this.prisma.leads.update({
       where: { id },
       data: updateLeadDto,
     });
+
+    try {
+      const actorId = await this.resolveTimelineActorId(user);
+
+      if (existingLead.name !== updatedLead.name) {
+        await this.timelineService.logNameChange(id, actorId, existingLead.name || '-', updatedLead.name || '-');
+      }
+
+      if (existingLead.mobile !== updatedLead.mobile) {
+        await this.timelineService.logPhoneChange(id, actorId, existingLead.mobile || '-', updatedLead.mobile || '-');
+      }
+
+      if (existingLead.email !== updatedLead.email) {
+        await this.timelineService.logEmailChange(id, actorId, existingLead.email || '-', updatedLead.email || '-');
+      }
+
+      if (existingLead.status !== updatedLead.status) {
+        await this.timelineService.logStatusChange(id, actorId, existingLead.status || '-', updatedLead.status || '-');
+      }
+
+      const detailsChanged =
+        existingLead.preferred_country !== updatedLead.preferred_country ||
+        existingLead.preferred_course !== updatedLead.preferred_course ||
+        existingLead.exam_taken !== updatedLead.exam_taken ||
+        existingLead.exam_score !== updatedLead.exam_score ||
+        existingLead.utm_source !== updatedLead.utm_source ||
+        existingLead.utm_medium !== updatedLead.utm_medium ||
+        existingLead.utm_campaign !== updatedLead.utm_campaign ||
+        existingLead.type !== updatedLead.type;
+
+      if (detailsChanged) {
+        await this.timelineService.logPurposeChange(
+          id,
+          actorId,
+          this.buildLeadDetailsSnapshot(existingLead),
+          this.buildLeadDetailsSnapshot(updatedLead),
+        );
+      }
+
+      if (existingLead.assigned_to !== updatedLead.assigned_to) {
+        let newOwnerName = 'Unassigned';
+        if (updatedLead.assigned_to) {
+          const owner = await this.prisma.partners.findUnique({
+            where: { id: updatedLead.assigned_to },
+            select: { name: true },
+          });
+          newOwnerName = owner?.name || 'Unassigned';
+        }
+
+        await this.timelineService.logAssignmentChange(id, actorId, newOwnerName);
+      }
+    } catch (error) {
+      console.error(`Timeline logging failed for lead update ${id}:`, error);
+    }
+
+    return updatedLead;
   }
 
   async remove(id: string) {

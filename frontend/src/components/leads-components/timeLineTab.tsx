@@ -34,6 +34,7 @@ export const eventColors: { [key: string]: { bg: string; icon: string } } = {
   [TimelineEvent.LEAD_NAME_CHANGED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   [TimelineEvent.LEAD_EMAIL_CHANGED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   [TimelineEvent.LEAD_PHONE_CHANGED]: { bg: "bg-blue-50", icon: "text-blue-600" },
+  [TimelineEvent.LEAD_PURPOSE_CHANGED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   [TimelineEvent.LEAD_NOTE_UPDATED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   [TimelineEvent.LEAD_FOLLOWUP_UPDATED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   [TimelineEvent.LEAD_STATUS_CHANGED]: { bg: "bg-indigo-50", icon: "text-indigo-600" },
@@ -96,6 +97,8 @@ export const renderEventAction = (event: Timeline, leadName: string) => {
       return <>changed <Field>Lead Phone</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
     case TimelineEvent.LEAD_EMAIL_CHANGED:
       return <>changed <Field>Lead Email</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
+    case TimelineEvent.LEAD_PURPOSE_CHANGED:
+      return <>updated <Field>Lead Details</Field> from <OldValue>{old_state || "-"}</OldValue> to <NewValue>{new_state || "-"}</NewValue>.</>;
     case TimelineEvent.LEAD_STATUS_CHANGED:
       return <>changed <Field>Status</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
     case TimelineEvent.LEAD_OWNER_CHANGED:
@@ -176,14 +179,14 @@ export const TimelineItem = ({ event, isLast, leadName }: { event: Timeline; isL
 };
 
 // 5. Main exported component
-export default function TimeLineTab({ leadId, leadName }: { leadId: string; leadName: string }) {
+export default function TimeLineTab({ leadId, leadName, refreshKey = 0 }: { leadId: string; leadName: string; refreshKey?: number }) {
   const { timeline, loading, fetchTimelineByLeadId } = useTimelineStore();
 
   useEffect(() => {
     if (leadId) {
       fetchTimelineByLeadId(leadId);
     }
-  }, [leadId, fetchTimelineByLeadId]);
+  }, [leadId, refreshKey, fetchTimelineByLeadId]);
 
   if (loading) {
     return (

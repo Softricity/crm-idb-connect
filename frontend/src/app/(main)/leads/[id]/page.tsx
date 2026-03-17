@@ -49,6 +49,7 @@ export default function LeadDetailPage() {
     const [isSheetOpen, setSheetOpen] = useState(false);
     const [selectedTab, setSelectedTab] = useState(defaultTab);
     const [studentPanelOpen, setStudentPanelOpen] = useState(false);
+    const [timelineRefreshKey, setTimelineRefreshKey] = useState(0);
 
     const fetchAndSetLead = useCallback(async () => {
         setLoading(true);
@@ -72,6 +73,7 @@ export default function LeadDetailPage() {
         try {
             await updateLead(lead.id, payload);
             setLead((prev) => (prev ? { ...prev, ...payload } : null));
+            setTimelineRefreshKey((prev) => prev + 1);
             toast.success("Lead status updated successfully!");
         } catch (error) {
             toast.error("Failed to update lead status.");
@@ -80,7 +82,10 @@ export default function LeadDetailPage() {
 
     const handleSheetStateChange = (isOpen: boolean) => {
         setSheetOpen(isOpen);
-        if (!isOpen) fetchAndSetLead();
+        if (!isOpen) {
+            fetchAndSetLead();
+            setTimelineRefreshKey((prev) => prev + 1);
+        }
     };
 
     if (loading) {
@@ -272,7 +277,11 @@ export default function LeadDetailPage() {
                     </Tab>
 
                     <Tab key="timeline" title="Timeline">
-                        <TimeLineTab leadName={lead?.name ?? ""} leadId={lead?.id ?? ""} />
+                        <TimeLineTab
+                            leadName={lead?.name ?? ""}
+                            leadId={lead?.id ?? ""}
+                            refreshKey={timelineRefreshKey}
+                        />
                     </Tab>
                 </Tabs>
             </div>

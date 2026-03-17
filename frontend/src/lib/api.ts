@@ -341,11 +341,17 @@ export const NotesAPI = {
 
 export const TimelineAPI = {
   fetchTimelineByLeadId: async (leadId: string) => {
-    const res = await fetch(`${API_BASE}/leads/${leadId}/timeline`, { headers: getHeaders() });
+    const res = await fetch(`${API_BASE}/leads/${leadId}/timeline?t=${Date.now()}`, {
+      headers: getHeaders(),
+      cache: 'no-store',
+    });
     return handleResponse(res);
   },
   fetchGlobalTimeline: async () => {
-    const res = await fetch(`${API_BASE}/timeline`, { headers: getHeaders() });
+    const res = await fetch(`${API_BASE}/timeline?t=${Date.now()}`, {
+      headers: getHeaders(),
+      cache: 'no-store',
+    });
     return handleResponse(res);
   },
   createTimelineEvent: async (event: any) => {
@@ -358,7 +364,12 @@ export const TimelineAPI = {
   },
   fetchAllTimelines: async (leadIds: string[]) => {
     const rows = await Promise.all(
-      leadIds.map((leadId) => fetch(`${API_BASE}/leads/${leadId}/timeline`, { headers: getHeaders() }).then(handleResponse))
+      leadIds.map((leadId) =>
+        fetch(`${API_BASE}/leads/${leadId}/timeline?t=${Date.now()}`, {
+          headers: getHeaders(),
+          cache: 'no-store',
+        }).then(handleResponse),
+      )
     );
     return rows.flat();
   },

@@ -58,8 +58,12 @@ export class LeadsController {
   }
   
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLeadDto: Partial<CreateLeadDto>) {
-    return this.leadsService.update(id, updateLeadDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateLeadDto: Partial<CreateLeadDto>,
+    @GetUser() user: any,
+  ) {
+    return this.leadsService.update(id, updateLeadDto, user);
   }
   
   @Post('bulk/assign')
