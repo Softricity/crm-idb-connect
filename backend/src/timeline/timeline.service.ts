@@ -42,16 +42,20 @@ export class TimelineService {
         partners: { 
           select: { name: true },
         },
+        leads: {
+          select: { name: true },
+        },
       },
       orderBy: {
         created_at: 'desc',
       },
     });
 
-    // ✅ FIX: Map 'partners' (DB name) to 'partner' (Frontend name)
+    // ✅ FIX: Map DB relations to Frontend property names
     return events.map(event => ({
         ...event,
-        partner: event.partners
+        partner: event.partners,
+        lead: event.leads
     }));
   }
 
@@ -190,10 +194,11 @@ export class TimelineService {
       },
     });
 
-    // ✅ FIX: Map 'partners' -> 'partner' here as well
+    // ✅ FIX: Map 'partners' -> 'partner' and 'leads' -> 'lead'
     return events.map(event => ({
         ...event,
-        partner: event.partners
+        partner: event.partners,
+        lead: event.leads
     }));
   }
 }

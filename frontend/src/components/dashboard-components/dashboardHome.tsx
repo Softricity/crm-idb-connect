@@ -60,10 +60,38 @@ export default function DashboardHome() {
   };
 
   const statCards = [
-    { label: "Total Leads", value: metrics.total, icon: <Users size={20} />, color: "text-blue-600", bg: "bg-blue-50" },
-    { label: "Today's Leads", value: metrics.todaysLeads, icon: <TrendingUp size={20} />, color: "text-purple-600", bg: "bg-purple-50" },
-    { label: "Converted", value: metrics.converted, icon: <CheckCircle size={20} />, color: "text-green-600", bg: "bg-green-50" },
-    { label: "Rejected", value: metrics.rejected, icon: <XCircle size={20} />, color: "text-red-600", bg: "bg-red-50" },
+    {
+      label: "Total Leads",
+      value: metrics.total,
+      icon: <Users size={20} className="text-white" />,
+      gradient: "from-blue-600 to-indigo-700",
+      shadow: "shadow-blue-100",
+      textColor: "text-blue-50"
+    },
+    {
+      label: "Today's Leads",
+      value: metrics.todaysLeads,
+      icon: <TrendingUp size={20} className="text-white" />,
+      gradient: "from-fuchsia-600 to-purple-700",
+      shadow: "shadow-purple-100",
+      textColor: "text-fuchsia-50"
+    },
+    {
+      label: "Converted",
+      value: metrics.converted,
+      icon: <CheckCircle size={20} className="text-white" />,
+      gradient: "from-emerald-500 to-teal-700",
+      shadow: "shadow-emerald-100",
+      textColor: "text-emerald-50"
+    },
+    {
+      label: "Rejected",
+      value: metrics.rejected,
+      icon: <XCircle size={20} className="text-white" />,
+      gradient: "from-rose-500 to-red-700",
+      shadow: "shadow-rose-100",
+      textColor: "text-rose-50"
+    },
   ];
 
   const emptyState = (msg: string) => (
@@ -84,20 +112,40 @@ export default function DashboardHome() {
 
   return (
     <div className="flex flex-col gap-6 w-full h-full overflow-hidden">
-      {/* Stats Cards Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 flex-shrink-0">
         {statCards.map((stat, idx) => (
-          <Card key={idx} radius="lg" className="shadow-sm border border-gray-100">
-            <CardBody className="flex flex-row items-center gap-4 p-4">
-              <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
-                {stat.icon}
+          <div
+            key={idx}
+            className={`relative overflow-hidden group hover:scale-[1.02] transition-all duration-300 p-5 rounded-2xl bg-gradient-to-br ${stat.gradient} ${stat.shadow} shadow-lg border border-white/10`}
+          >
+            {/* Decorative Background Glow */}
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:bg-white/20 transition-all" />
+
+            <div className="flex flex-col space-y-3 relative z-10">
+              <div className="flex items-center justify-between">
+                <div className="p-2 bg-white/15 rounded-xl backdrop-blur-md">
+                  {stat.icon}
+                </div>
+                <div className={`text-[10px] font-bold ${stat.textColor} uppercase tracking-widest opacity-70`}>
+                  Live
+                </div>
               </div>
+
               <div>
-                <p className="text-xs text-gray-500 font-medium">{stat.label}</p>
-                <p className="text-2xl font-bold">{stat.value}</p>
+                <p className={`text-xs font-medium ${stat.textColor} opacity-90 mb-0.5`}>
+                  {stat.label}
+                </p>
+                <div className="flex items-baseline space-x-1.5 ">
+                  <h3 className="text-3xl font-bold text-white tracking-tight leading-none">
+                    {stat.value}
+                  </h3>
+                  <span className={`text-[10px] ${stat.textColor} font-medium opacity-60 uppercase tracking-tighter`}>
+                    units
+                  </span>
+                </div>
               </div>
-            </CardBody>
-          </Card>
+            </div>
+          </div>
         ))}
       </div>
 

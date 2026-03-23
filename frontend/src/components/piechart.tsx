@@ -18,6 +18,8 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart"
 
+import { cn } from "@/lib/utils"
+
 type ChartPieDonutProps = {
   title?: string
   description?: string
@@ -27,6 +29,7 @@ type ChartPieDonutProps = {
   chartConfig: ChartConfig
   footerText?: string
   footerSubText?: string
+  className?: string
 }
 
 export function ChartPieDonut({
@@ -38,24 +41,27 @@ export function ChartPieDonut({
   chartConfig,
   footerText = "Trending up by 5.2% this month",
   footerSubText = "Showing data for the selected period",
+  className,
 }: ChartPieDonutProps) {
+  const contentHeight = 350;
+
   return (
-    <Card className="flex flex-col w-full">
-      <CardHeader className="items-center pb-0 text-center">
+    <Card className={cn("flex flex-col w-full", className)}>
+      <CardHeader className="items-center pb-2 text-center">
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 pb-0">
+      <CardContent className="flex-1 overflow-hidden pt-0" style={{ height: contentHeight }}>
         <ChartContainer
           config={chartConfig}
-          className="mx-auto aspect-square max-h-[250px]"
+          className="mx-auto aspect-square h-full"
         >
           <PieChart
             margin={{
               left: 30,
-              right: 20
+              right: 20,
+              bottom: 20
             }}
-
           >
             <ChartTooltip
               cursor={false}

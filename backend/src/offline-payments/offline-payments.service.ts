@@ -185,7 +185,8 @@ export class OfflinePaymentsService {
       leads: { select: { id: true, name: true } }
     };
 
-    const isSuperAdmin = user.role === 'superadmin';
+    const role = (user.role || '').toLowerCase().trim();
+    const isSuperAdmin = role === 'super admin' || role === 'superadmin';
     const whereClause: any = {
       status: 'RECEIVED',
       created_at: {
@@ -219,5 +220,22 @@ export class OfflinePaymentsService {
     });
 
     return { received, due };
+  }
+
+  async findAll(user: any) {
+    const role = (user.role || '').toLowerCase().trim();
+    const isSuper = role === 'super admin' || role === 'superadmin';
+    const where: any = {};
+    if (!isSuper) {
+      where.created_by = user.userId;
+    }
+    return this.prisma.offline_payments.findMany({
+      where,
+      include: {
+        leads: { select: { id: true, name: true } },
+        partners: { select: { name: true, role: true } },
+      },
+      orderBy: { created_at: 'desc' },
+    });
   }
 }

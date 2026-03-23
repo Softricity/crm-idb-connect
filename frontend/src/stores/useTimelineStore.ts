@@ -10,7 +10,7 @@ export interface Timeline {
   created_by: string;
   created_at?: string;
   partner?: { name: string };
-  leads?: { name: string }; // Added lead name
+  lead?: { name: string }; // Renamed from leads
 }
 
 interface TimelineState {

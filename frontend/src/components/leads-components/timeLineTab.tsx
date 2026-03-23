@@ -192,9 +192,9 @@ export const renderEventAction = (event: Timeline, leadName: string) => {
       return <>updated <Field>Lead Details</Field> from <OldValue>{old_state || "-"}</OldValue> to <NewValue>{new_state || "-"}</NewValue>.</>;
     }
     case TimelineEvent.LEAD_STATUS_CHANGED:
-      return <>changed <Field>Status</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
+      return <>changed <Field>Status</Field> for <Field>{leadName}</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
     case TimelineEvent.LEAD_DEPARTMENT_CHANGED:
-      return <>moved the lead from <OldValue>{old_state || "-"}</OldValue> to <NewValue>{new_state || "-"}</NewValue>.</>;
+      return <>moved <Field>{leadName}</Field> from <OldValue>{old_state || "-"}</OldValue> to <NewValue>{new_state || "-"}</NewValue>.</>;
     case TimelineEvent.LEAD_OWNER_CHANGED:
       return <>reassigned the lead.</>;
     case TimelineEvent.LEAD_NOTE_ADDED:

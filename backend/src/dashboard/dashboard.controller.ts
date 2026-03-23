@@ -13,7 +13,7 @@ export class DashboardController {
   constructor(private readonly dashboardService: DashboardService) {}
 
   @Get('stats')
-  @Roles(Role.Admin, Role.Counsellor) // Restrict to Admins and Counsellors
+  @Roles(Role.SuperAdmin, Role.Admin, Role.Counsellor) // Restrict to SuperAdmins, Admins and Counsellors
   getStats(@GetUser() user: any) {
     return this.dashboardService.getStats(user);
   }

@@ -18,6 +18,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "IDB Connect",
   description: "Lead Management Software for Small Businesses",
+  icons: {
+    icon: "/favicon.PNG",
+  },
 };
 
 export default function RootLayout({

@@ -1,9 +1,12 @@
 // src/common/utils/scope.util.ts
 
 export function getScope(user: any) {
+  const role = user?.role?.toLowerCase()?.trim() || "";
+  const branch_type = user?.branch_type?.toLowerCase()?.trim() || "";
+
   // 1. Super Admins or Head Office Admins see EVERYTHING
-  const isSuper = user.role === 'super admin';
-  const isHeadOfficeAdmin = user.branch_type === 'HeadOffice' && user.role === 'admin';
+  const isSuper = role.includes("super");
+  const isHeadOfficeAdmin = branch_type === "headoffice" && (role === "admin" || isSuper);
   
   if (isSuper || isHeadOfficeAdmin) {
     return {}; 

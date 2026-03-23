@@ -61,10 +61,11 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     set({ loading: false });
   },
 
-  fetchLeadsBasedOnPermission: async (userId: string, permissions: string[], branchId?: string) => {
+  fetchLeadsBasedOnPermission: async (userId: string, permissions: string[], branchId?: string, role?: string) => {
     set({ loading: true });
     try {
-      if (canViewAllLeads(permissions)) {
+      const isSuper = role === 'super admin' || role === 'superadmin' || canViewAllLeads(permissions);
+      if (isSuper) {
         const data = await api.LeadsAPI.fetchLeads(branchId);
         set({ leads: data as Lead[] });
       } else {

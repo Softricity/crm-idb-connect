@@ -13,7 +13,11 @@ export class DashboardService {
     const scope = getScope(user); 
     
     // 3. Create a base filter merging "Lead Type" + "Scope"
-    const whereBase = { type: 'lead', ...scope };
+    // Use an IN filter to be safe against casing or different lead type strings
+    const whereBase = { 
+        type: { in: ['lead', 'Lead', 'STUDENT', 'student'] }, 
+        ...scope 
+    };
 
     const todayStart = startOfDay(new Date());
     const todayEnd = endOfDay(new Date());

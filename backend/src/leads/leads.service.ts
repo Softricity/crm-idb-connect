@@ -170,7 +170,15 @@ export class LeadsService {
     email?: string,
     source?: string, // Feature 9: segmentation
   ) {
-    let where: any = { type: type || 'lead' };
+    const resolvedType = (type || 'lead').toLowerCase();
+    let where: any = { 
+        type: { in: [resolvedType, resolvedType.charAt(0).toUpperCase() + resolvedType.slice(1)] } 
+    };
+    
+    // Add variations for 'lead' specifically if that's the default
+    if (resolvedType === 'lead') {
+        where.type.in.push('STUDENT', 'student');
+    }
 
     if (branchId) {
       where.branch_id = branchId;

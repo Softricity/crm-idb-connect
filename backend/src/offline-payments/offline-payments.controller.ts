@@ -53,6 +53,11 @@ export class OfflinePaymentsController {
     return this.offlinePaymentsService.getTodaySummary(req.user, start, end);
   }
 
+  @Get('offline-payments')
+  findAll(@Request() req) {
+    return this.offlinePaymentsService.findAll(req.user);
+  }
+
   @Get('leads/:leadId/offline-payments')
   findByLeadId(@Param('leadId') leadId: string, @Request() req) {
     return this.offlinePaymentsService.findByLeadId(leadId, req.user);

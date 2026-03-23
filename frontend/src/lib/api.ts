@@ -419,6 +419,10 @@ export const OfflinePaymentsAPI = {
     const res = await fetch(url, { headers: getHeaders() });
     return handleResponse(res);
   },
+  fetchAllPayments: async () => {
+    const res = await fetch(`${API_BASE}/offline-payments`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
 };
 
 export const DashboardAPI = {

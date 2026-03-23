@@ -1,103 +1,158 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import { ChartBarMixed } from '../barchart'
 import { ChartPieDonut } from '../piechart'
-import FilterBar from './dashboardFilter'
 import { ChartConfig } from '../ui/chart'
+import { LeadsAPI } from '@/lib/api'
+import { Spinner } from '@heroui/react'
+import { useAuthStore } from '@/stores/useAuthStore'
+import { format, subMonths, startOfMonth, isAfter } from 'date-fns'
 
 export default function DashboardApplications() {
-  const testPieChart = [
-    { country: "Finland", leads: 77, fill: "#FDE68A" },
-    { country: "Spain", leads: 14, fill: "#3B82F6" },
-    { country: "Australia", leads: 7, fill: "#EC4899" },
-    { country: "United Kingdom", leads: 6, fill: "#F59E0B" },
-    { country: "United States", leads: 4, fill: "#34D399" },
-  ]
+  const [loading, setLoading] = useState(true);
+  const [applications, setApplications] = useState<any[]>([]);
+  const { user } = useAuthStore();
 
-  const testPieChartConfig: ChartConfig = {
-    Finland: { label: "Finland", color: "#FDE68A" },
-    Spain: { label: "Spain", color: "#3B82F6" },
-    Australia: { label: "Australia", color: "#EC4899" },
-    "United Kingdom": { label: "United Kingdom", color: "#F59E0B" },
-    "United States": { label: "United States", color: "#34D399" },
-  }
+  useEffect(() => {
+    const loadApps = async () => {
+      try {
+        const data = await LeadsAPI.fetchApplications();
+        setApplications(data || []);
+      } catch (err) {
+        console.error("Failed to load applications", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadApps();
+  }, []);
 
-  const testBarData = [
-    { status: "New", count: 30, fill: "#60A5FA" },
-    { status: "Engaged", count: 0, fill: "#A1A1AA" },
-    { status: "Hot", count: 0, fill: "#F59E0B" },
-    { status: "Assigned", count: 0, fill: "#34D399" },
-    { status: "Cold", count: 0, fill: "#CBD5E1" },
-    { status: "Rejected", count: 2, fill: "#F87171" },
-  ]
+  const role = (user?.role || '').toLowerCase();
+  const isSuper = role.includes('super');
 
-  const testBarConfig: ChartConfig = {
-    New: {
-      label: "New",
-      color: "#60A5FA", // Blue
-    },
-    Engaged: {
-      label: "Engaged",
-      color: "#A1A1AA", // Gray
-    },
-    Hot: {
-      label: "Hot",
-      color: "#F59E0B", // Amber
-    },
-    Assigned: {
-      label: "Assigned",
-      color: "#34D399", // Green
-    },
-    Cold: {
-      label: "Cold",
-      color: "#CBD5E1", // Cool gray
-    },
-    Rejected: {
-      label: "Rejected",
-      color: "#F87171", // Red
-    },
+  // 1. Status distribution
+  const statusCounts = applications.reduce((acc: any, app) => {
+    const status = app.status || "New";
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  const barDataStatus = Object.entries(statusCounts).map(([status, count]) => ({
+    status,
+    count,
+    fill: status === "converted" ? "#10B981" : status === "rejected" ? "#EF4444" : "#3B82F6"
+  }));
+
+  // 2. Country distribution
+  const countryCounts = applications.reduce((acc: any, app) => {
+    const country = app.preferred_country || "Unknown";
+    acc[country] = (acc[country] || 0) + 1;
+    return acc;
+  }, {});
+  const pieDataCountry = Object.entries(countryCounts).map(([country, leads]) => ({
+    country,
+    leads,
+    fill: `hsl(${Math.random() * 360}, 70%, 60%)`
+  }));
+
+  // 3. Source distribution
+  const sourceCounts = applications.reduce((acc: any, app) => {
+    const source = app.utm_source || "Direct";
+    acc[source] = (acc[source] || 0) + 1;
+    return acc;
+  }, {});
+  const pieDataSource = Object.entries(sourceCounts).map(([source, leads]) => ({
+    source,
+    leads,
+    fill: `hsl(${Math.random() * 360}, 70%, 50%)`
+  }));
+
+  // 4. Manager distribution (For Superadmin)
+  const managerCounts = applications.reduce((acc: any, app) => {
+    const manager = app.partners_leads_assigned_toTopartners?.name || "Unassigned";
+    acc[manager] = (acc[manager] || 0) + 1;
+    return acc;
+  }, {});
+  const barDataManager = Object.entries(managerCounts).map(([manager, count]) => ({
+    manager,
+    count,
+    fill: "#8B5CF6"
+  }));
+
+  // 5. Monthly Trend (For Counsellors)
+  // Get last 6 months labels
+  const last6Months = Array.from({ length: 6 }).map((_, i) => {
+    const d = subMonths(new Date(), i);
+    return format(d, "MMM yy");
+  }).reverse();
+
+  const trendCounts = applications.reduce((acc: any, app) => {
+    if (!app.created_at) return acc;
+    const month = format(new Date(app.created_at), "MMM yy");
+    acc[month] = (acc[month] || 0) + 1;
+    return acc;
+  }, {});
+
+  const barDataTrend = last6Months.map(month => ({
+    month,
+    count: trendCounts[month] || 0,
+    fill: "#3B82F6"
+  }));
+
+  const chartConfig: ChartConfig = {
+    count: { label: "Count" },
+    leads: { label: "Leads" }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Spinner label="Loading applications..." />
+      </div>
+    );
   }
 
   return (
     <>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mt-6  ">
-        <ChartBarMixed
-          title="Study Leads Overview"
-          chartData={testBarData}
-          dataKey="count"
-          categoryKey="status"
-          chartConfig={testBarConfig}
-        />
-        <ChartPieDonut
-          title="Study Leads by Countries"
-          description="Aug 2025 – Sep 2025"
-          chartData={testPieChart}
-          dataKey="leads"
-          nameKey="country"
-          chartConfig={testPieChartConfig}
-        />
-        <ChartPieDonut
-          title="Lead Source Distribution"
-          description="QR vs Walk In"
-          chartData={testPieChart}
-          dataKey="leads"
-          nameKey="country"
-          chartConfig={testPieChartConfig}
-        />
-        <ChartBarMixed
-          title="Study Leads by Lead Manager"
-          chartData={testBarData}
-          categoryKey="status"
-          dataKey="count"
-          chartConfig={testBarConfig}
-        />
-        <ChartBarMixed
-          title="Study Leads Overview"
-          chartData={testBarData}
-          dataKey="count"
-          categoryKey="status"
-          chartConfig={testBarConfig}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-6">
+        <div className="md:col-span-1 h-[480px]">
+          <ChartBarMixed
+            title="Overview by Status"
+            chartData={barDataStatus}
+            dataKey="count"
+            categoryKey="status"
+            chartConfig={chartConfig}
+            className="rounded-3xl border shadow-sm h-full"
+          />
+        </div>
+        <div className="md:col-span-1 h-[480px]">
+          <ChartPieDonut
+            title="Preferred Countries"
+            chartData={pieDataCountry}
+            dataKey="leads"
+            nameKey="country"
+            chartConfig={chartConfig}
+            className="rounded-3xl border shadow-sm h-full"
+          />
+        </div>
+        <div className="md:col-span-1 h-[480px]">
+          <ChartPieDonut
+            title="Lead Source Distribution"
+            chartData={pieDataSource}
+            dataKey="leads"
+            nameKey="source"
+            chartConfig={chartConfig}
+            className="rounded-3xl border shadow-sm h-full"
+          />
+        </div>
+        <div className="md:col-span-1 h-[480px]">
+          <ChartBarMixed
+            title={isSuper ? "Applications by Manager" : "Monthly Applications Trend"}
+            chartData={isSuper ? barDataManager : barDataTrend}
+            categoryKey={isSuper ? "manager" : "month"}
+            dataKey="count"
+            chartConfig={chartConfig}
+            className="rounded-3xl border shadow-sm h-full"
+          />
+        </div>
       </div>
     </>
   )

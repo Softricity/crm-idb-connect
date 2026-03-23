@@ -2,6 +2,7 @@
 
 import { TrendingUp } from "lucide-react"
 import { Bar, BarChart, XAxis, YAxis } from "recharts"
+import { cn } from "@/lib/utils"
 import {
   Card,
   CardContent,
@@ -28,6 +29,7 @@ type ChartBarMixedProps = {
   chartConfig: ChartConfig
   footerText?: string
   footerSubText?: string
+  className?: string
 }
 
 export function ChartBarMixed({
@@ -39,41 +41,50 @@ export function ChartBarMixed({
   chartConfig,
   footerText,
   footerSubText,
+  className,
 }: ChartBarMixedProps) {
+  const contentHeight = 350; // Standardize on a comfortable height
+  const barHeight = 45; // Height per bar including spacing
+  const chartHeight = Math.max(contentHeight - 100, chartData.length * barHeight);
+
   return (
-    <Card className="w-full">
-      <CardHeader>
+    <Card className={cn("w-full flex flex-col", className)}>
+      <CardHeader className="pb-2">
         <CardTitle>{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="overflow-auto">
-        <ChartContainer config={chartConfig}>
-          <BarChart
-            data={chartData}
-            layout="vertical"
-            margin={{
-              left: 20,
-              right:20
-            }}
-          >
-            <YAxis
-              dataKey={categoryKey}
-              type="category"
-              tickLine={false}
-              tickMargin={10}
-              axisLine={false}
-              tickFormatter={(value) =>
-                chartConfig[value as keyof typeof chartConfig]?.label || value
-              }
-            />
-            <XAxis dataKey={dataKey} type="number" hide />
-            <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent hideLabel />}
-            />
-            <Bar dataKey={dataKey} layout="vertical" radius={5} label />
-          </BarChart>
-        </ChartContainer>
+      <CardContent className="flex-1 overflow-y-auto overflow-x-hidden pt-0" style={{ height: contentHeight }}>
+        <div style={{ height: chartHeight, minWidth: '100%' }}>
+          <ChartContainer config={chartConfig} className="h-full w-full">
+            <BarChart
+              data={chartData}
+              layout="vertical"
+              margin={{
+                left: 100,
+                right: 20,
+                top: 10,
+                bottom: 10
+              }}
+            >
+              <YAxis
+                dataKey={categoryKey}
+                type="category"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                tickFormatter={(value) =>
+                  chartConfig[value as keyof typeof chartConfig]?.label || value
+                }
+              />
+              <XAxis dataKey={dataKey} type="number" hide />
+              <ChartTooltip
+                cursor={false}
+                content={<ChartTooltipContent hideLabel />}
+              />
+              <Bar dataKey={dataKey} layout="vertical" radius={5} barSize={24} />
+            </BarChart>
+          </ChartContainer>
+        </div>
       </CardContent>
     </Card>
   )

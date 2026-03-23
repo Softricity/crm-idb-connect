@@ -36,9 +36,9 @@ export const TimelineItem = ({
                 <div className="absolute left-5 top-7 -bottom-2 w-0.5 bg-gray-200" />
             )}
 
-            <div className="relative z-10 mt-1">
+            <div className="relative z-10 mt-1 hover:scale-110 transition-transform duration-200">
                 <div
-                    className={`ring-2 ring-white ${colors.bg} flex items-center justify-center h-10 w-10 rounded-full shadow-sm`}
+                    className={`${colors.bg} flex items-center justify-center h-10 w-10 rounded-xl shadow-sm hover:shadow-md transition-shadow`}
                 >
                     <Icon className={`h-5 w-5 ${colors.icon}`} />
                 </div>
@@ -81,31 +81,35 @@ export const TimelineItem = ({
 export const renderEventAction = (event: Timeline) => {
     const { event_type, old_state, new_state } = event;
 
-    const Field = ({ children }: { children: React.ReactNode }) => (
-        <strong className="font-semibold text-gray-800">{children}</strong>
+    const Field = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
+        <span className={`font-bold text-indigo-600 bg-indigo-50/50 px-1.5 py-0.5 rounded-md transition-colors hover:bg-indigo-100 ${className}`}>
+            {children}
+        </span>
     );
     const OldValue = ({ children }: { children: React.ReactNode }) => (
-        <span className="bg-orange-100 text-orange-800 px-1.5 py-0.5 rounded-md text-xs font-mono">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-100 mx-1">
             {children}
         </span>
     );
     const NewValue = ({ children }: { children: React.ReactNode }) => (
-        <span className="bg-green-100 text-green-800 px-1.5 py-0.5 rounded-md text-xs font-mono">
+        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-100 mx-1">
             {children}
         </span>
     );
     const Quote = ({ children }: { children: React.ReactNode }) => (
-        <strong className="font-semibold text-sky-700">"{children}"</strong>
+        <span className="font-semibold text-sky-800 bg-sky-50 px-1 rounded italic underline decoration-sky-200">
+            "{children}"
+        </span>
     );
 
     switch (event_type) {
         case TimelineEvent.LEAD_CREATED:
-            return <>created a lead.</>;
+            return <>created lead <Field>{event.lead?.name || "Lead"}</Field>.</>;
 
         case TimelineEvent.LEAD_NAME_CHANGED:
             return (
                 <>
-                    changed <Field>Lead Name</Field> from <OldValue>{old_state}</OldValue> to{" "}
+                    changed <Field>Lead Name</Field> for <Field>{event.lead?.name || "Lead"}</Field> from <OldValue>{old_state}</OldValue> to{" "}
                     <NewValue>{new_state}</NewValue>.
                 </>
             );
@@ -113,7 +117,7 @@ export const renderEventAction = (event: Timeline) => {
         case TimelineEvent.LEAD_PHONE_CHANGED:
             return (
                 <>
-                    changed <Field>Lead Phone</Field> from <OldValue>{old_state}</OldValue> to{" "}
+                    changed <Field>Lead Phone</Field> for <Field>{event.lead?.name || "Lead"}</Field> from <OldValue>{old_state}</OldValue> to{" "}
                     <NewValue>{new_state}</NewValue>.
                 </>
             );
@@ -121,7 +125,7 @@ export const renderEventAction = (event: Timeline) => {
         case TimelineEvent.LEAD_EMAIL_CHANGED:
             return (
                 <>
-                    changed <Field>Lead Email</Field> from <OldValue>{old_state}</OldValue> to{" "}
+                    changed <Field>Lead Email</Field> for <Field>{event.lead?.name || "Lead"}</Field> from <OldValue>{old_state}</OldValue> to{" "}
                     <NewValue>{new_state}</NewValue>.
                 </>
             );
@@ -133,7 +137,7 @@ export const renderEventAction = (event: Timeline) => {
                 const change = detailChanges[0];
                 return (
                     <>
-                        updated <Field>{change.field}</Field> from <OldValue>{change.oldValue}</OldValue> to{" "}
+                        updated <Field>{change.field}</Field> for <Field>{event.lead?.name || "Lead"}</Field> from <OldValue>{change.oldValue}</OldValue> to{" "}
                         <NewValue>{change.newValue}</NewValue>.
                     </>
                 );
@@ -142,7 +146,7 @@ export const renderEventAction = (event: Timeline) => {
             if (detailChanges.length > 1) {
                 return (
                     <>
-                        updated <Field>Lead Details</Field>:
+                        updated <Field>Lead Details</Field> for <Field>{event.lead?.name || "Lead"}</Field>:
                         {detailChanges.map((change, index) => (
                             <span key={`${change.field}-${index}`}>
                                 {index > 0 ? "; " : " "}
@@ -157,7 +161,7 @@ export const renderEventAction = (event: Timeline) => {
 
             return (
                 <>
-                    updated <Field>Lead Details</Field> from <OldValue>{old_state || "-"}</OldValue> to{" "}
+                    updated <Field>Lead Details</Field> for <Field>{event.lead?.name || "Lead"}</Field> from <OldValue>{old_state || "-"}</OldValue> to{" "}
                     <NewValue>{new_state || "-"}</NewValue>.
                 </>
             );
@@ -166,7 +170,7 @@ export const renderEventAction = (event: Timeline) => {
         case TimelineEvent.LEAD_STATUS_CHANGED:
             return (
                 <>
-                    changed <Field>Status</Field> from <OldValue>{old_state}</OldValue> to{" "}
+                    changed <Field>Status</Field> for <Field>{event.lead?.name || "Lead"}</Field> from <OldValue>{old_state}</OldValue> to{" "}
                     <NewValue>{new_state}</NewValue>.
                 </>
             );
@@ -174,55 +178,55 @@ export const renderEventAction = (event: Timeline) => {
         case TimelineEvent.LEAD_DEPARTMENT_CHANGED:
             return (
                 <>
-                    moved the lead from <OldValue>{old_state || '-'}</OldValue> to{' '}
+                    moved <Field>{event.lead?.name || "Lead"}</Field> from <OldValue>{old_state || '-'}</OldValue> to{" "}
                     <NewValue>{new_state || '-'}</NewValue>.
                 </>
             );
 
         case TimelineEvent.LEAD_OWNER_CHANGED:
-            return <>reassigned the lead.</>;
+            return <>reassigned lead <Field>{event.lead?.name || "Lead"}</Field>.</>;
 
         case TimelineEvent.LEAD_NOTE_ADDED:
-            return <>added a note.</>;
+            return <>added a note for <Field>{event.lead?.name || "Lead"}</Field>.</>;
 
         case TimelineEvent.LEAD_NOTE_UPDATED:
-            return <>updated a note.</>;
+            return <>updated a note for <Field>{event.lead?.name || "Lead"}</Field>.</>;
 
         case TimelineEvent.LEAD_NOTE_DELETED:
-            return <>deleted a note.</>;
+            return <>deleted a note for <Field>{event.lead?.name || "Lead"}</Field>.</>;
 
         case TimelineEvent.LEAD_FOLLOWUP_ADDED:
             return (
                 <>
-                    created follow up <Quote>{new_state}</Quote>.
+                    created follow up <Quote>{new_state}</Quote> for <Field>{event.lead?.name || "Lead"}</Field>.
                 </>
             );
 
         case TimelineEvent.LEAD_FOLLOWUP_UPDATED:
             return (
                 <>
-                    updated follow up from <Quote>{old_state}</Quote> to <Quote>{new_state}</Quote>.
+                    updated follow up for <Field>{event.lead?.name || "Lead"}</Field> from <Quote>{old_state}</Quote> to <Quote>{new_state}</Quote>.
                 </>
             );
 
         case TimelineEvent.LEAD_FOLLOWUP_DELETED:
             return (
                 <>
-                    deleted follow up <Quote>{old_state}</Quote>.
+                    deleted follow up <Quote>{old_state}</Quote> for <Field>{event.lead?.name || "Lead"}</Field>.
                 </>
             );
 
         case TimelineEvent.LEAD_FOLLOWUP_COMPLETED:
             return (
                 <>
-                    completed the follow up <Quote>{new_state}</Quote>.
+                    completed follow up <Quote>{new_state}</Quote> for <Field>{event.lead?.name || "Lead"}</Field>.
                 </>
             );
 
         case TimelineEvent.LEAD_FOLLOWUP_DATE_EXTENDED:
             return (
                 <>
-                    extended the due date from{" "}
+                    extended due date for <Field>{event.lead?.name || "Lead"}</Field> from{" "}
                     <OldValue>{old_state ? format(new Date(old_state), "dd MMM") : "N/A"}</OldValue>{" "}
                     to{" "}
                     <NewValue>{new_state ? format(new Date(new_state), "dd MMM") : "N/A"}</NewValue>.
@@ -232,21 +236,21 @@ export const renderEventAction = (event: Timeline) => {
         case TimelineEvent.LEAD_FOLLOWUP_COMMENT_ADDED:
             return (
                 <>
-                    added a comment: <Quote>{new_state}</Quote>
+                    added a comment for <Field>{event.lead?.name || "Lead"}</Field>: <Quote>{new_state}</Quote>
                 </>
             );
 
         case TimelineEvent.LEAD_FOLLOWUP_COMMENT_DELETED:
-            return <>deleted all comments from a follow up.</>;
+            return <>deleted all comments from a follow up for <Field>{event.lead?.name || "Lead"}</Field>.</>;
 
         case TimelineEvent.OFFLINE_PAYMENT_ADDED:
-            return <>recorded an offline payment of <NewValue>{new_state}</NewValue>.</>;
+            return <>recorded an offline payment of <NewValue>{new_state}</NewValue> for <Field>{event.lead?.name || "Lead"}</Field>.</>;
 
         case TimelineEvent.OFFLINE_PAYMENT_UPDATED:
-            return <>updated an offline payment from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
+            return <>updated an offline payment for <Field>{event.lead?.name || "Lead"}</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
 
         case TimelineEvent.OFFLINE_PAYMENT_DELETED:
-            return <>deleted an offline payment of <OldValue>{old_state}</OldValue>.</>;
+            return <>deleted an offline payment for <Field>{event.lead?.name || "Lead"}</Field> of <OldValue>{old_state}</OldValue>.</>;
 
         default:
             return <>{event_type.replace(/_/g, " ").toLowerCase()}.</>;
@@ -294,9 +298,20 @@ export default function DashboardTimeline({ leadIds }: { leadIds: string[] }) {
     }
 
     return (
-        <div className="group bg-white px-5 rounded-xl shadow-xl max-h-[370px] overflow-y-auto hover-scrollbar transition-colors duration-200 relative">
-            <h2 className="text-xl mb-6 text-gray-900 sticky top-0 bg-white z-9999 py-2">Timeline</h2>
-            <div>
+        <div className="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden flex flex-col h-full max-h-[400px]">
+             <div className="bg-gray-50/50 px-6 py-4 border-b border-gray-100 flex items-center justify-between sticky top-0 z-10 backdrop-blur-sm">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-100 rounded-lg">
+                        <History className="h-5 w-5 text-indigo-600" />
+                    </div>
+                    <h2 className="text-lg font-bold text-gray-800 tracking-tight">Timeline</h2>
+                </div>
+                <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    Live Feed
+                </div>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto hover-scrollbar p-6 space-y-1">
                 {feed.map((event, index) => (
                     <TimelineItem
                         key={event.id}
