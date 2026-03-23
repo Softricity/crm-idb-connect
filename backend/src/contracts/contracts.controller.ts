@@ -58,6 +58,15 @@ export class ContractsController {
     return this.contractsService.create(dto);
   }
 
+  @Post(':id/assign')
+  @Roles(Role.Admin, Role.SuperAdmin)
+  bulkAssign(
+    @Param('id') id: string,
+    @Body('agent_ids') agentIds: string[],
+  ) {
+    return this.contractsService.bulkAssign(id, agentIds);
+  }
+
   @Patch(':id/content')
   @Roles(Role.Admin, Role.SuperAdmin)
   updateContent(@Param('id') id: string, @Body() dto: UpdateContractContentDto) {

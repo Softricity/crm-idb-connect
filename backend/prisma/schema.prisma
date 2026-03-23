@@ -24,8 +24,91 @@ model Branch {
   leads      leads[]
   partners   partners[]
   agents     Agent[]
+  department_assignment_cursors department_assignment_cursor[]
 
   @@map("branches")
+}
+
+model department {
+  id                          String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                        String                         @unique
+  code                        String                         @unique
+  is_active                   Boolean                        @default(true)
+  created_at                  DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at                  DateTime                       @default(now()) @updatedAt @db.Timestamptz(6)
+  leads                       leads[]
+  partner_departments         partner_department[]
+  department_orders           department_order[]
+  department_statuses         department_status[]
+  department_assignment_cursors department_assignment_cursor[]
+
+  @@map("departments")
+}
+
+model partner_department {
+  partner_id     String      @db.Uuid
+  department_id  String      @db.Uuid
+  is_primary     Boolean     @default(false)
+  is_active      Boolean     @default(true)
+  created_at     DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
+  partners       partners    @relation(fields: [partner_id], references: [id], onDelete: Cascade)
+  department     department  @relation(fields: [department_id], references: [id], onDelete: Cascade)
+
+  @@id([partner_id, department_id])
+  @@index([department_id, is_active], map: "idx_partner_departments_department_active")
+  @@index([partner_id, is_active], map: "idx_partner_departments_partner_active")
+  @@map("partner_departments")
+}
+
+model department_order {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  department_id  String      @db.Uuid
+  order_index    Int
+  is_default     Boolean     @default(false)
+  is_active      Boolean     @default(true)
+  created_at     DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
+  department     department  @relation(fields: [department_id], references: [id], onDelete: Cascade)
+
+  @@unique([department_id])
+  @@unique([order_index])
+  @@index([is_active, order_index], map: "idx_department_order_active_order")
+  @@map("department_order")
+}
+
+model department_status {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  department_id  String      @db.Uuid
+  key            String
+  label          String
+  order_index    Int
+  is_terminal    Boolean     @default(false)
+  is_default     Boolean     @default(false)
+  is_active      Boolean     @default(true)
+  created_at     DateTime    @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
+  department     department  @relation(fields: [department_id], references: [id], onDelete: Cascade)
+
+  @@unique([department_id, key])
+  @@unique([department_id, order_index])
+  @@index([department_id, is_active], map: "idx_department_status_department_active")
+  @@map("department_statuses")
+}
+
+model department_assignment_cursor {
+  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branch_id      String      @db.Uuid
+  department_id  String      @db.Uuid
+  last_partner_id String?    @db.Uuid
+  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
+  branch         Branch      @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  department     department  @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  last_partner   partners?   @relation("department_assignment_cursor_last_partner", fields: [last_partner_id], references: [id], onDelete: SetNull)
+
+  @@unique([branch_id, department_id])
+  @@index([last_partner_id], map: "idx_department_assignment_cursor_last_partner")
+  @@map("department_assignment_cursors")
 }
 
 model announcement_reads {
@@ -275,10 +358,14 @@ model leads {
   password                             String?            @default("")
   is_flagged                           Boolean            @default(false)
   branch_id                            String?            @db.Uuid
+  current_department_id                String?            @db.Uuid
+  past_departments                     Json               @default("[]")
+  past_owners                          Json               @default("[]")
   applications                         applications[]
   followups                            followups[]
   partners_leads_assigned_toTopartners partners?          @relation("leads_assigned_toTopartners", fields: [assigned_to], references: [id], onDelete: NoAction, onUpdate: NoAction)
   branch                               Branch?            @relation(fields: [branch_id], references: [id])
+  current_department                   department?        @relation(fields: [current_department_id], references: [id], onDelete: SetNull)
   partners_leads_created_byTopartners  partners?          @relation("leads_created_byTopartners", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   notes                                notes[]
   offline_payments                     offline_payments[]
@@ -288,6 +375,9 @@ model leads {
   
   agent_team_member_id                 String?           @db.Uuid
   agent_team_member                    AgentTeamMember?  @relation(fields: [agent_team_member_id], references: [id])
+
+  @@index([branch_id, current_department_id], map: "idx_leads_branch_department")
+  @@index([current_department_id], map: "idx_leads_department")
 }
 
 model notes {
@@ -310,10 +400,13 @@ model offline_payments {
   receiver     String?   @db.Uuid
   lead_id      String?   @db.Uuid
   created_at   DateTime  @default(now()) @db.Timestamptz(6)
+  due_date     DateTime? @db.Timestamptz(6)
+  created_by   String?   @db.Uuid
   status       String?
   file         String?
   leads        leads?    @relation(fields: [lead_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  partners     partners? @relation(fields: [receiver], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  partners     partners? @relation("offline_payments_receiver", fields: [receiver], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  creator      partners? @relation("offline_payments_creator", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model partners {
@@ -339,13 +432,16 @@ model partners {
   leads_leads_assigned_toTopartners leads[]              @relation("leads_assigned_toTopartners")
   leads_leads_created_byTopartners  leads[]              @relation("leads_created_byTopartners")
   notes                             notes[]
-  offline_payments                  offline_payments[]
+  received_payments                 offline_payments[]   @relation("offline_payments_receiver")
+  recorded_payments                 offline_payments[]   @relation("offline_payments_creator")
   branch                            Branch?              @relation(fields: [branch_id], references: [id])
   role                              role                 @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   timeline                          timeline[]
   todos                             todos[]
   sent_messages                     ChatMessage[]
   financial_notes                   FinancialNote[]
+  partner_departments               partner_department[]
+  last_assignment_cursors           department_assignment_cursor[] @relation("department_assignment_cursor_last_partner")
   support_tickets                   SupportTicket[] @relation("LegacySupportTicketPartner")
   requested_support_tickets         SupportTicket[] @relation("SupportTicketRequesterPartner")
 }
@@ -423,7 +519,7 @@ model AgentUniversityAccess {
 
 model AgentContract {
   id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  agent_id        String              @db.Uuid
+  agent_id        String?             @db.Uuid
   title           String
   content         String              
   is_signed       Boolean             @default(false)
@@ -435,7 +531,7 @@ model AgentContract {
   rejection_note  String?
   created_at      DateTime            @default(now()) @db.Timestamptz(6)
   updated_at      DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
-  agent           Agent               @relation(fields: [agent_id], references: [id], onDelete: Cascade)
+  agent           Agent?               @relation(fields: [agent_id], references: [id], onDelete: Cascade)
 
   @@map("agent_contracts")
 }
@@ -804,6 +900,7 @@ enum timeline_event {
   LEAD_PURPOSE_CHANGED
   LEAD_OWNER_CHANGED
   LEAD_STATUS_CHANGED
+  LEAD_DEPARTMENT_CHANGED
   LEAD_NOTE_ADDED
   LEAD_NOTE_DELETED
   LEAD_NOTE_UPDATED

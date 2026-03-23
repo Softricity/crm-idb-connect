@@ -56,4 +56,9 @@ export class AnnouncementsController {
   markAsRead(@Param('id') id: string, @Request() req) {
     return this.announcementsService.markAsRead(id, req.user.id);
   }
+
+  @Post('mark-all-read')
+  markAllAsRead(@Request() req) {
+    return this.announcementsService.markAllAsRead(req.user);
+  }
 }

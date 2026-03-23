@@ -11,6 +11,7 @@ import {
 import SidebarMenus from "./sidebar-menus";
 import { MenuItem } from "@/config/menus";
 import BranchSelector from "./BranchSelector";
+import NotificationBell from "@/components/NotificationBell";
 
 export default function Navbar({ menus }: { menus: MenuItem[] }) {
   const [open, setOpen] = useState(false);
@@ -37,15 +38,18 @@ export default function Navbar({ menus }: { menus: MenuItem[] }) {
         />
       </div>
 
-      {/* Hamburger button */}
-      <button
-        title="Open Menu"
-        type="button"
-        onClick={handleOpen}
-        className="p-2 rounded-lg hover:bg-gray-100 shrink-0"
-      >
-        <Menu size={26} />
-      </button>
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+        {/* Hamburger button */}
+        <button
+          title="Open Menu"
+          type="button"
+          onClick={handleOpen}
+          className="p-2 rounded-lg hover:bg-gray-100 shrink-0"
+        >
+          <Menu size={26} />
+        </button>
+      </div>
 
       {/* Mobile Drawer */}
       <Drawer isOpen={open} onOpenChange={setOpen} placement="left" size="xs">

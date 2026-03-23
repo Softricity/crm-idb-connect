@@ -55,7 +55,7 @@ export function ChartPieDonut({
               left: 30,
               right: 20
             }}
-            
+
           >
             <ChartTooltip
               cursor={false}

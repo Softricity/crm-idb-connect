@@ -17,6 +17,19 @@ export interface Partner {
   zone: string;
   remarks?: string | null;
   branch_id?: string | null; // Branch assignment
+  department_ids?: string[];
+  primary_department_id?: string | null;
+  partner_departments?: Array<{
+    department_id: string;
+    is_primary: boolean;
+    is_active: boolean;
+    department?: {
+      id: string;
+      name: string;
+      code: string;
+      is_active: boolean;
+    };
+  }>;
   // Agent-specific fields
   agency_name?: string | null;
 

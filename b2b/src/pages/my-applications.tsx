@@ -1,16 +1,20 @@
 import { GetServerSideProps } from 'next';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import ApplicationsTable, { Lead } from '@/components/applications/ApplicationsTable';
+import ApplicationsTable, {
+    Lead,
+    DepartmentStatusConfig,
+} from '@/components/applications/ApplicationsTable';
 import CreateApplicationModal from '@/components/applications/CreateApplicationModal';
 import { Select, SelectItem, Button, Input } from '@heroui/react';
 import { Plus, Search } from 'lucide-react';
-import { useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
-import { AgentsAPI, LeadsAPI } from '@/lib/api';
+import { AgentsAPI, DepartmentsAPI, LeadsAPI } from '@/lib/api';
 
 interface MyApplicationsProps {
     allLeads: Lead[];
     teamMembers: { id: string; name: string }[];
+    departments: DepartmentConfig[];
     userType?: string;
     initialSearch?: string;
     initialStatus?: string;
@@ -19,9 +23,31 @@ interface MyApplicationsProps {
     initialPage?: number;
 }
 
+interface DepartmentConfig {
+    id: string;
+    is_default?: boolean;
+    order_index?: number;
+    department_statuses?: DepartmentStatusConfig[];
+}
+
+const FALLBACK_STATUS_OPTIONS = [
+    { value: '', label: 'All Statuses' },
+    { value: 'new', label: 'New' },
+    { value: 'contacted', label: 'Contacted' },
+    { value: 'interested', label: 'Interested' },
+    { value: 'engaged', label: 'Engaged' },
+    { value: 'hot', label: 'Hot' },
+    { value: 'cold', label: 'Cold' },
+    { value: 'rejected', label: 'Rejected' },
+];
+
+const normalizeStatusToken = (value?: string | null) =>
+    (value || '').toString().trim().toLowerCase();
+
 const MyApplications = ({ 
     allLeads, 
     teamMembers,
+    departments = [],
     userType = 'agent',
     initialSearch = '', 
     initialStatus = '', 
@@ -31,7 +57,7 @@ const MyApplications = ({
 }: MyApplicationsProps) => {
     const router = useRouter();
     const [searchInput, setSearchInput] = useState(initialSearch);
-    const [selectedStatus, setSelectedStatus] = useState(initialStatus);
+    const [selectedStatus, setSelectedStatus] = useState(normalizeStatusToken(initialStatus));
     const [selectedSort, setSelectedSort] = useState(initialSortBy);
     const [selectedOrder, setSelectedOrder] = useState(initialSortOrder);
     const [currentPage, setCurrentPage] = useState(initialPage);
@@ -39,6 +65,99 @@ const MyApplications = ({
     const isTeamMember = userType === 'agent_team_member';
     
     const limit = 20;
+
+    const activeDepartmentStatuses = useMemo(() => {
+        const normalizedDepartments = (departments || []).map((department) => ({
+            ...department,
+            department_statuses: (department.department_statuses || [])
+                .filter((status) => status.is_active !== false)
+                .sort((left, right) => {
+                    const leftOrder = left.order_index ?? Number.MAX_SAFE_INTEGER;
+                    const rightOrder = right.order_index ?? Number.MAX_SAFE_INTEGER;
+                    if (leftOrder !== rightOrder) {
+                        return leftOrder - rightOrder;
+                    }
+                    return (left.label || left.key || '').localeCompare(right.label || right.key || '');
+                }),
+        }));
+
+        if (!normalizedDepartments.length) {
+            return [] as DepartmentStatusConfig[];
+        }
+
+        const leadDepartmentFrequency = new Map<string, number>();
+        allLeads.forEach((lead) => {
+            if (!lead.current_department_id) {
+                return;
+            }
+            leadDepartmentFrequency.set(
+                lead.current_department_id,
+                (leadDepartmentFrequency.get(lead.current_department_id) || 0) + 1,
+            );
+        });
+
+        const mostCommonDepartmentId = Array.from(leadDepartmentFrequency.entries())
+            .sort((left, right) => right[1] - left[1])[0]?.[0];
+
+        const activeDepartment =
+            normalizedDepartments.find((department) => department.id === mostCommonDepartmentId) ||
+            normalizedDepartments.find((department) => department.is_default) ||
+            [...normalizedDepartments].sort(
+                (left, right) => (left.order_index ?? Number.MAX_SAFE_INTEGER) - (right.order_index ?? Number.MAX_SAFE_INTEGER),
+            )[0];
+
+        if (activeDepartment?.department_statuses?.length) {
+            return activeDepartment.department_statuses;
+        }
+
+        return normalizedDepartments
+            .flatMap((department) => department.department_statuses || [])
+            .sort((left, right) => {
+                const leftOrder = left.order_index ?? Number.MAX_SAFE_INTEGER;
+                const rightOrder = right.order_index ?? Number.MAX_SAFE_INTEGER;
+                if (leftOrder !== rightOrder) {
+                    return leftOrder - rightOrder;
+                }
+                return (left.label || left.key || '').localeCompare(right.label || right.key || '');
+            });
+    }, [allLeads, departments]);
+
+    const statusOptions = useMemo(() => {
+        if (!activeDepartmentStatuses.length) {
+            return FALLBACK_STATUS_OPTIONS;
+        }
+
+        const seen = new Set<string>();
+        const dynamicOptions = activeDepartmentStatuses
+            .map((status) => ({
+                value: normalizeStatusToken(status.key || status.label),
+                label: status.label?.trim() || status.key,
+            }))
+            .filter((option) => {
+                if (!option.value || seen.has(option.value)) {
+                    return false;
+                }
+                seen.add(option.value);
+                return true;
+            });
+
+        if (!dynamicOptions.length) {
+            return FALLBACK_STATUS_OPTIONS;
+        }
+
+        return [{ value: '', label: 'All Statuses' }, ...dynamicOptions];
+    }, [activeDepartmentStatuses]);
+
+    useEffect(() => {
+        if (!selectedStatus) {
+            return;
+        }
+
+        const exists = statusOptions.some((option) => option.value === selectedStatus);
+        if (!exists) {
+            setSelectedStatus('');
+        }
+    }, [selectedStatus, statusOptions]);
 
     const { filteredLeads, totalPages, totalCount } = useMemo(() => {
         let filtered = [...allLeads];
@@ -53,7 +172,9 @@ const MyApplications = ({
         }
 
         if (selectedStatus) {
-            filtered = filtered.filter(lead => lead.status?.toLowerCase() === selectedStatus.toLowerCase());
+            filtered = filtered.filter(
+                (lead) => normalizeStatusToken(lead.status) === selectedStatus,
+            );
         }
 
         filtered.sort((a, b) => {
@@ -82,17 +203,6 @@ const MyApplications = ({
             totalCount
         };
     }, [allLeads, searchInput, selectedStatus, selectedSort, selectedOrder, currentPage, limit]);
-
-    const statusOptions = [
-        { value: '', label: 'All Statuses' },
-        { value: 'new', label: 'New' },
-        { value: 'contacted', label: 'Contacted' },
-        { value: 'interested', label: 'Interested' },
-        { value: 'engaged', label: 'Engaged' },
-        { value: 'hot', label: 'Hot' },
-        { value: 'cold', label: 'Cold' },
-        { value: 'rejected', label: 'Rejected' },
-    ];
 
     const handleSearch = () => {
         setCurrentPage(1);
@@ -163,8 +273,8 @@ const MyApplications = ({
                             placeholder="Select status"
                             selectedKeys={selectedStatus ? [selectedStatus] : []}
                             onSelectionChange={(keys) => {
-                                const value = Array.from(keys)[0] as string;
-                                setSelectedStatus(value);
+                                const value = Array.from(keys)[0] as string | undefined;
+                                setSelectedStatus(normalizeStatusToken(value));
                             }}
                             size='sm'
                             classNames={{
@@ -230,6 +340,10 @@ const MyApplications = ({
                     teamMembers={teamMembers}
                     onAssignTeamMember={handleAssignTeamMember}
                     hideTeamAssignment={isTeamMember}
+                    departmentStatuses={activeDepartmentStatuses}
+                    onForwarded={async () => {
+                        await router.replace(router.asPath);
+                    }}
                 />
 
                 <CreateApplicationModal
@@ -277,15 +391,17 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
 
     try {
         const createdBy = user.id;
-        const [data, teamMembers] = await Promise.all([
+        const [data, teamMembers, departments] = await Promise.all([
             LeadsAPI.getMyApplications(createdBy, token),
             user.type === 'agent' ? AgentsAPI.getMyTeam(token) : Promise.resolve([]),
+            DepartmentsAPI.fetchDepartments(false, token).catch(() => []),
         ]);
 
         return {
             props: {
                 allLeads: data || [],
                 teamMembers: (teamMembers || []).map((m: any) => ({ id: m.id, name: m.name })),
+                departments: Array.isArray(departments) ? departments : [],
                 userType: user.type || 'agent',
                 initialSearch: (query.search as string) || '',
                 initialStatus: (query.status as string) || '',
@@ -300,6 +416,7 @@ export const getServerSideProps: GetServerSideProps = async (ctx) => {
             props: {
                 allLeads: [],
                 teamMembers: [],
+                departments: [],
                 userType: user.type || 'agent',
                 initialSearch: '',
                 initialStatus: '',

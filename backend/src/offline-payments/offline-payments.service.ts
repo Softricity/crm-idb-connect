@@ -53,10 +53,12 @@ export class OfflinePaymentsService {
     const payment = await this.prisma.offline_payments.create({
       data: {
         ...createDto,
+        amount: createDto.amount ? BigInt(createDto.amount) : undefined,
         file: fileUrl,
+        created_by: userId,
       },
       include: {
-        leads: { select: { name: true } },
+        leads: { select: { id: true, name: true } },
         partners: { select: { name: true, role: true } },
       },
     });
@@ -170,5 +172,52 @@ export class OfflinePaymentsService {
     if (!fileUrl) return { ok: false };
     const result = await this.supabaseService.removeFileByUrl(fileUrl);
     return { ok: result };
+  }
+
+  async getTodaySummary(user: any, start?: string, end?: string) {
+    const todayStart = start ? new Date(start) : new Date();
+    if (!start) todayStart.setHours(0, 0, 0, 0);
+
+    const todayEnd = end ? new Date(end) : new Date();
+    if (!end) todayEnd.setHours(23, 59, 59, 999);
+
+    const commonInclude = {
+      leads: { select: { id: true, name: true } }
+    };
+
+    const isSuperAdmin = user.role === 'superadmin';
+    const whereClause: any = {
+      status: 'RECEIVED',
+      created_at: {
+        gte: todayStart,
+        lte: todayEnd,
+      },
+    };
+    if (!isSuperAdmin) {
+      whereClause.created_by = user.userId;
+    }
+
+    const received = await this.prisma.offline_payments.findMany({
+      where: whereClause,
+      include: commonInclude,
+    });
+
+    const dueWhereClause: any = {
+      status: 'SCHEDULED',
+      due_date: {
+        gte: todayStart,
+        lte: todayEnd,
+      },
+    };
+    if (!isSuperAdmin) {
+      dueWhereClause.created_by = user.userId;
+    }
+
+    const due = await this.prisma.offline_payments.findMany({
+      where: dueWhereClause,
+      include: commonInclude,
+    });
+
+    return { received, due };
   }
 }

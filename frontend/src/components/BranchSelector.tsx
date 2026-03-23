@@ -86,11 +86,7 @@ export default function BranchSelector({
       description={
         isDisabled
           ? canManageBranches
-            ? undefined
-            : user?.branch_name
-              ? `Locked to ${user.branch_name} (no permission)`
-              : `No branch assigned`
-          : undefined
+            : undefined
       }
     >
       {visibleBranches.map((branch) => (

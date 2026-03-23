@@ -70,6 +70,12 @@ export default function AgreementsPage() {
 
   const [form, setForm] = useState({ agent_id: '', title: '', content: '' });
   const [editingContract, setEditingContract] = useState<ContractRow | null>(null);
+  
+  // Bulk Assign State
+  const [assigningContract, setAssigningContract] = useState<ContractRow | null>(null);
+  const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
+  const { isOpen: isAssignOpen, onOpen: onAssignOpen, onOpenChange: onAssignOpenChange } = useDisclosure();
+
   const [rejectingContractId, setRejectingContractId] = useState<string | null>(null);
   const [rejectionNote, setRejectionNote] = useState('');
   const [loading, setLoading] = useState(false);
@@ -131,17 +137,38 @@ export default function AgreementsPage() {
   }, [inquiries, search]);
 
   const createContract = async () => {
-    if (!form.agent_id || !form.title || !form.content) {
-      alert('Please fill all fields');
+    if (!form.title || !form.content) {
+      alert('Please fill title and content');
       return;
     }
     setLoading(true);
     try {
-      await ContractsAPI.create(form);
-      alert('Contract created');
+      await ContractsAPI.create({
+        ...form,
+        agent_id: form.agent_id || undefined
+      });
+      alert(form.agent_id ? 'Contract created' : 'General template created');
       setForm({ agent_id: '', title: '', content: '' });
+      await load();
     } catch (e: any) {
       alert(e?.message || 'Failed to create contract');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBulkAssign = async () => {
+    if (!assigningContract || selectedAgentIds.length === 0) return;
+    setLoading(true);
+    try {
+      await ContractsAPI.bulkAssign(assigningContract.id, selectedAgentIds);
+      alert(`Assigned to ${selectedAgentIds.length} agents`);
+      onAssignOpenChange();
+      setAssigningContract(null);
+      setSelectedAgentIds([]);
+      await load();
+    } catch (e: any) {
+      alert(e?.message || 'Failed to assign template');
     } finally {
       setLoading(false);
     }
@@ -204,7 +231,7 @@ export default function AgreementsPage() {
   const updateInquiryStatus = async (id: string, status: string) => {
     try {
       await AgentsAPI.updateInquiryStatus(id, status);
-      await load(); // CONVERTED disappears from inquiry tab and appears in agents list
+      await load(); 
     } catch (e: any) {
       alert(e?.message || 'Failed to update inquiry status');
     }
@@ -278,33 +305,39 @@ export default function AgreementsPage() {
         <CardBody className="space-y-4">
           {tab === 'agreements' ? (
             <>
-              <div className="border rounded-lg p-4 space-y-3">
-                <h3 className="font-semibold">Create Agreement</h3>
-                <Select
-                  label="Agent"
-                  selectedKeys={form.agent_id ? [form.agent_id] : []}
-                  onChange={(e) => setForm({ ...form, agent_id: e.target.value })}
-                >
-                  {agents.map((a) => (
-                    <SelectItem key={a.id} textValue={`${a.name} (${a.email})`}>
-                      {a.name} ({a.email})
-                    </SelectItem>
-                  ))}
-                </Select>
-                <Input label="Contract Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+              <div className="border rounded-lg p-4 space-y-3 bg-gray-50/30">
+                <h3 className="font-semibold">{form.agent_id ? 'Create Agent Agreement' : 'Create General Template'}</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Select
+                        label="Agent (Optional for Template)"
+                        selectedKeys={form.agent_id ? [form.agent_id] : []}
+                        onChange={(e) => setForm({ ...form, agent_id: e.target.value })}
+                        placeholder="Leave empty for general template"
+                    >
+                        {agents.map((a) => (
+                        <SelectItem key={a.id} textValue={`${a.name} (${a.email})`}>
+                            {a.name} ({a.email})
+                        </SelectItem>
+                        ))}
+                    </Select>
+                    <Input label="Contract Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+                </div>
                 <Textarea label="Contract Content (HTML allowed)" minRows={8} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-2">
+                  {form.agent_id && (
+                    <Button variant="light" size="sm" onPress={() => setForm({ ...form, agent_id: '' })}>Clear Agent</Button>
+                  )}
                   <Button color="primary" className="text-white" isLoading={loading} onPress={createContract}>
-                    <Plus className="h-4 w-4 mr-1" /> Create Agreement
+                    <Plus className="h-4 w-4 mr-1" /> {form.agent_id ? 'Create Agreement' : 'Create Template'}
                   </Button>
                 </div>
               </div>
 
-              <div className="border rounded-lg">
-                <Table aria-label="Agreements table">
+              <div className="border rounded-lg overflow-hidden">
+                <Table aria-label="Agreements table" removeWrapper>
                   <TableHeader>
                     <TableColumn>TITLE</TableColumn>
-                    <TableColumn>AGENT</TableColumn>
+                    <TableColumn>ASSIGNED TO</TableColumn>
                     <TableColumn>STATUS</TableColumn>
                     <TableColumn>REJECTION NOTE</TableColumn>
                     <TableColumn align="center">ACTIONS</TableColumn>
@@ -312,8 +345,14 @@ export default function AgreementsPage() {
                   <TableBody items={filteredAgreements} emptyContent="No agreements found">
                     {(row) => (
                       <TableRow key={row.id}>
-                        <TableCell>{row.title}</TableCell>
-                        <TableCell>{row.agent?.name || row.agent?.email || '-'}</TableCell>
+                        <TableCell className="font-medium">{row.title}</TableCell>
+                        <TableCell>
+                            {!row.agent_id ? (
+                                <Chip size="sm" variant="flat" color="secondary">TEMPLATE</Chip>
+                            ) : (
+                                <span>{row.agent?.name || row.agent?.email || '-'}</span>
+                            )}
+                        </TableCell>
                         <TableCell>{statusChip(row.status)}</TableCell>
                         <TableCell className="max-w-xs truncate">{row.rejection_note || '-'}</TableCell>
                         <TableCell>
@@ -329,12 +368,27 @@ export default function AgreementsPage() {
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
+                            
+                            {!row.agent_id && (
+                                <Button 
+                                    size="sm" 
+                                    variant="flat" 
+                                    color="secondary"
+                                    onPress={() => {
+                                        setAssigningContract(row);
+                                        onAssignOpen();
+                                    }}
+                                >
+                                    Assign
+                                </Button>
+                            )}
+
                             {row.status === 'SIGNED' ? (
                               <Button isIconOnly size="sm" variant="light" color="success" onPress={() => approveAgreement(row.id)}>
                                 <CheckCircle className="h-4 w-4" />
                               </Button>
                             ) : null}
-                            {row.status !== 'REJECTED' ? (
+                            {row.status !== 'REJECTED' && row.agent_id ? (
                               <Button
                                 isIconOnly
                                 size="sm"
@@ -349,9 +403,11 @@ export default function AgreementsPage() {
                                 <XCircle className="h-4 w-4" />
                               </Button>
                             ) : null}
-                            <Button isIconOnly size="sm" variant="light" onPress={() => downloadAgreement(row.id)}>
-                              <FileDown className="h-4 w-4" />
-                            </Button>
+                            {row.agent_id && (
+                                <Button isIconOnly size="sm" variant="light" onPress={() => downloadAgreement(row.id)}>
+                                    <FileDown className="h-4 w-4" />
+                                </Button>
+                            )}
                           </div>
                         </TableCell>
                       </TableRow>
@@ -435,6 +491,7 @@ export default function AgreementsPage() {
         </CardBody>
       </Card>
 
+      {/* Reject Modal */}
       <Modal isOpen={isOpen} onOpenChange={onOpenChange}>
         <ModalContent>
           {(close) => (
@@ -457,6 +514,7 @@ export default function AgreementsPage() {
         </ModalContent>
       </Modal>
 
+      {/* Edit Modal */}
       <Modal isOpen={isEditOpen} onOpenChange={onEditOpenChange} size="4xl">
         <ModalContent>
           {(close) => (
@@ -478,6 +536,52 @@ export default function AgreementsPage() {
               <ModalFooter>
                 <Button variant="light" onPress={close}>Cancel</Button>
                 <Button color="primary" className="text-white" isLoading={loading} onPress={updateContract}>Save</Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Bulk Assign Modal */}
+      <Modal isOpen={isAssignOpen} onOpenChange={onAssignOpenChange} size="2xl">
+        <ModalContent>
+          {(close) => (
+            <>
+              <ModalHeader>Assign Template to Agents</ModalHeader>
+              <ModalBody className="space-y-4">
+                <div className="p-3 bg-secondary-50 border border-secondary-100 rounded-lg">
+                    <p className="text-sm text-secondary-700">
+                        Assigning template: <strong>{assigningContract?.title}</strong>
+                    </p>
+                </div>
+                <Select
+                    label="Select Agents"
+                    selectionMode="multiple"
+                    placeholder="Search and select agents"
+                    selectedKeys={selectedAgentIds}
+                    onSelectionChange={(keys) => setSelectedAgentIds(Array.from(keys) as string[])}
+                >
+                    {agents.map((a) => (
+                        <SelectItem key={a.id} textValue={a.name}>
+                            {a.name} ({a.agency_name || 'Individual'})
+                        </SelectItem>
+                    ))}
+                </Select>
+                <p className="text-[10px] text-gray-400">
+                    A copy of this agreement will be created for each selected agent.
+                </p>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" onPress={close}>Cancel</Button>
+                <Button 
+                    color="secondary" 
+                    className="text-white" 
+                    isLoading={loading} 
+                    onPress={handleBulkAssign}
+                    isDisabled={selectedAgentIds.length === 0}
+                >
+                  Assign to {selectedAgentIds.length} Agents
+                </Button>
               </ModalFooter>
             </>
           )}

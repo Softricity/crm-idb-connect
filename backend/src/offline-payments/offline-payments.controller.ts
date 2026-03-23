@@ -11,6 +11,7 @@ import {
   Request,
   UseInterceptors, // Import
   UploadedFile,    // Import
+  Query,           // Import
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express'; // Import
 import { OfflinePaymentsService } from './offline-payments.service';
@@ -45,6 +46,11 @@ export class OfflinePaymentsController {
   @Post('offline-payments/delete-file')
   async deleteUploadedFile(@Body('fileUrl') fileUrl: string) {
     return this.offlinePaymentsService.deleteFileOnly(fileUrl);
+  }
+
+  @Get('offline-payments/today-summary')
+  getTodaySummary(@Request() req, @Query('start') start?: string, @Query('end') end?: string) {
+    return this.offlinePaymentsService.getTodaySummary(req.user, start, end);
   }
 
   @Get('leads/:leadId/offline-payments')

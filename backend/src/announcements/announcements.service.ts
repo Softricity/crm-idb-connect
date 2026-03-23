@@ -45,12 +45,19 @@ export class AnnouncementsService {
       // Standard Users (Consumption View)
       where.OR = [
         { 
-          target_audience: 'user', 
-          users: { has: user.id } 
+          target_audience: 'branch' // All Branches
         },
         { 
-          target_audience: 'branch', 
-          branch_id: user.branch_id // <--- Match User's Branch
+          target_audience: 'branch-specific',
+          branches: { has: user.branch_id } 
+        },
+        { 
+          target_audience: 'role-based',
+          roles: { has: user.role?.toLowerCase() } 
+        },
+        { 
+          target_audience: 'user', 
+          users: { has: user.id } 
         },
       ];
     }
@@ -113,6 +120,27 @@ export class AnnouncementsService {
     });
   }
 
+  async markAllAsRead(user: any) {
+    const announcements = await this.findAll(user, false);
+    const unread = announcements.filter(a => a.announcement_reads.length === 0);
+    
+    const promises = unread.map(a => 
+      this.prisma.announcement_reads.upsert({
+        where: {
+          announcement_id_partner_id: {
+            announcement_id: a.id,
+            partner_id: user.id,
+          },
+        },
+        create: { announcement_id: a.id, partner_id: user.id },
+        update: { read_at: new Date() },
+      })
+    );
+
+    await Promise.all(promises);
+    return { success: true, count: unread.length };
+  }
+
   async getUnreadCount(user: any) {
     // Reuse findAll to ensure scoping rules apply
     const announcements = await this.findAll(user, false);
@@ -122,6 +150,6 @@ export class AnnouncementsService {
       (a) => a.announcement_reads.length === 0
     ).length;
 
-    return { unreadCount };
+    return { count: unreadCount };
   }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   Modal,
   ModalContent,
@@ -14,6 +14,7 @@ import {
   Progress,
 } from "@heroui/react";
 import { useLeadStore, Lead } from "@/stores/useLeadStore";
+import { DepartmentsAPI } from "@/lib/api";
 import { toast } from "sonner";
 import { Shuffle, AlertCircle } from "lucide-react";
 
@@ -25,8 +26,20 @@ interface BulkChangeStatusModalProps {
   onComplete: () => void; // e.g., clear selected + refresh views
 }
 
-// Keep values aligned to your backend/store expected strings
-const STATUS_OPTIONS = [
+interface DepartmentStatusConfig {
+  key: string;
+  label: string;
+  order_index: number;
+  is_default?: boolean;
+  is_active?: boolean;
+}
+
+interface DepartmentRecord {
+  id: string;
+  department_statuses?: DepartmentStatusConfig[];
+}
+
+const FALLBACK_STATUS_OPTIONS = [
   { value: "new", label: "New" },
   { value: "inprocess", label: "In Process" },
   { value: "assigned", label: "Assigned" },
@@ -39,6 +52,9 @@ const STATUS_OPTIONS = [
   { value: "engaged", label: "Engaged" },
 ];
 
+const normalizeStatusToken = (value?: string | null) =>
+  (value || "").toString().trim().toLowerCase();
+
 export default function BulkChangeStatusModal({
   isOpen,
   onOpenChange,
@@ -48,6 +64,7 @@ export default function BulkChangeStatusModal({
 }: BulkChangeStatusModalProps) {
   const { updateLead, fetchLeads } = useLeadStore();
 
+  const [departments, setDepartments] = useState<DepartmentRecord[]>([]);
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [reason, setReason] = useState<string>("");
   const [isProcessing, setIsProcessing] = useState(false);
@@ -57,6 +74,124 @@ export default function BulkChangeStatusModal({
     () => allLeads.filter((l) => selectedLeadIds.includes(l.id || "")),
     [allLeads, selectedLeadIds]
   );
+
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchDepartments = async () => {
+      try {
+        const response = await DepartmentsAPI.fetchDepartments(false);
+        if (!isMounted) {
+          return;
+        }
+
+        const normalizedDepartments: DepartmentRecord[] = Array.isArray(response)
+          ? response.map((department: any) => ({
+              id: department.id,
+              department_statuses: (department.department_statuses || [])
+                .filter((status: any) => status.is_active !== false)
+                .map((status: any) => ({
+                  key: status.key,
+                  label: status.label,
+                  order_index: status.order_index ?? 0,
+                  is_default: status.is_default,
+                  is_active: status.is_active,
+                })),
+            }))
+          : [];
+
+        setDepartments(normalizedDepartments);
+      } catch (error) {
+        console.error("Failed to fetch department statuses for bulk status modal:", error);
+        if (isMounted) {
+          setDepartments([]);
+        }
+      }
+    };
+
+    fetchDepartments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isOpen]);
+
+  const statusOptions = useMemo(() => {
+    const selectedDepartmentIds = Array.from(
+      new Set(
+        selectedLeads
+          .map((lead) => lead.current_department_id)
+          .filter((departmentId): departmentId is string => Boolean(departmentId)),
+      ),
+    );
+
+    if (!selectedDepartmentIds.length || !departments.length) {
+      return FALLBACK_STATUS_OPTIONS;
+    }
+
+    const statusesByValue = new Map<
+      string,
+      { value: string; label: string; order_index: number; is_default: boolean }
+    >();
+
+    for (const departmentId of selectedDepartmentIds) {
+      const department = departments.find((item) => item.id === departmentId);
+      const departmentStatuses = (department?.department_statuses || []).filter(
+        (status) => status.is_active !== false,
+      );
+
+      for (const status of departmentStatuses) {
+        const value = normalizeStatusToken(status.key || status.label);
+        if (!value) {
+          continue;
+        }
+
+        const candidate = {
+          value,
+          label: status.label?.trim() || status.key,
+          order_index: status.order_index ?? Number.MAX_SAFE_INTEGER,
+          is_default: status.is_default === true,
+        };
+        const existing = statusesByValue.get(value);
+
+        if (!existing || candidate.order_index < existing.order_index) {
+          statusesByValue.set(value, candidate);
+        }
+      }
+    }
+
+    const resolved = Array.from(statusesByValue.values()).sort((left, right) => {
+      if (left.is_default && !right.is_default) {
+        return -1;
+      }
+      if (!left.is_default && right.is_default) {
+        return 1;
+      }
+      if (left.order_index !== right.order_index) {
+        return left.order_index - right.order_index;
+      }
+      return left.label.localeCompare(right.label);
+    });
+
+    return resolved.length
+      ? resolved.map(({ value, label }) => ({ value, label: label || value }))
+      : FALLBACK_STATUS_OPTIONS;
+  }, [departments, selectedLeads]);
+
+  useEffect(() => {
+    if (!selectedStatus) {
+      return;
+    }
+
+    const exists = statusOptions.some((option) => option.value === selectedStatus);
+    if (!exists) {
+      setSelectedStatus("");
+    }
+  }, [selectedStatus, statusOptions]);
 
   const total = selectedLeads.length;
   const progress = total > 0 ? Math.round((currentIndex / total) * 100) : 0;
@@ -96,7 +231,7 @@ export default function BulkChangeStatusModal({
 
       if (success) {
         toast.success(
-          `Updated ${success} lead${success > 1 ? "s" : ""} to "${STATUS_OPTIONS.find(s => s.value === selectedStatus)?.label ?? selectedStatus
+          `Updated ${success} lead${success > 1 ? "s" : ""} to "${statusOptions.find(s => s.value === selectedStatus)?.label ?? selectedStatus
           }".`
         );
       }
@@ -170,7 +305,7 @@ export default function BulkChangeStatusModal({
                       onChange={(e) => setSelectedStatus(e.target.value)}
                       isDisabled={isProcessing}
                     >
-                      {STATUS_OPTIONS.map((opt) => (
+                      {statusOptions.map((opt) => (
                         <SelectItem key={opt.value}>{opt.label}</SelectItem>
                       ))}
                     </Select>

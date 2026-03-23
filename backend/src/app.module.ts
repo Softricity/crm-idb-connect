@@ -30,6 +30,7 @@ import { FinancialsModule } from './financials/financials.module';
 import { SupportModule } from './support/support.module';
 import { ContractsModule } from './contracts/contracts.module';
 import { ReportsModule } from './reports/reports.module';
+import { DepartmentsModule } from './departments/departments.module';
 
 @Module({
   imports: [
@@ -61,6 +62,7 @@ import { ReportsModule } from './reports/reports.module';
     SupportModule,
     ContractsModule,
     ReportsModule,
+    DepartmentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

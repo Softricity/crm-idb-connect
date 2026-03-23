@@ -8,51 +8,67 @@ import DashboardLeads from "@/components/dashboard-components/dashboardLeads";
 import DashboardApplications from "@/components/dashboard-components/dashboardApplications";
 import DashboardPayments from "@/components/dashboard-components/dashboardPayments";
 import SearchDrawer from "@/components/dashboard-components/SearchDrawer";
+import ActivityLogsContent from "@/components/dashboard-components/ActivityLogsContent";
+import ReportsLanding from "@/components/reports-components/ReportsLanding";
+import { PermissionGuard } from "@/components/PermissionGuard";
+import { AdministrativePermission } from "@/lib/utils";
 
-export default function Page() {
-    const [selected, setSelected] = useState("home");
-    const [openSearch, setOpenSearch] = useState(false);
+import { useDashboardStore } from "@/stores/useDashboardStore";
+
+export default function DashboardPage() {
+    const topSelected = useDashboardStore((s) => s.topSelected);
+    const [dashboardSubSelected, setDashboardSubSelected] = useState("leads");
+
     return (
         <div className="w-full flex flex-col px-6 py-4 gap-6">
 
-            <div className="flex items-center justify-between w-full">
-
-                <Tabs
-                    aria-label="Dashboard Sections"
-                    selectedKey={selected}
-                    onSelectionChange={(key) => setSelected(key as string)}
-                    variant="solid"
-                    color="secondary"
-                    radius="full"
-                    classNames={{
-                        tabList: "bg-gray-100 p-1 rounded-full shadow-sm",
-                        tab: "px-6 py-2 text-sm font-medium",
-                    }}
-                >
-                    <Tab key="home" title="Home" />
-                    <Tab key="leads" title="Leads" />
-                    <Tab key="applications" title="Applications" />
-                    <Tab key="payments" title="Payments" />
-                </Tabs>
-
-                <div
-                    onClick={() => setOpenSearch(true)}
-                    className="cursor-pointer flex items-center gap-2 w-[260px] md:w-[320px] px-4 py-2 rounded-full border border-gray-300 text-gray-500 hover:border-blue-500 hover:bg-blue-50 transition"
-                >
-                    <SearchIcon className="h-4 w-4" />
-                    <span className="text-sm">Search Anything...</span>
+            {topSelected === "dashboard" && (
+                <div className="flex justify-center w-full">
+                    <Tabs
+                        aria-label="Dashboard Sub-sections"
+                        selectedKey={dashboardSubSelected}
+                        onSelectionChange={(key) => setDashboardSubSelected(key as string)}
+                        variant="solid"
+                        color="primary"
+                        radius="full"
+                        size="sm"
+                        classNames={{
+                            tabList: "bg-gray-100 p-1 rounded-full shadow-sm",
+                            tab: "px-6 py-1 text-xs font-medium transition-all duration-200",
+                            tabContent: "group-data-[selected=true]:text-white text-gray-600",
+                            cursor: "bg-primary shadow-sm",
+                        }}
+                    >
+                        <Tab key="leads" title="Leads" />
+                        <Tab key="applications" title="Applications" />
+                        <Tab key="payments" title="Payments" />
+                    </Tabs>
                 </div>
-            </div>
+            )}
 
             <div className="min-h-[70vh]">
-                {selected === "home" && <DashboardHome />}
-                {selected === "leads" && <DashboardLeads />}
-                {selected === "applications" && <DashboardApplications />}
-                {selected === "payments" && <DashboardPayments />}
+                {topSelected === "home" && <DashboardHome />}
+                
+                {topSelected === "dashboard" && (
+                    <>
+                        {dashboardSubSelected === "leads" && <DashboardLeads />}
+                        {dashboardSubSelected === "applications" && <DashboardApplications />}
+                        {dashboardSubSelected === "payments" && <DashboardPayments />}
+                    </>
+                )}
+
+                {topSelected === "reports" && (
+                    <PermissionGuard requiredPermissions={[AdministrativePermission.REPORTS_VIEW]}>
+                        <ReportsLanding />
+                    </PermissionGuard>
+                )}
+
+                {topSelected === "activity" && (
+                    <PermissionGuard requiredPermissions={[AdministrativePermission.ACTIVITY_LOGS]}>
+                        <ActivityLogsContent />
+                    </PermissionGuard>
+                )}
             </div>
-
-            <SearchDrawer open={openSearch} onClose={() => setOpenSearch(false)} />
-
         </div>
     );
-}
+}

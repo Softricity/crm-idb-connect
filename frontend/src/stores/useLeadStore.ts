@@ -24,6 +24,8 @@ export interface Lead {
   password?: string | null;
   is_flagged?: boolean;
   branch_id?: string | null;
+  current_department_id?: string | null;
+  can_forward_to_next_department?: boolean;
   partners_leads_assigned_toTopartners?: {
     name: string;
     email?: string;

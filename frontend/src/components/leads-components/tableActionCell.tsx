@@ -29,6 +29,7 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { toast } from "sonner";
 import { useState } from "react";
 import CommissionModal from "./CommissionModal";
+import { ForwardDepartmentModal } from "./forwardDepartmentModal";
 import { hasPermission, LeadPermission, ApplicationPermission, CommissionPermission } from "@/lib/utils";
 
 interface LeadActionsMenuProps {
@@ -45,6 +46,7 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
     const { user } = useAuthStore();
     const { selectedBranch } = useBranchStore();
     const [commissionModalOpen, setCommissionModalOpen] = useState(false);
+    const [forwardModalOpen, setForwardModalOpen] = useState(false);
     
     const userPermissions = user?.permissions || [];
     const basePath = "/leads";
@@ -54,6 +56,16 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
     const canConvertToApp = hasPermission(userPermissions, ApplicationPermission.LEAD_TO_APPLICATION);
     const canUpdateLead = hasPermission(userPermissions, LeadPermission.LEAD_UPDATE);
     const canCreateCommission = hasPermission(userPermissions, CommissionPermission.COMMISSION_CREATE);
+
+    const normalizedLeadType = (lead?.type || "lead").toLowerCase();
+    const nextDepartmentLabel =
+        normalizedLeadType === "lead"
+            ? "Admissions"
+            : normalizedLeadType === "application"
+                ? "Visa"
+                : null;
+    const canForwardToNextDepartment =
+        Boolean(lead && nextDepartmentLabel && lead.can_forward_to_next_department) && canConvertToApp;
     
     return (
         <>
@@ -75,24 +87,13 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                         </DropdownItem>
                     ) : null}
 
-                    {canConvertToApp ? (
+                    {canForwardToNextDepartment ? (
                         <DropdownItem
-                            key="add_lead"
-                            startContent={<Plus className="h-4 w-4 text-blue-500" />}
-                            onClick={async () => {
-                                try {
-                                    await updateLead(leadId, { type: 'application' });
-                                    toast.success('Lead converted to application');
-                                    if (user && user.id && user.permissions) {
-                                        await fetchLeadsBasedOnPermission(user.id, user.permissions, selectedBranch?.id);
-                                    }
-                                } catch (err) {
-                                    console.error('Error converting lead to application', err);
-                                    toast.error('Failed to convert lead');
-                                }
-                            }}
+                            key="forward_department"
+                            startContent={<Repeat className="h-4 w-4 text-blue-500" />}
+                            onClick={() => setForwardModalOpen(true)}
                         >
-                            Lead to Application
+                            {`Forward to ${nextDepartmentLabel}`}
                         </DropdownItem>
                     ) : null}
 
@@ -163,6 +164,14 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                 onSuccess={() => {
                     toast.success("Commission created successfully");
                 }}
+            />
+        )}
+
+        {lead && (
+            <ForwardDepartmentModal
+                isOpen={forwardModalOpen}
+                onOpenChange={setForwardModalOpen}
+                lead={lead}
             />
         )}
         </>

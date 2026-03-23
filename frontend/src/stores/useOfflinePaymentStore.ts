@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { TimelineEvent } from "@/lib/utils"; // optional if you use timeline logging
 import { OfflinePaymentsAPI } from "@/lib/api";
+import { format } from "date-fns";
 
 
       export interface OfflinePayment {
@@ -19,14 +20,17 @@ import { OfflinePaymentsAPI } from "@/lib/api";
         file?: string;
         leads?: { name: string };
         partners?: { name: string; role?: string }; // optional: to ensure not agent
+        due_date?: string;
       }
 
       interface OfflinePaymentState {
         payments: OfflinePayment[];
         loading: boolean;
+        todaySummary: { received: OfflinePayment[]; due: OfflinePayment[] };
         fetchPaymentsByLeadId: (leadId: string) => Promise<void>;
         fetchPaymentsByReceiver: (receiverId: string) => Promise<void>;
-        addPayment: (payment: Omit<OfflinePayment, "id" | "created_at" | "partners" | "leads">) => Promise<any>;
+        fetchTodaySummary: (start?: string, end?: string) => Promise<void>;
+        addPayment: (payment: Omit<OfflinePayment, "id" | "created_at" | "partners" | "leads"> & { due_date?: string }) => Promise<any>;
         updatePayment: (id: string, updates: Partial<OfflinePayment>) => Promise<any>;
         deletePayment: (id: string, fileUrl?: string) => Promise<any>;
         uploadPaymentFile: (file: File, leadId?: string) => Promise<string | null>;
@@ -37,6 +41,30 @@ import { OfflinePaymentsAPI } from "@/lib/api";
       export const useOfflinePaymentStore = create<OfflinePaymentState>((set, get) => ({
         payments: [],
         loading: false,
+        todaySummary: { received: [], due: [] },
+
+        fetchTodaySummary: async (start?: string, end?: string) => {
+          set({ loading: true });
+          try {
+            let s = start;
+            let e = end;
+            
+            if (!s || !e) {
+              const now = new Date();
+              const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+              const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+              s = startOfDay.toISOString();
+              e = endOfDay.toISOString();
+            }
+
+            const data = await OfflinePaymentsAPI.fetchTodaySummary(s, e);
+            set({ todaySummary: data || { received: [], due: [] } });
+          } catch (err) {
+            console.error("Error fetching today summary:", err);
+          } finally {
+            set({ loading: false });
+          }
+        },
 
         fetchPaymentsByLeadId: async (leadId: string) => {
           set({ loading: true });
@@ -78,6 +106,8 @@ import { OfflinePaymentsAPI } from "@/lib/api";
               lead_id: payment.lead_id,
               status: payment.status,
               file: payment.file,
+              due_date: payment.due_date,
+              created_at: payment.created_at,
             };
             const data = await OfflinePaymentsAPI.createPayment(payload);
             set((state) => ({ payments: [data, ...state.payments] }));

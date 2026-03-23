@@ -1,5 +1,5 @@
 //tabsWrapper.tsx
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Tabs, Tab, Card, CardBody } from "@heroui/react";
 import LeadsTableToolbar from "./leadsTableToolbar";
 import LeadsDisplay from "./displayLeads";
@@ -9,18 +9,63 @@ import { BulkAssignCounsellorModal } from "./bulkAssignCounsellorModal";
 import { filterLeads as applyFilters } from "@/lib/filterLeads";
 import { LeadFilterState } from "@/types/filters";
 import LeadFiltersDrawer from "./LeadFilters";
+import { DepartmentsAPI } from "@/lib/api";
 
 
-type TabName = "All" | "New" | "Lead In Process" | "Assigned" | "Cold" | "Rejected";
+type StatusTab = {
+  key: string;
+  label: string;
+};
 
-const TAB_LABELS: TabName[] = [
-  "All",
-  "New",
-  "Lead In Process",
-  "Assigned",
-  "Cold",
-  "Rejected",
+interface DepartmentOrderConfig {
+  order_index: number;
+  is_default?: boolean;
+}
+
+interface DepartmentStatusConfig {
+  key: string;
+  label: string;
+  order_index: number;
+  is_default?: boolean;
+  is_terminal?: boolean;
+  is_active?: boolean;
+}
+
+interface DepartmentRecord {
+  id: string;
+  department_orders?: DepartmentOrderConfig[];
+  department_statuses?: DepartmentStatusConfig[];
+}
+
+const FALLBACK_STATUS_TABS: StatusTab[] = [
+  { key: "new", label: "New" },
+  { key: "inprocess", label: "In Process" },
+  { key: "assigned", label: "Assigned" },
+  { key: "cold", label: "Cold" },
+  { key: "rejected", label: "Rejected" },
 ];
+
+const normalizeStatusToken = (value?: string | null) =>
+  (value || "").toString().trim().toLowerCase();
+
+const getDepartmentOrderIndex = (department: DepartmentRecord) =>
+  department.department_orders?.[0]?.order_index ?? Number.MAX_SAFE_INTEGER;
+
+const getDefaultDepartmentId = (departments: DepartmentRecord[]) => {
+  const defaultDepartment = departments.find(
+    (department) => department.department_orders?.[0]?.is_default,
+  );
+
+  if (defaultDepartment) {
+    return defaultDepartment.id;
+  }
+
+  const sorted = [...departments].sort(
+    (left, right) => getDepartmentOrderIndex(left) - getDepartmentOrderIndex(right),
+  );
+
+  return sorted[0]?.id;
+};
 
 // Default column configuration - only essential columns visible by default
 const DEFAULT_COLUMNS: ColumnConfig[] = [
@@ -47,6 +92,7 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
   const [showOnlyFlagged, setShowOnlyFlagged] = useState(false);
   const [isBulkAssignModalOpen, setIsBulkAssignModalOpen] = useState(false);
   const [isFiltersDrawerOpen, setIsFiltersDrawerOpen] = useState(false);
+  const [departments, setDepartments] = useState<DepartmentRecord[]>([]);
   const [filters, setFilters] = useState<LeadFilterState>({
     search: "",
     courses: [],
@@ -55,12 +101,122 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
     sources: [],
     countries: [],
   });
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchDepartments = async () => {
+      try {
+        const response = await DepartmentsAPI.fetchDepartments(false);
+        if (!isMounted) {
+          return;
+        }
+
+        const normalizedDepartments: DepartmentRecord[] = Array.isArray(response)
+          ? response.map((department: any) => ({
+              id: department.id,
+              department_orders: department.department_orders || [],
+              department_statuses: (department.department_statuses || [])
+                .filter((status: any) => status.is_active !== false)
+                .sort(
+                  (left: any, right: any) =>
+                    (left.order_index ?? 0) - (right.order_index ?? 0),
+                ),
+            }))
+          : [];
+
+        setDepartments(normalizedDepartments);
+      } catch (error) {
+        console.error("Failed to fetch department statuses for lead tabs:", error);
+      }
+    };
+
+    fetchDepartments();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   
   // Calculate active filter count
   const filtersActiveCount = useMemo(() => {
     return filters.courses.length + filters.owners.length + filters.statuses.length + 
            filters.sources.length + filters.countries.length;
   }, [filters]);
+
+  const activeDepartmentId = useMemo(() => {
+    if (!departments.length) {
+      return undefined;
+    }
+
+    const departmentLeadCounts = new Map<string, number>();
+    for (const lead of leads) {
+      if (!lead.current_department_id) {
+        continue;
+      }
+
+      departmentLeadCounts.set(
+        lead.current_department_id,
+        (departmentLeadCounts.get(lead.current_department_id) || 0) + 1,
+      );
+    }
+
+    let selectedDepartmentId: string | undefined;
+    let maxCount = -1;
+    for (const [departmentId, count] of departmentLeadCounts.entries()) {
+      if (count > maxCount) {
+        selectedDepartmentId = departmentId;
+        maxCount = count;
+      }
+    }
+
+    return selectedDepartmentId || getDefaultDepartmentId(departments);
+  }, [departments, leads]);
+
+  const activeDepartmentStatuses = useMemo(() => {
+    if (!departments.length) {
+      return [] as DepartmentStatusConfig[];
+    }
+
+    const targetDepartment =
+      departments.find((department) => department.id === activeDepartmentId) ||
+      departments.find((department) => department.id === getDefaultDepartmentId(departments));
+
+    const statuses = (targetDepartment?.department_statuses || []).filter(
+      (status) => status.is_active !== false,
+    );
+
+    return [...statuses].sort(
+      (left, right) => (left.order_index ?? 0) - (right.order_index ?? 0),
+    );
+  }, [activeDepartmentId, departments]);
+
+  const statusTabs = useMemo(() => {
+    const tabs: StatusTab[] = [{ key: "all", label: "All" }];
+    const seenTokens = new Set<string>();
+
+    const sourceStatuses = activeDepartmentStatuses.length
+      ? activeDepartmentStatuses.map((status) => ({
+          key: normalizeStatusToken(status.key || status.label),
+          label: status.label?.trim() || status.key,
+        }))
+      : FALLBACK_STATUS_TABS;
+
+    for (const status of sourceStatuses) {
+      const token = normalizeStatusToken(status.key);
+      if (!token || seenTokens.has(token)) {
+        continue;
+      }
+
+      tabs.push({
+        key: token,
+        label: status.label || token,
+      });
+      seenTokens.add(token);
+    }
+
+    return tabs;
+  }, [activeDepartmentStatuses]);
 
   // Build filter options from current dataset
   const filterOptions = useMemo(() => {
@@ -70,36 +226,24 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
     return {
       courses: uniq(leads.map((l) => l.preferred_course ?? "")),
       owners: uniq(leads.map((l) => l.partners_leads_assigned_toTopartners?.name ?? "Unassigned")),
-      statuses: uniq(leads.map((l) => (l.status ?? "").toLowerCase())).map(
-        (s) => (s.charAt(0).toUpperCase() + s.slice(1)) || ""
-      ),
+      statuses: activeDepartmentStatuses.length
+        ? activeDepartmentStatuses
+            .map((status) => normalizeStatusToken(status.key || status.label))
+            .filter(Boolean)
+        : uniq(leads.map((l) => normalizeStatusToken(l.status))).filter(Boolean),
       sources: uniq(leads.map((l) => l.utm_source ?? "")),
       countries: uniq(leads.map((l) => l.preferred_country ?? "")),
     };
-  }, [leads]);
+  }, [activeDepartmentStatuses, leads]);
   
-  const filterLeads = (tab: TabName) => {
+  const filterLeads = (tabKey: string) => {
     let filteredLeads = leads;
     
     // First filter by tab
-    if (tab !== "All") {
-      filteredLeads = leads.filter((lead) => {
-        const status = lead.status?.toLowerCase();
-        switch (tab) {
-          case "New":
-            return status === "new";
-          case "Lead In Process":
-            return status === "interested" || status === "inprocess" || status === "contacted" || status === "hot" || status === "engaged";
-          case "Assigned":
-            return status === "assigned";
-          case "Cold":
-            return status === "cold";
-          case "Rejected":
-            return status === "rejected";
-          default:
-            return true;
-        }
-      });
+    if (tabKey !== "all") {
+      filteredLeads = leads.filter(
+        (lead) => normalizeStatusToken(lead.status) === tabKey,
+      );
     }
     
     // Then apply advanced filters
@@ -113,11 +257,11 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
     return filteredLeads;
   };
 
-  const renderTabTitle = (tab: TabName) => (
+  const renderTabTitle = (tab: StatusTab) => (
     <div className="flex items-center justify-center">
-      {tab}
+      {tab.label}
       <span className="ml-2 inline-flex items-center justify-center rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700 group-data-[selected=true]:bg-white group-data-[selected=true]:text-teal-600">
-        {filterLeads(tab).length}
+        {filterLeads(tab.key).length}
       </span>
     </div>
   );
@@ -133,8 +277,8 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
   return (
     <div className="w-full p-3 overflow-x-auto">
       <Tabs aria-label="Lead Status Tabs" radius="md">
-        {TAB_LABELS.map((tab) => (
-          <Tab key={tab} title={renderTabTitle(tab)}>
+        {statusTabs.map((tab) => (
+          <Tab key={tab.key} title={renderTabTitle(tab)}>
             <Card className="overflow-x-auto">
               <CardBody>
                 <div className="gap-5 flex flex-col">
@@ -146,16 +290,17 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
                     onColumnsChange={handleColumnsChange}
                     showOnlyFlagged={showOnlyFlagged}
                     onToggleFlagged={() => setShowOnlyFlagged(!showOnlyFlagged)}
-                    currentTabLeads={filterLeads(tab)}
+                    currentTabLeads={filterLeads(tab.key)}
                     onBulkAssign={() => setIsBulkAssignModalOpen(true)}
                     onOpenFilters={() => setIsFiltersDrawerOpen(true)}
                     filtersActiveCount={filtersActiveCount}
                   />
                   <LeadsDisplay
-                    leads={filterLeads(tab)}
+                    leads={filterLeads(tab.key)}
                     selectedLeadIds={selectedLeadIds}
                     setSelectedLeadIds={setSelectedLeadIds}
                     columns={columns}
+                    departmentStatuses={activeDepartmentStatuses}
                   />
 
                 </div>

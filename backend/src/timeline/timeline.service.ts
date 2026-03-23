@@ -112,6 +112,16 @@ export class TimelineService {
     );
   }
 
+  async logDepartmentChange(leadId: string, userId: string | null, oldDepartment: string, newDepartment: string) {
+    await this.log(
+      leadId,
+      'LEAD_DEPARTMENT_CHANGED',
+      userId,
+      newDepartment,
+      oldDepartment,
+    );
+  }
+
   async logNameChange(leadId: string, userId: string | null, oldName: string, newName: string) {
     await this.log(
       leadId,

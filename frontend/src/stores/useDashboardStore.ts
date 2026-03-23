@@ -23,6 +23,8 @@ interface DashboardState {
   byStatus: StatusBuckets;
   bySource: SourceBuckets;
   last7Days: { label: string; date: string; count: number }[];
+  topSelected: string;
+  setTopSelected: (key: string) => void;
 
   fetchDashboardLeads: () => Promise<void>;
   refresh: () => Promise<void>;
@@ -37,6 +39,8 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   byStatus: {},
   bySource: {},
   last7Days: [],
+  topSelected: "home",
+  setTopSelected: (key: string) => set({ topSelected: key }),
 
   fetchDashboardLeads: async () => {
     set({ loading: true, error: undefined });
@@ -107,5 +111,5 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   refresh: async () => {
     await get().fetchDashboardLeads();
   },
-  reset: () => set({ leads: [], loading: false, error: undefined, metrics: { todaysLeads: 0, converted: 0, rejected: 0, total: 0 }, byStatus: {}, bySource: {}, last7Days: [] }),
+  reset: () => set({ leads: [], loading: false, error: undefined, metrics: { todaysLeads: 0, converted: 0, rejected: 0, total: 0 }, byStatus: {}, bySource: {}, last7Days: [], topSelected: "home" }),
 }));

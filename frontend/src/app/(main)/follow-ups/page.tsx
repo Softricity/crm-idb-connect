@@ -32,20 +32,16 @@ export default function FollowUpsPage() {
   }
 
   useEffect(() => {
-    if (user?.id) {
-      // Fetch followups for current user and selected date
-      fetchAllFollowups({ userId: user.id, date: selectedDate });
-    }
-  }, [user?.id, selectedDate, fetchAllFollowups]);
+    // Fetch followups for current user's lead scope and selected date
+    fetchAllFollowups({ date: selectedDate });
+  }, [selectedDate, fetchAllFollowups]);
 
   const handleMarkComplete = async (followupId: string) => {
     try {
       await markComplete(followupId);
       toast.success("Follow-up marked as complete");
       // Refresh the list
-      if (user?.id) {
-        fetchAllFollowups({ userId: user.id, date: selectedDate });
-      }
+      fetchAllFollowups({ date: selectedDate });
     } catch (error) {
       toast.error("Failed to mark follow-up as complete");
       console.error(error);

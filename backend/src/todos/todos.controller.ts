@@ -41,7 +41,7 @@ export class TodosController {
       params.completed = completed === 'true';
     }
 
-    return this.todosService.findAll(req.user.sub, params);
+    return this.todosService.findAll(req.user.id, params);
   }
 
   @Get(':id')

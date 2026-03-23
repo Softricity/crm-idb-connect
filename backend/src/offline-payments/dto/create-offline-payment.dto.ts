@@ -39,4 +39,12 @@ export class CreateOfflinePaymentDto {
   @IsOptional()
   @IsString()
   file?: string;
+
+  @IsOptional()
+  @IsString()
+  due_date?: string;
+
+  @IsOptional()
+  @IsString()
+  created_by?: string;
 }

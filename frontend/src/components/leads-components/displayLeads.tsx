@@ -3,7 +3,7 @@ import { Dispatch, SetStateAction } from "react";
 import { Lead, useLeadStore } from "@/stores/useLeadStore"; 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
-import LeadsTable from "./leadsTable";
+import LeadsTable, { DepartmentStatusConfig } from "./leadsTable";
 import { ColumnConfig } from "./columnVisibilitySelector";
 
 type LeadsDisplayProps = {
@@ -11,9 +11,16 @@ type LeadsDisplayProps = {
   selectedLeadIds: string[];
   setSelectedLeadIds: Dispatch<SetStateAction<string[]>>;
   columns: ColumnConfig[];
+  departmentStatuses: DepartmentStatusConfig[];
 };
 
-export default function LeadsDisplay({ leads, selectedLeadIds, setSelectedLeadIds, columns }: LeadsDisplayProps) {
+export default function LeadsDisplay({
+  leads,
+  selectedLeadIds,
+  setSelectedLeadIds,
+  columns,
+  departmentStatuses,
+}: LeadsDisplayProps) {
   
   const { loading } = useLeadStore();
   
@@ -29,7 +36,15 @@ export default function LeadsDisplay({ leads, selectedLeadIds, setSelectedLeadId
     );
   }
 
-  return <LeadsTable leads={leads} selectedLeadIds={selectedLeadIds} setSelectedLeadIds={setSelectedLeadIds} columns={columns} />;
+  return (
+    <LeadsTable
+      leads={leads}
+      selectedLeadIds={selectedLeadIds}
+      setSelectedLeadIds={setSelectedLeadIds}
+      columns={columns}
+      departmentStatuses={departmentStatuses}
+    />
+  );
 }
 
 

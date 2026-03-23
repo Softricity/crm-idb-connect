@@ -411,6 +411,14 @@ export const OfflinePaymentsAPI = {
     });
     return handleResponse(res);
   },
+  fetchTodaySummary: async (start?: string, end?: string) => {
+    const params = new URLSearchParams();
+    if (start) params.append('start', start);
+    if (end) params.append('end', end);
+    const url = `${API_BASE}/offline-payments/today-summary${params.toString() ? `?${params.toString()}` : ''}`;
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
 };
 
 export const DashboardAPI = {
@@ -639,7 +647,15 @@ export const ContractsAPI = {
     const res = await fetch(`${API_BASE}/contracts/${id}/download`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to download contract PDF');
     return res.blob();
-  }
+  },
+  bulkAssign: async (id: string, agent_ids: string[]) => {
+    const res = await fetch(`${API_BASE}/contracts/${id}/assign`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ agent_ids }),
+    });
+    return handleResponse(res);
+  },
 };
 
 export const SupportAPI = {
@@ -803,6 +819,107 @@ export const BranchesAPI = {
   },
 };
 
+export interface DepartmentOrderItemInput {
+  department_id: string;
+  order_index: number;
+  is_active?: boolean;
+  is_default?: boolean;
+}
+
+export interface DepartmentStatusInput {
+  key: string;
+  label: string;
+  order_index: number;
+  is_terminal?: boolean;
+  is_default?: boolean;
+  is_active?: boolean;
+}
+
+export interface DepartmentInput {
+  name: string;
+  code: string;
+  is_active?: boolean;
+  order_index?: number;
+  is_default?: boolean;
+}
+
+export const DepartmentsAPI = {
+  fetchDepartments: async (includeInactive = false) => {
+    const params = new URLSearchParams();
+    if (includeInactive) {
+      params.append('includeInactive', 'true');
+    }
+
+    const url = params.toString()
+      ? `${API_BASE}/departments?${params.toString()}`
+      : `${API_BASE}/departments`;
+
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  fetchDepartmentById: async (id: string, includeInactive = false) => {
+    const params = new URLSearchParams();
+    if (includeInactive) {
+      params.append('includeInactive', 'true');
+    }
+
+    const url = params.toString()
+      ? `${API_BASE}/departments/${id}?${params.toString()}`
+      : `${API_BASE}/departments/${id}`;
+
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createDepartment: async (data: DepartmentInput) => {
+    const res = await fetch(`${API_BASE}/departments`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  updateDepartment: async (id: string, data: Partial<DepartmentInput>) => {
+    const res = await fetch(`${API_BASE}/departments/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  updateDepartmentOrder: async (items: DepartmentOrderItemInput[]) => {
+    const res = await fetch(`${API_BASE}/departments/order`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ items }),
+    });
+    return handleResponse(res);
+  },
+  fetchDepartmentStatuses: async (departmentId: string, includeInactive = false) => {
+    const params = new URLSearchParams();
+    if (includeInactive) {
+      params.append('includeInactive', 'true');
+    }
+
+    const url = params.toString()
+      ? `${API_BASE}/departments/${departmentId}/statuses?${params.toString()}`
+      : `${API_BASE}/departments/${departmentId}/statuses`;
+
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  upsertDepartmentStatuses: async (
+    departmentId: string,
+    statuses: DepartmentStatusInput[],
+  ) => {
+    const res = await fetch(`${API_BASE}/departments/${departmentId}/statuses`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ statuses }),
+    });
+    return handleResponse(res);
+  },
+};
+
 export const PermissionsAPI = {
   getAll: async () => {
     const res = await fetch(`${API_BASE}/permissions`, { headers: getHeaders() });
@@ -929,6 +1046,13 @@ export const AnnouncementsAPI = {
     const res = await fetch(`${API_BASE}/announcements/unread-count`, { headers: getHeaders() });
     return handleResponse(res);
   },
+  markAllAsRead: async () => {
+    const res = await fetch(`${API_BASE}/announcements/mark-all-read`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
 };
 
 export const TodosAPI = {
@@ -1004,6 +1128,7 @@ export default {
   FinancialsAPI,
   OptionsAPI,
   BranchesAPI,
+  DepartmentsAPI,
   PermissionsAPI,
   PermissionGroupsAPI,
   RolesAPI,

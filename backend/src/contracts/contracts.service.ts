@@ -147,12 +147,32 @@ export class ContractsService {
   async create(dto: CreateTemplateDto) {
     return this.prisma.agentContract.create({
       data: {
-        agent_id: dto.agent_id,
+        agent_id: dto.agent_id ?? null,
         title: dto.title,
         content: dto.content,
       },
       include: { agent: true },
+    } as any);
+  }
+
+  async bulkAssign(id: string, agentIds: string[]) {
+    const template = await this.prisma.agentContract.findUnique({
+      where: { id },
     });
+    if (!template) throw new NotFoundException('Template not found');
+
+    const creations = agentIds.map((agentId) =>
+      this.prisma.agentContract.create({
+        data: {
+          agent_id: agentId,
+          title: template.title,
+          content: template.content,
+          status: AgentContractStatus.PENDING,
+        },
+      }),
+    );
+
+    return this.prisma.$transaction(creations);
   }
 
   async list(status?: AgentContractStatus, agentId?: string) {
@@ -258,7 +278,7 @@ export class ContractsService {
     if (!contract) throw new NotFoundException('Contract not found');
     if (!contract.is_signed) throw new BadRequestException('Contract is not signed');
 
-    await this.prisma.$transaction([
+    const updates: any[] = [
       this.prisma.agentContract.update({
         where: { id },
         data: {
@@ -268,18 +288,26 @@ export class ContractsService {
           rejection_note: null,
         },
       }),
-      this.prisma.agent.update({
-        where: { id: contract.agent_id },
-        data: { contract_approved: true },
-      }),
-    ]);
+    ];
+
+    if (contract.agent_id) {
+      updates.push(
+        this.prisma.agent.update({
+          where: { id: contract.agent_id },
+          data: { contract_approved: true },
+        }),
+      );
+    }
+
+    await this.prisma.$transaction(updates);
     return { success: true };
   }
 
   async reject(id: string, dto: RejectContractDto) {
     const contract = await this.prisma.agentContract.findUnique({ where: { id } });
     if (!contract) throw new NotFoundException('Contract not found');
-    await this.prisma.$transaction([
+
+    const updates: any[] = [
       this.prisma.agentContract.update({
         where: { id },
         data: {
@@ -289,11 +317,18 @@ export class ContractsService {
           approved_by: null,
         },
       }),
-      this.prisma.agent.update({
-        where: { id: contract.agent_id },
-        data: { contract_approved: false },
-      }),
-    ]);
+    ];
+
+    if (contract.agent_id) {
+      updates.push(
+        this.prisma.agent.update({
+          where: { id: contract.agent_id },
+          data: { contract_approved: false },
+        }),
+      );
+    }
+
+    await this.prisma.$transaction(updates);
     return { success: true };
   }
 
@@ -316,7 +351,7 @@ export class ContractsService {
       status: contract.status,
       content: contract.content,
       signature_url: contract.signature_url,
-      agentName: contract.agent?.name || contract.agent_id,
+      agentName: contract.agent?.name || contract.agent_id || 'General Template',
     });
     return {
       filename: `contract-${contract.id}.pdf`,

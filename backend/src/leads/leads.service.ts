@@ -190,7 +190,7 @@ export class LeadsService {
       where.agent_id = null;
     }
 
-    return this.prisma.leads.findMany({
+    const leads = await this.prisma.leads.findMany({
       where,
       include: {
         partners_leads_assigned_toTopartners: {
@@ -206,6 +206,8 @@ export class LeadsService {
       },
       orderBy: { created_at: 'desc' },
     });
+
+    return this.withForwardEligibility(leads);
   }
 
   async login(email: string, password: string) {
@@ -238,7 +240,7 @@ export class LeadsService {
 
     try {
       const lead = await this.prisma.leads.findUnique({
-        where: { id },
+          where: { id },
         include: {
           partners_leads_assigned_toTopartners: { select: { name: true, email: true } },
           courses: {
@@ -257,33 +259,118 @@ export class LeadsService {
         throw new NotFoundException(`Lead not found for id: ${id}`);
       }
 
-      return lead;
+        return this.withForwardEligibilityForOne(lead);
     } catch (error) {
       console.error(error);
       throw new InternalServerErrorException('Failed to retrieve lead');
     }
   }
 
-  private buildLeadDetailsSnapshot(lead: {
-    preferred_country?: string | null;
-    preferred_course?: string | null;
-    exam_taken?: string | null;
-    exam_score?: string | null;
-    utm_source?: string | null;
-    utm_medium?: string | null;
-    utm_campaign?: string | null;
-    type?: string | null;
-  }) {
-    return [
-      `country:${lead.preferred_country || '-'}`,
-      `course:${lead.preferred_course || '-'}`,
-      `exam:${lead.exam_taken || '-'}`,
-      `score:${lead.exam_score || '-'}`,
-      `source:${lead.utm_source || '-'}`,
-      `medium:${lead.utm_medium || '-'}`,
-      `campaign:${lead.utm_campaign || '-'}`,
-      `type:${lead.type || '-'}`,
-    ].join(' | ');
+  private normalizeLeadFieldValue(value?: string | null): string {
+    const normalized = (value ?? '').toString().trim();
+    return normalized ? normalized : '-';
+  }
+
+  private toTitleCase(value: string): string {
+    if (!value || value === '-') {
+      return value;
+    }
+
+    return value
+      .replace(/[_-]+/g, ' ')
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+      .join(' ');
+  }
+
+  private mapLeadTypeForTimeline(value: string): string {
+    if (value === '-') {
+      return '-';
+    }
+
+    const normalized = value.toLowerCase();
+    if (normalized === 'lead') {
+      return 'Lead';
+    }
+    if (normalized === 'application') {
+      return 'Application';
+    }
+    if (normalized === 'visa') {
+      return 'Visa';
+    }
+
+    return this.toTitleCase(value);
+  }
+
+  private buildLeadDetailsDiff(
+    before: {
+      preferred_country?: string | null;
+      preferred_course?: string | null;
+      exam_taken?: string | null;
+      exam_score?: string | null;
+      utm_source?: string | null;
+      utm_medium?: string | null;
+      utm_campaign?: string | null;
+    },
+    after: {
+      preferred_country?: string | null;
+      preferred_course?: string | null;
+      exam_taken?: string | null;
+      exam_score?: string | null;
+      utm_source?: string | null;
+      utm_medium?: string | null;
+      utm_campaign?: string | null;
+    },
+  ): { oldState: string; newState: string } | null {
+    const fields: Array<{ key: keyof typeof before; label: string }> = [
+      { key: 'preferred_country', label: 'Country' },
+      { key: 'preferred_course', label: 'Course' },
+      { key: 'exam_taken', label: 'Exam' },
+      { key: 'exam_score', label: 'Score' },
+      { key: 'utm_source', label: 'Source' },
+      { key: 'utm_medium', label: 'Medium' },
+      { key: 'utm_campaign', label: 'Campaign' },
+    ];
+
+    const oldParts: string[] = [];
+    const newParts: string[] = [];
+
+    for (const field of fields) {
+      const oldValue = this.normalizeLeadFieldValue(before[field.key] as string | null | undefined);
+      const newValue = this.normalizeLeadFieldValue(after[field.key] as string | null | undefined);
+
+      if (oldValue !== newValue) {
+        oldParts.push(`${field.label}: ${oldValue}`);
+        newParts.push(`${field.label}: ${newValue}`);
+      }
+    }
+
+    if (!oldParts.length) {
+      return null;
+    }
+
+    return {
+      oldState: oldParts.join(' | '),
+      newState: newParts.join(' | '),
+    };
+  }
+
+  private buildLeadTypeDiff(
+    before: { type?: string | null },
+    after: { type?: string | null },
+  ): { oldState: string; newState: string } | null {
+    const oldType = this.mapLeadTypeForTimeline(this.normalizeLeadFieldValue(before.type));
+    const newType = this.mapLeadTypeForTimeline(this.normalizeLeadFieldValue(after.type));
+
+    if (oldType === newType) {
+      return null;
+    }
+
+    return {
+      oldState: oldType,
+      newState: newType,
+    };
   }
 
   private async resolveTimelineActorId(user?: any): Promise<string | null> {
@@ -300,6 +387,201 @@ export class LeadsService {
     return partner?.id || null;
   }
 
+  private extractStringUpdateValue(value: unknown): string | null | undefined {
+    if (value === undefined) {
+      return undefined;
+    }
+
+    if (value === null) {
+      return null;
+    }
+
+    if (typeof value === 'string') {
+      return value;
+    }
+
+    if (typeof value === 'object' && value !== null && 'set' in value) {
+      const setValue = (value as { set?: unknown }).set;
+      if (setValue === undefined) {
+        return undefined;
+      }
+      if (setValue === null) {
+        return null;
+      }
+      if (typeof setValue === 'string') {
+        return setValue;
+      }
+    }
+
+    return undefined;
+  }
+
+  private normalizeStatusToken(value?: string | null): string {
+    return (value || '').toString().trim().toLowerCase();
+  }
+
+  private async buildTerminalStatusLookup(departmentIds: Array<string | null | undefined>) {
+    const uniqueDepartmentIds = Array.from(
+      new Set(departmentIds.filter((departmentId): departmentId is string => Boolean(departmentId))),
+    );
+
+    const lookupByDepartment = new Map<string, Set<string>>();
+    const fallbackTerminalTokens = new Set<string>(['cold', 'rejected', 'converted']);
+
+    const terminalStatuses = await this.prisma.department_status.findMany({
+      where: {
+        is_active: true,
+        is_terminal: true,
+        ...(uniqueDepartmentIds.length
+          ? { department_id: { in: uniqueDepartmentIds } }
+          : {}),
+      },
+      select: {
+        department_id: true,
+        key: true,
+        label: true,
+      },
+    });
+
+    for (const status of terminalStatuses) {
+      const statusTokens = [
+        this.normalizeStatusToken(status.key),
+        this.normalizeStatusToken(status.label),
+      ].filter(Boolean);
+
+      if (!lookupByDepartment.has(status.department_id)) {
+        lookupByDepartment.set(status.department_id, new Set<string>());
+      }
+
+      const tokenSet = lookupByDepartment.get(status.department_id)!;
+      for (const token of statusTokens) {
+        tokenSet.add(token);
+        fallbackTerminalTokens.add(token);
+      }
+    }
+
+    return {
+      lookupByDepartment,
+      fallbackTerminalTokens,
+    };
+  }
+
+  private async withForwardEligibility<
+    T extends {
+      type?: string | null;
+      status?: string | null;
+      current_department_id?: string | null;
+    },
+  >(leads: T[]): Promise<Array<T & { can_forward_to_next_department: boolean }>> {
+    const { lookupByDepartment, fallbackTerminalTokens } = await this.buildTerminalStatusLookup(
+      leads.map((lead) => lead.current_department_id),
+    );
+
+    return leads.map((lead) => {
+      const normalizedType = (lead.type || 'lead').toLowerCase();
+      const hasNextDepartment = normalizedType === 'lead' || normalizedType === 'application';
+
+      const statusToken = this.normalizeStatusToken(lead.status);
+      const terminalTokensForDepartment = lead.current_department_id
+        ? lookupByDepartment.get(lead.current_department_id)
+        : undefined;
+
+      const resolvedTerminalTokens =
+        terminalTokensForDepartment && terminalTokensForDepartment.size > 0
+          ? terminalTokensForDepartment
+          : fallbackTerminalTokens;
+
+      const isTerminalStatus = Boolean(statusToken && resolvedTerminalTokens.has(statusToken));
+
+      return {
+        ...lead,
+        can_forward_to_next_department: hasNextDepartment && isTerminalStatus,
+      };
+    });
+  }
+
+  private async withForwardEligibilityForOne<
+    T extends {
+      type?: string | null;
+      status?: string | null;
+      current_department_id?: string | null;
+    },
+  >(lead: T): Promise<T & { can_forward_to_next_department: boolean }> {
+    const [decoratedLead] = await this.withForwardEligibility([lead]);
+    return decoratedLead;
+  }
+
+  private async resolveForwardTargetDepartmentId(
+    currentDepartmentId: string | null | undefined,
+    requestedTypeIndex: number,
+  ): Promise<string | null> {
+    const activeDepartmentOrders = await this.prisma.department_order.findMany({
+      where: { is_active: true },
+      orderBy: { order_index: 'asc' },
+      select: {
+        department_id: true,
+        is_default: true,
+      },
+    });
+
+    if (!activeDepartmentOrders.length) {
+      return null;
+    }
+
+    if (currentDepartmentId) {
+      const currentOrderIndex = activeDepartmentOrders.findIndex(
+        (entry) => entry.department_id === currentDepartmentId,
+      );
+
+      if (currentOrderIndex !== -1) {
+        return activeDepartmentOrders[currentOrderIndex + 1]?.department_id ?? null;
+      }
+    }
+
+    if (requestedTypeIndex >= 0) {
+      const fallbackByStage = activeDepartmentOrders[requestedTypeIndex];
+      if (fallbackByStage?.department_id) {
+        return fallbackByStage.department_id;
+      }
+    }
+
+    const fallbackDefault =
+      activeDepartmentOrders.find((entry) => entry.is_default) ||
+      activeDepartmentOrders[0];
+    return fallbackDefault?.department_id ?? null;
+  }
+
+  private async resolveInitialStatusForDepartment(departmentId: string): Promise<string | null> {
+    const defaultStatus = await this.prisma.department_status.findFirst({
+      where: {
+        department_id: departmentId,
+        is_active: true,
+        is_default: true,
+      },
+      orderBy: { order_index: 'asc' },
+      select: { key: true },
+    });
+
+    if (defaultStatus?.key) {
+      return this.normalizeStatusToken(defaultStatus.key);
+    }
+
+    const firstActiveStatus = await this.prisma.department_status.findFirst({
+      where: {
+        department_id: departmentId,
+        is_active: true,
+      },
+      orderBy: { order_index: 'asc' },
+      select: { key: true },
+    });
+
+    if (firstActiveStatus?.key) {
+      return this.normalizeStatusToken(firstActiveStatus.key);
+    }
+
+    return null;
+  }
+
   async update(id: string, updateLeadDto: Prisma.leadsUpdateInput, user?: any) {
     const existingLead = await this.prisma.leads.findUnique({
       where: { id },
@@ -310,6 +592,7 @@ export class LeadsService {
         email: true,
         status: true,
         assigned_to: true,
+        current_department_id: true,
         preferred_country: true,
         preferred_course: true,
         exam_taken: true,
@@ -325,9 +608,90 @@ export class LeadsService {
       throw new NotFoundException(`Lead with ID ${id} not found.`);
     }
 
+    const currentType = (existingLead.type || '').toLowerCase();
+    const requestedTypeRaw = this.extractStringUpdateValue(updateLeadDto.type);
+    const requestedType = (requestedTypeRaw || '').toLowerCase();
+
+    const flow = ['lead', 'application', 'visa'];
+    const currentTypeIndex = flow.indexOf(currentType);
+    const requestedTypeIndex = flow.indexOf(requestedType);
+    const isForwardTransition =
+      requestedTypeRaw !== undefined &&
+      requestedType !== currentType &&
+      currentTypeIndex !== -1 &&
+      requestedTypeIndex === currentTypeIndex + 1;
+
+    let updatePayload: Prisma.leadsUpdateInput = { ...updateLeadDto };
+
+    if (isForwardTransition) {
+      const [eligibility] = await this.withForwardEligibility([{
+        type: existingLead.type,
+        status: existingLead.status,
+        current_department_id: existingLead.current_department_id,
+      }]);
+
+      if (!eligibility.can_forward_to_next_department) {
+        throw new BadRequestException('Lead can only be forwarded when its current status is marked terminal for the current department.');
+      }
+
+      const requestedAssignee = this.extractStringUpdateValue((updateLeadDto as any).assigned_to);
+      const assigneeId = (requestedAssignee || '').trim();
+
+      if (!assigneeId) {
+        throw new BadRequestException('Forwarding to the next department requires selecting an assignee.');
+      }
+
+      const assignee = await this.prisma.partners.findUnique({
+        where: { id: assigneeId },
+        include: { role: true },
+      });
+
+      if (!assignee) {
+        throw new NotFoundException(`Assignee with ID ${assigneeId} not found.`);
+      }
+
+      if ((assignee.role?.name || '').toLowerCase() === 'agent') {
+        throw new BadRequestException('Selected assignee must be an internal team member.');
+      }
+
+      const targetDepartmentId = await this.resolveForwardTargetDepartmentId(
+        existingLead.current_department_id,
+        requestedTypeIndex,
+      );
+
+      if (!targetDepartmentId) {
+        throw new BadRequestException('Cannot forward lead because no next active department is configured.');
+      }
+
+      const requestedStatusRaw = this.extractStringUpdateValue((updateLeadDto as any).status);
+      const requestedStatus = this.normalizeStatusToken(requestedStatusRaw);
+      const nextDepartmentInitialStatus = await this.resolveInitialStatusForDepartment(targetDepartmentId);
+
+      const {
+        assigned_to: _ignoredAssignedTo,
+        current_department_id: _ignoredCurrentDepartmentId,
+        ...forwardSafeUpdateFields
+      } = (updateLeadDto as Record<string, unknown>);
+
+      updatePayload = {
+        ...(forwardSafeUpdateFields as Prisma.leadsUpdateInput),
+        partners_leads_assigned_toTopartners: {
+          connect: {
+            id: assigneeId,
+          },
+        },
+        current_department: {
+          connect: {
+            id: targetDepartmentId,
+          },
+        },
+        status: nextDepartmentInitialStatus || requestedStatus || 'new',
+      };
+    }
+
     const updatedLead = await this.prisma.leads.update({
       where: { id },
-      data: updateLeadDto,
+      data: updatePayload,
     });
 
     try {
@@ -349,22 +713,18 @@ export class LeadsService {
         await this.timelineService.logStatusChange(id, actorId, existingLead.status || '-', updatedLead.status || '-');
       }
 
-      const detailsChanged =
-        existingLead.preferred_country !== updatedLead.preferred_country ||
-        existingLead.preferred_course !== updatedLead.preferred_course ||
-        existingLead.exam_taken !== updatedLead.exam_taken ||
-        existingLead.exam_score !== updatedLead.exam_score ||
-        existingLead.utm_source !== updatedLead.utm_source ||
-        existingLead.utm_medium !== updatedLead.utm_medium ||
-        existingLead.utm_campaign !== updatedLead.utm_campaign ||
-        existingLead.type !== updatedLead.type;
+      const typeDiff = this.buildLeadTypeDiff(existingLead, updatedLead);
+      if (typeDiff) {
+        await this.timelineService.logDepartmentChange(id, actorId, typeDiff.oldState, typeDiff.newState);
+      }
 
-      if (detailsChanged) {
+      const detailsDiff = this.buildLeadDetailsDiff(existingLead, updatedLead);
+      if (detailsDiff) {
         await this.timelineService.logPurposeChange(
           id,
           actorId,
-          this.buildLeadDetailsSnapshot(existingLead),
-          this.buildLeadDetailsSnapshot(updatedLead),
+          detailsDiff.oldState,
+          detailsDiff.newState,
         );
       }
 
@@ -428,7 +788,7 @@ export class LeadsService {
       { agent_id: userId }
     ];
 
-    return this.prisma.leads.findMany({
+    const leads = await this.prisma.leads.findMany({
       where,
       include: {
         partners_leads_assigned_toTopartners: {
@@ -440,6 +800,8 @@ export class LeadsService {
       },
       orderBy: { created_at: 'desc' },
     });
+
+    return this.withForwardEligibility(leads);
   }
 
   async addCourseToLead(leadId: string, courseId: string, user?: any) {

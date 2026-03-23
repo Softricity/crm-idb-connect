@@ -233,6 +233,42 @@ export const LeadsAPI = {
   },
 };
 
+export const PartnersAPI = {
+  fetchPartners: async (branchId?: string, role?: string, token?: string) => {
+    const params = new URLSearchParams();
+    if (branchId) params.append('branch_id', branchId);
+    if (role) params.append('role', role);
+    const url = params.toString() ? `${API_BASE}/partners?${params.toString()}` : `${API_BASE}/partners`;
+    const res = await fetch(url, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+};
+
+export const DepartmentsAPI = {
+  fetchDepartments: async (includeInactive = false, token?: string) => {
+    const params = new URLSearchParams();
+    if (includeInactive) params.append('includeInactive', 'true');
+
+    const url = params.toString()
+      ? `${API_BASE}/departments?${params.toString()}`
+      : `${API_BASE}/departments`;
+
+    const res = await fetch(url, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+  fetchDepartmentStatuses: async (departmentId: string, includeInactive = false, token?: string) => {
+    const params = new URLSearchParams();
+    if (includeInactive) params.append('includeInactive', 'true');
+
+    const url = params.toString()
+      ? `${API_BASE}/departments/${departmentId}/statuses?${params.toString()}`
+      : `${API_BASE}/departments/${departmentId}/statuses`;
+
+    const res = await fetch(url, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+};
+
 // --- Agents ---
 export const AgentsAPI = {
   onboard: async (data: any) => {

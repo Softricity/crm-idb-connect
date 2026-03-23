@@ -17,11 +17,19 @@ import { getScope } from '../common/utils/scope.util'; // <--- IMPORT
 export class FollowupsService {
   constructor(private prisma: PrismaService, private timelineService: TimelineService) {}
 
-  async findAll(userId?: string, date?: string) {
-    const where: any = {};
+  async findAll(user: any, userId?: string, date?: string) {
+    const scope = getScope(user);
+    const where: any = {
+      leads: {
+        ...scope,
+      },
+    };
     
-    // Filter by userId if provided
-    if (userId) {
+    // For non-super admins, strictly only show follow-ups they created
+    if (user.role !== Role.SuperAdmin) {
+      where.created_by = user.id;
+    } else if (userId) {
+      // Super Admin can filter by any user
       where.created_by = userId;
     }
     
@@ -109,7 +117,7 @@ export class FollowupsService {
     const followup = await this.findFollowupOrThrow(id);
 
     // Security Check: Only admin or creator can update
-    if (user.role !== Role.Admin && followup.created_by !== user.id) {
+    if (user.role !== Role.SuperAdmin && user.role !== Role.Admin && followup.created_by !== user.id) {
       throw new ForbiddenException('You do not have permission to edit this followup.');
     }
 
@@ -129,7 +137,7 @@ export class FollowupsService {
     const followup = await this.findFollowupOrThrow(id);
 
     // Security Check: Only admin or creator can delete
-    if (user.role !== Role.Admin && followup.created_by !== user.id) {
+    if (user.role !== Role.SuperAdmin && user.role !== Role.Admin && followup.created_by !== user.id) {
       throw new ForbiddenException('You do not have permission to delete this followup.');
     }
 
@@ -219,7 +227,7 @@ export class FollowupsService {
     const comment = await this.findCommentOrThrow(commentId);
 
     // Security Check: Only admin or comment creator can update
-    if (user.role !== Role.Admin && comment.created_by !== user.id) {
+    if (user.role !== Role.SuperAdmin && user.role !== Role.Admin && comment.created_by !== user.id) {
       throw new ForbiddenException('You do not have permission to edit this comment.');
     }
 
@@ -241,7 +249,7 @@ export class FollowupsService {
     const comment = await this.findCommentOrThrow(commentId);
 
     // Security Check: Only admin or comment creator can delete
-    if (user.role !== Role.Admin && comment.created_by !== user.id) {
+    if (user.role !== Role.SuperAdmin && user.role !== Role.Admin && comment.created_by !== user.id) {
       throw new ForbiddenException('You do not have permission to delete this comment.');
     }
 

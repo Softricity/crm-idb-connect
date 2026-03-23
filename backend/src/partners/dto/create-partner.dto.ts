@@ -1,5 +1,5 @@
 // src/partners/dto/create-partner.dto.ts
-import { IsString, IsOptional, IsEmail, IsUUID } from 'class-validator'; // Assuming you use class-validator
+import { IsArray, IsEmail, IsOptional, IsString, IsUUID } from 'class-validator'; // Assuming you use class-validator
 
 export class CreatePartnerDto {
   @IsUUID()
@@ -43,4 +43,13 @@ export class CreatePartnerDto {
   @IsUUID()
   @IsOptional()
   branch_id?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsUUID('4', { each: true })
+  department_ids?: string[];
+
+  @IsOptional()
+  @IsUUID()
+  primary_department_id?: string;
 }
