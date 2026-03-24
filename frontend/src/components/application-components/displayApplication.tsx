@@ -33,12 +33,18 @@ interface ApplicationsDataTableProps {
     applications: Application[];
     selectedApplicationIds: string[];
     setSelectedApplicationIds: Dispatch<SetStateAction<string[]>>;
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+    onPageChange: (page: number) => void;
 }
+
+import { Pagination } from "@heroui/react";
 
 export default function ApplicationsDataTable({
     applications,
     selectedApplicationIds,
     setSelectedApplicationIds,
+    pagination,
+    onPageChange,
 }: ApplicationsDataTableProps) {
 
     const { loading } = useApplicationStore();
@@ -335,6 +341,20 @@ export default function ApplicationsDataTable({
 
             <div className="mt-4">
                 {renderContent()}
+                
+                {pagination.totalPages > 1 && (
+                    <div className="flex w-full justify-center mt-6">
+                        <Pagination
+                            isCompact
+                            showControls
+                            showShadow
+                            color="primary"
+                            page={pagination.page}
+                            total={pagination.totalPages}
+                            onChange={onPageChange}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

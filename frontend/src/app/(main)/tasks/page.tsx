@@ -136,7 +136,7 @@ export default function TasksPage() {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">My Tasks</h1>
+              {/* Removed h1 title as it's in the universal header */}
               <p className="mt-2 text-gray-600">
                 Manage your personal to-do list
               </p>

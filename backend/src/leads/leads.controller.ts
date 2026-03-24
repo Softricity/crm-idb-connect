@@ -48,8 +48,10 @@ export class LeadsController {
     @Query('branch_id') branchId?: string,
     @Query('email') email?: string,
     @Query('source') source?: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '10',
   ) {
-    return this.leadsService.findAll(user, assignedTo, createdBy, type, branchId, email, source);
+    return this.leadsService.findAll(user, assignedTo, createdBy, type, branchId, email, source, parseInt(page), parseInt(limit));
   }
   
   @Get(':id')

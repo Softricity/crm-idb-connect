@@ -97,7 +97,7 @@ export default function FollowUpsPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Follow-ups</h1>
+          {/* Removed h1 title as it's in the universal header */}
           <p className="mt-2 text-gray-600">
             View and manage your scheduled follow-ups
           </p>

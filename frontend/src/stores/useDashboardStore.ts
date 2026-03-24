@@ -1,10 +1,5 @@
 import { create } from "zustand";
 import api from "@/lib/api";
-import {
-  startOfTodayLocal,
-  endOfTodayLocal,
-  lastNDaysLocal,
-} from "@/lib/dates";
 import { Lead } from "./useLeadStore";
 
 type StatusBuckets = Record<string, number>;
@@ -46,60 +41,18 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
     set({ loading: true, error: undefined });
 
     try {
-      const data = await api.DashboardAPI.fetchDashboardLeads();
-      const leads = (data ?? []) as Lead[];
-
-    // === Metrics ===
-    const start = startOfTodayLocal();
-    const end = endOfTodayLocal();
-
-    const todaysLeads = leads.filter((l) => {
-      const d = new Date(l?.created_at??"");
-      return d >= start && d <= end;
-    }).length;
-
-    const converted = leads.filter((l) => l.status === "converted").length;
-    const rejected = leads.filter((l) => l.status === "rejected").length;
-    const total = leads.length;
-
-    // === Group by Status & Source ===
-    const byStatus: Record<string, number> = {};
-    const bySource: Record<string, number> = {};
-
-    leads.forEach((l) => {
-      const status = l.status || "unknown";
-      byStatus[status] = (byStatus[status] || 0) + 1;
-
-      const src = l.utm_source || "unknown";
-      bySource[src] = (bySource[src] || 0) + 1;
-    });
-
-    // === Last 7 Days ===
-    const days = lastNDaysLocal(7);
-    const last7Days = days.map((day) => {
-      const startDay = new Date(day);
-      const endDay = new Date(day);
-      endDay.setHours(23, 59, 59, 999);
-      const count = leads.filter((l) => {
-        const d = new Date(l?.created_at ?? "");
-        return d >= startDay && d <= endDay;
-      }).length;
-      return {
-        label: day.toLocaleDateString(undefined, {
-          month: "short",
-          day: "numeric",
-        }),
-        date: day.toISOString(),
-        count,
-      };
-    });
+      const stats = await api.DashboardAPI.getStats();
 
       set({
-        leads,
-        metrics: { todaysLeads, converted, rejected, total },
-        byStatus,
-        bySource,
-        last7Days,
+        metrics: {
+            todaysLeads: stats.metrics.todaysLeads,
+            converted: stats.metrics.converted,
+            rejected: stats.metrics.rejected,
+            total: stats.metrics.total,
+        },
+        byStatus: stats.byStatus,
+        bySource: stats.bySource,
+        last7Days: stats.last7Days,
         loading: false,
       });
     } catch (error: any) {
@@ -111,5 +64,14 @@ export const useDashboardStore = create<DashboardState>((set, get) => ({
   refresh: async () => {
     await get().fetchDashboardLeads();
   },
-  reset: () => set({ leads: [], loading: false, error: undefined, metrics: { todaysLeads: 0, converted: 0, rejected: 0, total: 0 }, byStatus: {}, bySource: {}, last7Days: [], topSelected: "home" }),
+  reset: () => set({ 
+    leads: [], 
+    loading: false, 
+    error: undefined, 
+    metrics: { todaysLeads: 0, converted: 0, rejected: 0, total: 0 }, 
+    byStatus: {}, 
+    bySource: {}, 
+    last7Days: [], 
+    topSelected: "home" 
+  }),
 }));

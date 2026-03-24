@@ -17,4 +17,10 @@ export class DashboardController {
   getStats(@GetUser() user: any) {
     return this.dashboardService.getStats(user);
   }
+
+  @Get('application-stats')
+  @Roles(Role.SuperAdmin, Role.Admin, Role.Counsellor)
+  getApplicationStats(@GetUser() user: any) {
+    return this.dashboardService.getApplicationStats(user);
+  }
 }

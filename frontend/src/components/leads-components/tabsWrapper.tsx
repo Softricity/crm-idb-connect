@@ -84,9 +84,13 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
 
 type TabsWrapperProps = {
   leads: Lead[];
+  pagination: { total: number; page: number; limit: number; totalPages: number; counts: Record<string, number> };
+  onPageChange: (page: number) => void;
 };
 
-export default function TabsWrapper({ leads }: TabsWrapperProps) {
+import { Pagination } from "@heroui/react";
+
+export default function TabsWrapper({ leads, pagination, onPageChange }: TabsWrapperProps) {
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [showOnlyFlagged, setShowOnlyFlagged] = useState(false);
@@ -257,14 +261,19 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
     return filteredLeads;
   };
 
-  const renderTabTitle = (tab: StatusTab) => (
-    <div className="flex items-center justify-center">
-      {tab.label}
-      <span className="ml-2 inline-flex items-center justify-center rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700 group-data-[selected=true]:bg-white group-data-[selected=true]:text-teal-600">
-        {filterLeads(tab.key).length}
-      </span>
-    </div>
-  );
+  const renderTabTitle = (tab: StatusTab) => {
+    const isAll = tab.key === "all";
+    const totalCount = isAll ? pagination.total : (pagination.counts[tab.key] || 0);
+
+    return (
+      <div className="flex items-center justify-center">
+        {tab.label}
+        <span className="ml-2 inline-flex items-center justify-center rounded-full bg-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700 group-data-[selected=true]:bg-white group-data-[selected=true]:text-teal-600">
+          {totalCount}
+        </span>
+      </div>
+    );
+  };
 
   const handleColumnsChange = (updatedColumns: ColumnConfig[]) => {
     setColumns(updatedColumns);
@@ -302,6 +311,20 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
                     columns={columns}
                     departmentStatuses={activeDepartmentStatuses}
                   />
+                  
+                  {pagination.totalPages > 1 && (
+                    <div className="flex w-full justify-center mt-4">
+                      <Pagination
+                        isCompact
+                        showControls
+                        showShadow
+                        color="primary"
+                        page={pagination.page}
+                        total={pagination.totalPages}
+                        onChange={onPageChange}
+                      />
+                    </div>
+                  )}
 
                 </div>
               </CardBody>

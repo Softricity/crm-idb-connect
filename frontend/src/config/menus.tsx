@@ -68,8 +68,10 @@ export const menus: MenuItem[] = [
   { title: "Branches", icon: <Building size={20} />, type: "link", link: "/settings/branches", requiredPermissions: ["Branch Manage"] },
   { title: "Departments", icon: <Workflow size={20} />, type: "link", link: "/settings/departments", requiredPermissions: [BranchPermission.BRANCH_MANAGE] },
   { title: "Support", icon: <HelpCircle size={20} />, type: "link", link: "/support", requiredPermissions: [SupportPermission.SUPPORT_TICKET_VIEW, SupportPermission.SUPPORT_TICKET_MANAGE] },
-  { title: "Customise", icon: <SlidersHorizontal size={20} />, type: "link", link: "/customise" },
+  { title: "Integrations", icon: <Link size={20} />, type: "link", link: "/settings/integrations", requiredPermissions: [BranchPermission.BRANCH_MANAGE] },
+
 ];
+
 
 
 export const b2bMenus: MenuItem[] = [

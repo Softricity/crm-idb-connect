@@ -106,14 +106,14 @@ export const AgentsAPI = {
 };
 
 export const LeadsAPI = {
-  fetchLeads: async (branchId?: string) => {
-    const params = new URLSearchParams({ type: 'lead' });
+  fetchLeads: async (branchId?: string, page: number = 1, limit: number = 10) => {
+    const params = new URLSearchParams({ type: 'lead', page: page.toString(), limit: limit.toString() });
     if (branchId) params.append('branch_id', branchId);
     const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  fetchApplications: async (branchId?: string) => {
-    const params = new URLSearchParams({ type: 'application' });
+  fetchApplications: async (branchId?: string, page: number = 1, limit: number = 10) => {
+    const params = new URLSearchParams({ type: 'application', page: page.toString(), limit: limit.toString() });
     if (branchId) params.append('branch_id', branchId);
     const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
@@ -122,14 +122,14 @@ export const LeadsAPI = {
     const res = await fetch(`${API_BASE}/leads/${id}`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  getAgentLeads: async (agentId: string, branchId?: string) => {
-    const params = new URLSearchParams({ created_by: agentId });
+  getAgentLeads: async (agentId: string, branchId?: string, page: number = 1, limit: number = 10) => {
+    const params = new URLSearchParams({ created_by: agentId, page: page.toString(), limit: limit.toString() });
     if (branchId) params.append('branch_id', branchId);
     const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  getCounsellorLeads: async (counsellorId: string, branchId?: string) => {
-    const params = new URLSearchParams({ assigned_to: counsellorId, type: 'lead' });
+  getCounsellorLeads: async (counsellorId: string, branchId?: string, page: number = 1, limit: number = 10) => {
+    const params = new URLSearchParams({ assigned_to: counsellorId, type: 'lead', page: page.toString(), limit: limit.toString() });
     if (branchId) params.append('branch_id', branchId);
     const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
@@ -340,15 +340,15 @@ export const NotesAPI = {
 };
 
 export const TimelineAPI = {
-  fetchTimelineByLeadId: async (leadId: string) => {
-    const res = await fetch(`${API_BASE}/leads/${leadId}/timeline?t=${Date.now()}`, {
+  fetchTimelineByLeadId: async (leadId: string, page: number = 1, limit: number = 20) => {
+    const res = await fetch(`${API_BASE}/leads/${leadId}/timeline?page=${page}&limit=${limit}&t=${Date.now()}`, {
       headers: getHeaders(),
       cache: 'no-store',
     });
     return handleResponse(res);
   },
-  fetchGlobalTimeline: async () => {
-    const res = await fetch(`${API_BASE}/timeline?t=${Date.now()}`, {
+  fetchGlobalTimeline: async (page: number = 1, limit: number = 20) => {
+    const res = await fetch(`${API_BASE}/timeline?page=${page}&limit=${limit}&t=${Date.now()}`, {
       headers: getHeaders(),
       cache: 'no-store',
     });
@@ -363,15 +363,19 @@ export const TimelineAPI = {
     return handleResponse(res);
   },
   fetchAllTimelines: async (leadIds: string[]) => {
-    const rows = await Promise.all(
+    if (!leadIds || leadIds.length === 0) return [];
+    
+    const responses = await Promise.all(
       leadIds.map((leadId) =>
-        fetch(`${API_BASE}/leads/${leadId}/timeline?t=${Date.now()}`, {
+        fetch(`${API_BASE}/leads/${leadId}/timeline?limit=10&t=${Date.now()}`, {
           headers: getHeaders(),
           cache: 'no-store',
         }).then(handleResponse),
       )
     );
-    return rows.flat();
+    
+    // Each response is { data: Timeline[], meta: ... }
+    return responses.flatMap(res => res.data || []);
   },
 };
 
@@ -430,8 +434,8 @@ export const DashboardAPI = {
     const res = await fetch(`${API_BASE}/dashboard/stats`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  fetchDashboardLeads: async () => {
-    const res = await fetch(`${API_BASE}/leads`, { headers: getHeaders() });
+  getApplicationStats: async () => {
+    const res = await fetch(`${API_BASE}/dashboard/application-stats`, { headers: getHeaders() });
     return handleResponse(res);
   },
 };
@@ -575,8 +579,27 @@ export const CommissionsAPI = {
     const res = await fetch(`${API_BASE}/commissions`, { headers: getHeaders() });
     return handleResponse(res);
   },
+  getOne: async (id: string) => {
+    const res = await fetch(`${API_BASE}/commissions/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
   getMyCommissions: async () => {
     const res = await fetch(`${API_BASE}/commissions/my-commissions`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  update: async (id: string, data: any) => {
+    const res = await fetch(`${API_BASE}/commissions/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  delete: async (id: string) => {
+    const res = await fetch(`${API_BASE}/commissions/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
     return handleResponse(res);
   },
 };
@@ -1111,6 +1134,36 @@ export const TodosAPI = {
   },
 };
 
+export const IntegrationsAPI = {
+  getAll: async () => {
+    const res = await fetch(`${API_BASE}/integrations`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  upsert: async (data: any) => {
+    const res = await fetch(`${API_BASE}/integrations`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  update: async (id: string, data: any) => {
+    const res = await fetch(`${API_BASE}/integrations/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  delete: async (id: string) => {
+    const res = await fetch(`${API_BASE}/integrations/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+};
+
 export default {
   ReportsAPI,
   LeadsAPI,
@@ -1138,4 +1191,6 @@ export default {
   RolesAPI,
   AnnouncementsAPI,
   TodosAPI,
+  IntegrationsAPI,
 };
+

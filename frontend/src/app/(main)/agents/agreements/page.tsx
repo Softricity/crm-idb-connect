@@ -280,7 +280,7 @@ export default function AgreementsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Agent Agreements</h1>
+          {/* Removed h1 title as it's in the universal header */}
           <p className="text-muted-foreground">Manage agents, inquiries and agreement lifecycle from one place</p>
         </div>
       </div>

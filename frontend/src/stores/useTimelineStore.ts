@@ -7,7 +7,9 @@ export interface Timeline {
   event_type: string;
   old_state?: any;
   new_state?: any;
-  created_by: string;
+  source?: string;
+  actor_name?: string;
+  created_by: string | null;
   created_at?: string;
   partner?: { name: string };
   lead?: { name: string }; // Renamed from leads
@@ -18,9 +20,11 @@ interface TimelineState {
   globalTimeline: Timeline[]; // New State
   loading: boolean;
   timelineByLead: Record<string, Timeline[]>;
+  pagination: { total: number; page: number; limit: number; totalPages: number };
+  globalPagination: { total: number; page: number; limit: number; totalPages: number };
 
-  fetchTimelineByLeadId: (leadId: string) => Promise<void>;
-  fetchGlobalTimeline: () => Promise<void>; // New Action
+  fetchTimelineByLeadId: (leadId: string, page?: number, limit?: number) => Promise<void>;
+  fetchGlobalTimeline: (page?: number, limit?: number) => Promise<void>; // New Action
   addTimelineEvent: (event: Omit<Timeline, "id" | "partner" | "created_at">) => Promise<void>;
   fetchAllTimelines: (leadIds: string[]) => Promise<void>;
   reset: () => void;
@@ -31,12 +35,18 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   globalTimeline: [], // Init
   loading: false,
   timelineByLead: {},
+  pagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
+  globalPagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
 
-  fetchTimelineByLeadId: async (leadId) => {
+  fetchTimelineByLeadId: async (leadId, page = 1, limit = 20) => {
     set({ loading: true });
     try {
-      const data = await api.TimelineAPI.fetchTimelineByLeadId(leadId);
-      set({ timeline: data as Timeline[] });
+      const resp = await api.TimelineAPI.fetchTimelineByLeadId(leadId, page, limit);
+      set((state) => ({ 
+        timeline: resp.data as Timeline[],
+        timelineByLead: { ...state.timelineByLead, [leadId]: resp.data as Timeline[] },
+        pagination: resp.meta
+      }));
     } catch (error: any) {
       console.error("Error fetching timeline:", error.message || error);
     }
@@ -44,11 +54,14 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   },
 
   // New Action Implementation
-  fetchGlobalTimeline: async () => {
+  fetchGlobalTimeline: async (page = 1, limit = 20) => {
     set({ loading: true });
     try {
-      const data = await api.TimelineAPI.fetchGlobalTimeline();
-      set({ globalTimeline: data as Timeline[] });
+      const resp = await api.TimelineAPI.fetchGlobalTimeline(page, limit);
+      set({ 
+        globalTimeline: resp.data as Timeline[],
+        globalPagination: resp.meta
+      });
     } catch (error: any) {
       console.error("Error fetching global timeline:", error.message || error);
     }
@@ -86,5 +99,12 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     }
   },
   
-  reset: () => set({ timeline: [], globalTimeline: [], loading: false, timelineByLead: {} }),
+  reset: () => set({ 
+    timeline: [], 
+    globalTimeline: [], 
+    loading: false, 
+    timelineByLead: {},
+    pagination: { total: 0, page: 1, limit: 20, totalPages: 0 },
+    globalPagination: { total: 0, page: 1, limit: 20, totalPages: 0 }
+  }),
 }));

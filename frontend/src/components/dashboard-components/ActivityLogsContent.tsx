@@ -1,18 +1,21 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useTimelineStore } from "@/stores/useTimelineStore";
 import { TimelineItem } from "@/components/dashboard-components/timeline";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Activity } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
+import { Pagination } from "@heroui/react";
 
 export default function ActivityLogsContent() {
-  const { globalTimeline, fetchGlobalTimeline, loading } = useTimelineStore();
+  const { globalTimeline, fetchGlobalTimeline, loading, globalPagination } = useTimelineStore();
+  const [page, setPage] = useState(1);
+  const limit = 20;
 
   useEffect(() => {
-    fetchGlobalTimeline();
-  }, [fetchGlobalTimeline]);
+    fetchGlobalTimeline(page, limit);
+  }, [fetchGlobalTimeline, page]);
 
   return (
     <div className="space-y-6">
@@ -27,8 +30,20 @@ export default function ActivityLogsContent() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-medium">Recent Activities</CardTitle>
+            {globalPagination.totalPages > 1 && (
+                <Pagination
+                    isCompact
+                    showControls
+                    showShadow
+                    color="primary"
+                    page={page}
+                    total={globalPagination.totalPages}
+                    onChange={setPage}
+                    size="sm"
+                />
+            )}
         </CardHeader>
         <Separator className="mb-4" />
         <CardContent>
@@ -60,6 +75,20 @@ export default function ActivityLogsContent() {
                    />
                 </div>
               ))}
+            </div>
+          )}
+          
+          {globalPagination.totalPages > 1 && (
+            <div className="flex justify-center mt-6">
+                 <Pagination
+                    isCompact
+                    showControls
+                    showShadow
+                    color="primary"
+                    page={page}
+                    total={globalPagination.totalPages}
+                    onChange={setPage}
+                />
             </div>
           )}
         </CardContent>

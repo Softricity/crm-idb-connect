@@ -64,7 +64,7 @@ export class LeadsService {
     
     const finalPreferredCountry = createLeadDto.preferred_country || "India"; 
 
-    return this.prisma.leads.create({
+    const lead = await this.prisma.leads.create({
       data: {
         name: createLeadDto.name,
         email: createLeadDto.email,
@@ -86,6 +86,15 @@ export class LeadsService {
         branch_id: createLeadDto.branch_id,
       },
     });
+
+    try {
+      const { id: actorId, name: actorName, source } = await this.resolveTimelineActorId(user);
+      await this.timelineService.logLeadCreated(lead, source, actorName || undefined);
+    } catch (error) {
+      console.error(`Timeline logging failed for lead creation ${lead.id}:`, error);
+    }
+
+    return lead;
   }
 
   async bulkAssign(bulkAssignDto: BulkAssignDto, user: any) {
@@ -121,8 +130,9 @@ export class LeadsService {
       data: { status, reason: reason || null },
     });
 
+    const { id: actorId, name: actorName, source } = await this.resolveTimelineActorId(user);
     leadIds.forEach(async (leadId) => {
-      await this.timelineService.logStatusChange(leadId, user.id, 'Previous', status);
+      await this.timelineService.logStatusChange(leadId, actorId, 'Previous', status, source, actorName || undefined);
     });
 
     return result;
@@ -169,7 +179,10 @@ export class LeadsService {
     branchId?: string,
     email?: string,
     source?: string, // Feature 9: segmentation
+    page: number = 1,
+    limit: number = 20,
   ) {
+    const skip = (page - 1) * limit;
     const resolvedType = (type || 'lead').toLowerCase();
     let where: any = { 
         type: { in: [resolvedType, resolvedType.charAt(0).toUpperCase() + resolvedType.slice(1)] } 
@@ -198,24 +211,54 @@ export class LeadsService {
       where.agent_id = null;
     }
 
-    const leads = await this.prisma.leads.findMany({
-      where,
-      include: {
-        partners_leads_assigned_toTopartners: {
-          select: { name: true, email: true },
-        },
-        ...(type === 'application' && {
-          applications: {
-            include: {
-              preferences: true,
-            },
+    const [leads, total, statusCounts] = await Promise.all([
+      this.prisma.leads.findMany({
+        where,
+        include: {
+          partners_leads_assigned_toTopartners: {
+            select: { name: true, email: true },
           },
-        }),
-      },
-      orderBy: { created_at: 'desc' },
-    });
+          ...(type === 'application' && {
+            applications: {
+              include: {
+                preferences: true,
+              },
+            },
+          }),
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.leads.count({ where }),
+      this.prisma.leads.groupBy({
+        by: ['status'],
+        where,
+        _count: {
+          status: true,
+        },
+      }),
+    ]);
 
-    return this.withForwardEligibility(leads);
+    const data = await this.withForwardEligibility(leads);
+
+    // Map statusCounts to a record
+    const counts = statusCounts.reduce((acc, curr) => {
+      const statusKey = (curr.status || '').toString().trim().toLowerCase();
+      acc[statusKey] = (acc[statusKey] || 0) + curr._count.status;
+      return acc;
+    }, {} as Record<string, number>);
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        counts,
+      },
+    };
   }
 
   async login(email: string, password: string) {
@@ -381,18 +424,40 @@ export class LeadsService {
     };
   }
 
-  private async resolveTimelineActorId(user?: any): Promise<string | null> {
+  private async resolveTimelineActorId(user?: any): Promise<{ id: string | null; name: string | null; source: string }> {
     const actorId = user?.id || user?.userId;
+    const source = (user?.type === 'agent' || user?.type === 'agent_team_member') ? 'b2b' : 'crm';
+
     if (!actorId) {
-      return null;
+      return { id: null, name: 'System', source };
     }
 
-    const partner = await this.prisma.partners.findUnique({
-      where: { id: actorId },
-      select: { id: true },
-    });
+    if (source === 'crm') {
+      const partner = await this.prisma.partners.findUnique({
+        where: { id: actorId },
+        select: { id: true, name: true },
+      });
+      return {
+        id: partner?.id || null,
+        name: partner?.name || 'Unknown',
+        source,
+      };
+    } else {
+      // B2B Source - Find Agent or Team Member
+      const agent = await this.prisma.agent.findUnique({
+        where: { id: actorId },
+        select: { name: true },
+      });
+      if (agent) return { id: null, name: agent.name, source };
 
-    return partner?.id || null;
+      const teamMember = await this.prisma.agentTeamMember.findUnique({
+        where: { id: actorId },
+        select: { name: true },
+      });
+      if (teamMember) return { id: null, name: teamMember.name, source };
+
+      return { id: null, name: 'Agent', source };
+    }
   }
 
   private extractStringUpdateValue(value: unknown): string | null | undefined {
@@ -703,27 +768,27 @@ export class LeadsService {
     });
 
     try {
-      const actorId = await this.resolveTimelineActorId(user);
+      const { id: actorId, name: actorName, source } = await this.resolveTimelineActorId(user);
 
       if (existingLead.name !== updatedLead.name) {
-        await this.timelineService.logNameChange(id, actorId, existingLead.name || '-', updatedLead.name || '-');
+        await this.timelineService.logNameChange(id, actorId, existingLead.name || '-', updatedLead.name || '-', source, actorName || undefined);
       }
 
       if (existingLead.mobile !== updatedLead.mobile) {
-        await this.timelineService.logPhoneChange(id, actorId, existingLead.mobile || '-', updatedLead.mobile || '-');
+        await this.timelineService.logPhoneChange(id, actorId, existingLead.mobile || '-', updatedLead.mobile || '-', source, actorName || undefined);
       }
 
       if (existingLead.email !== updatedLead.email) {
-        await this.timelineService.logEmailChange(id, actorId, existingLead.email || '-', updatedLead.email || '-');
+        await this.timelineService.logEmailChange(id, actorId, existingLead.email || '-', updatedLead.email || '-', source, actorName || undefined);
       }
 
       if (existingLead.status !== updatedLead.status) {
-        await this.timelineService.logStatusChange(id, actorId, existingLead.status || '-', updatedLead.status || '-');
+        await this.timelineService.logStatusChange(id, actorId, existingLead.status || '-', updatedLead.status || '-', source, actorName || undefined);
       }
 
       const typeDiff = this.buildLeadTypeDiff(existingLead, updatedLead);
       if (typeDiff) {
-        await this.timelineService.logDepartmentChange(id, actorId, typeDiff.oldState, typeDiff.newState);
+        await this.timelineService.logDepartmentChange(id, actorId, typeDiff.oldState, typeDiff.newState, source, actorName || undefined);
       }
 
       const detailsDiff = this.buildLeadDetailsDiff(existingLead, updatedLead);
@@ -733,6 +798,8 @@ export class LeadsService {
           actorId,
           detailsDiff.oldState,
           detailsDiff.newState,
+          source,
+          actorName || undefined
         );
       }
 
@@ -746,7 +813,7 @@ export class LeadsService {
           newOwnerName = owner?.name || 'Unassigned';
         }
 
-        await this.timelineService.logAssignmentChange(id, actorId, newOwnerName);
+        await this.timelineService.logAssignmentChange(id, actorId, newOwnerName, source, actorName || undefined);
       }
     } catch (error) {
       console.error(`Timeline logging failed for lead update ${id}:`, error);
@@ -863,12 +930,27 @@ export class LeadsService {
       throw new BadRequestException('Lead is not owned by the agent');
     }
 
-    return this.prisma.leads.update({
+    const updatedLead = await this.prisma.leads.update({
       where: { id: leadId },
       data: {
         agent_id: agentId,
         agent_team_member_id: teamMemberId,
       },
     });
+
+    try {
+      const { id: actorId, name: actorName, source } = await this.resolveTimelineActorId(user);
+      const teamMember = await this.prisma.agentTeamMember.findUnique({
+        where: { id: teamMemberId },
+        select: { name: true },
+      });
+      const teamMemberName = teamMember?.name || 'Unknown Team Member';
+      
+      await this.timelineService.logAssignmentChange(leadId, actorId, teamMemberName, source, actorName || undefined);
+    } catch (error) {
+      console.error(`Timeline logging failed for team member assignment ${leadId}:`, error);
+    }
+
+    return updatedLead;
   }
 }

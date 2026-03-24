@@ -49,11 +49,11 @@ export function ChartBarMixed({
 
   return (
     <Card className={cn("w-full flex flex-col", className)}>
-      <CardHeader className="pb-2">
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+      <CardHeader className="pb-0 pt-4 px-4">
+        <CardTitle className="text-sm">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 overflow-y-auto overflow-x-hidden pt-0" style={{ height: contentHeight }}>
+      <CardContent className="flex-1 overflow-y-auto overflow-x-hidden pt-0 px-2 pb-2" style={{ height: contentHeight }}>
         <div style={{ height: chartHeight, minWidth: '100%' }}>
           <ChartContainer config={chartConfig} className="h-full w-full">
             <BarChart

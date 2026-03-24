@@ -11,10 +11,10 @@ export default function SourceChart({ data }: Props) {
   const items = Object.entries(data).map(([name, value]) => ({ name, value }));
   return (
     <Card shadow="sm" radius="none" className="border border-gray-100 bg-white overflow-hidden rounded-3xl">
-      <CardHeader className="bg-gray-50/50 px-6 py-4 border-b border-gray-100">
-         <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest">Leads by Source</h2>
+      <CardHeader className="bg-gray-50/50 px-4 py-2 border-b border-gray-100">
+         <h2 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Leads by Source</h2>
       </CardHeader>
-      <CardBody className="p-6" style={{ height: 320 }}>
+      <CardBody className="p-2" style={{ height: 320 }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie

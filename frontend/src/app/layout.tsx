@@ -32,6 +32,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.className} antialiased`}
+        suppressHydrationWarning={true}
       >
         <HeroUIProvider>
           {children}

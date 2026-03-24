@@ -47,11 +47,11 @@ export function ChartPieDonut({
 
   return (
     <Card className={cn("flex flex-col w-full", className)}>
-      <CardHeader className="items-center pb-2 text-center">
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+      <CardHeader className="items-center pb-0 pt-4 px-4 text-center">
+        <CardTitle className="text-sm">{title}</CardTitle>
+        <CardDescription className="text-xs">{description}</CardDescription>
       </CardHeader>
-      <CardContent className="flex-1 overflow-hidden pt-0" style={{ height: contentHeight }}>
+      <CardContent className="flex-1 overflow-hidden pt-0 px-2 pb-2" style={{ height: contentHeight }}>
         <ChartContainer
           config={chartConfig}
           className="mx-auto aspect-square h-full"

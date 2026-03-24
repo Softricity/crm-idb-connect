@@ -12,16 +12,24 @@ import {
     SelectItem,
     Textarea,
 } from "@heroui/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { CommissionsAPI } from "@/lib/api";
 
 interface CommissionModalProps {
     isOpen: boolean;
     onClose: () => void;
-    leadId: string;
-    agentId: string;
-    leadName: string;
+    leadId?: string;
+    agentId?: string;
+    leadName?: string;
+    editData?: {
+        id: string;
+        amount: number;
+        currency: string;
+        status: string;
+        remarks?: string;
+        lead?: { name: string };
+    };
     onSuccess?: () => void;
 }
 
@@ -31,6 +39,7 @@ export default function CommissionModal({
     leadId,
     leadName,
     agentId,
+    editData,
     onSuccess,
 }: CommissionModalProps) {
     const [amount, setAmount] = useState("");
@@ -38,6 +47,20 @@ export default function CommissionModal({
     const [status, setStatus] = useState("PENDING");
     const [remarks, setRemarks] = useState("");
     const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        if (editData && isOpen) {
+            setAmount(editData.amount.toString());
+            setCurrency(editData.currency);
+            setStatus(editData.status);
+            setRemarks(editData.remarks || "");
+        } else if (!editData && isOpen) {
+            setAmount("");
+            setCurrency("USD");
+            setStatus("PENDING");
+            setRemarks("");
+        }
+    }, [editData, isOpen]);
 
     const currencyOptions = [
         { value: "USD", label: "USD" },
@@ -63,32 +86,44 @@ export default function CommissionModal({
 
         setIsLoading(true);
         try {
-            await CommissionsAPI.create({
-                lead_id: leadId,
-                application_id: null,
-                amount: parseFloat(amount),
-                currency,
-                status,
-                agent_id: agentId,
-                remarks: remarks || undefined,
-            });
+            if (editData) {
+                await CommissionsAPI.update(editData.id, {
+                    amount: parseFloat(amount),
+                    currency,
+                    status,
+                    remarks: remarks || undefined,
+                });
+                toast.success("Commission updated successfully");
+            } else {
+                await CommissionsAPI.create({
+                    lead_id: leadId,
+                    application_id: null,
+                    amount: parseFloat(amount),
+                    currency,
+                    status,
+                    agent_id: agentId,
+                    remarks: remarks || undefined,
+                });
+                toast.success("Commission created successfully");
+            }
 
-            toast.success("Commission created successfully");
             handleClose();
             onSuccess?.();
         } catch (error: any) {
-            console.error("Error creating commission:", error);
-            toast.error(error.message || "Failed to create commission");
+            console.error("Error saving commission:", error);
+            toast.error(error.message || "Failed to save commission");
         } finally {
             setIsLoading(false);
         }
     };
 
     const handleClose = () => {
-        setAmount("");
-        setCurrency("USD");
-        setStatus("PENDING");
-        setRemarks("");
+        if (!editData) {
+            setAmount("");
+            setCurrency("USD");
+            setStatus("PENDING");
+            setRemarks("");
+        }
         onClose();
     };
 
@@ -96,10 +131,12 @@ export default function CommissionModal({
         <Modal isOpen={isOpen} onClose={handleClose} size="2xl">
             <ModalContent>
                 <ModalHeader className="flex flex-col gap-1">
-                    Create Commission
-                    <p className="text-sm font-normal text-gray-500">
-                        For: {leadName}
-                    </p>
+                    {editData ? "Edit Commission" : "Create Commission"}
+                    {(leadName || editData?.lead?.name) && (
+                        <p className="text-sm font-normal text-gray-500">
+                            For: {leadName || editData?.lead?.name}
+                        </p>
+                    )}
                 </ModalHeader>
                 <ModalBody>
                     <div className="space-y-4">
@@ -168,7 +205,7 @@ export default function CommissionModal({
                         isLoading={isLoading}
                         isDisabled={isLoading}
                     >
-                        Create Commission
+                        {editData ? "Update Commission" : "Create Commission"}
                     </Button>
                 </ModalFooter>
             </ModalContent>

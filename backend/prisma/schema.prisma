@@ -605,6 +605,8 @@ model timeline {
   event_type timeline_event
   old_state  String?
   new_state  String?
+  source     String?         // 'crm', 'b2b', 'api', etc.
+  actor_name String?         // Name of the person who performed the action
   created_by String?         @db.Uuid
   created_at DateTime       @default(now()) @db.Timestamptz(6)
   partners   partners?       @relation(fields: [created_by], references: [id], onDelete: SetNull, onUpdate: NoAction)
@@ -944,3 +946,26 @@ enum TicketRequesterType {
   AGENT
   AGENT_TEAM_MEMBER
 }
+
+model IntegrationConfig {
+  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider     IntegrationProvider
+  display_name String
+  api_key      String?
+  api_secret   String?
+  config_json  Json?               @default("{}")
+  is_active    Boolean             @default(false)
+  connected_at DateTime?           @db.Timestamptz(6)
+  created_at   DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@unique([provider])
+  @@map("integration_configs")
+}
+
+enum IntegrationProvider {
+  RAZORPAY
+  GOOGLE_ADS
+  META_PIXEL
+}
+

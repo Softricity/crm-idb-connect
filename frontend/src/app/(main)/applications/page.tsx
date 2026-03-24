@@ -8,12 +8,14 @@ import React, { useEffect, useState } from "react";
 
 export default function Page() {
     const [selectedApplicationIds, setSelectedApplicationIds] = useState<string[]>([]);
-    const { applications, fetchApplications } = useApplicationStore();
+    const { applications, pagination, fetchApplications } = useApplicationStore();
     const { selectedBranch } = useBranchStore();
+    const [page, setPage] = useState(1);
+
     useEffect(() => {
         // Fetch applications filtered by selected branch
-        fetchApplications(undefined, selectedBranch?.id);
-    }, [fetchApplications, selectedBranch?.id]);
+        fetchApplications(undefined, selectedBranch?.id, page);
+    }, [fetchApplications, selectedBranch?.id, page]);
 
     return (
         <PermissionGuard requiredPermissions={[ApplicationPermission.APPLICATION_MANAGE]}>
@@ -21,6 +23,8 @@ export default function Page() {
                 applications={applications}
                 selectedApplicationIds={selectedApplicationIds}
                 setSelectedApplicationIds={setSelectedApplicationIds}
+                pagination={pagination}
+                onPageChange={setPage}
             />
         </PermissionGuard>
     );

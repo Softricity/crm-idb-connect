@@ -312,11 +312,11 @@ export default function DashboardTimeline({ leadIds }: { leadIds: string[] }) {
             </div>
             
             <div className="flex-1 overflow-y-auto hover-scrollbar p-6 space-y-1">
-                {feed.map((event, index) => (
+                {feed.slice(0, 10).map((event, index) => (
                     <TimelineItem
                         key={event.id}
                         event={event}
-                        isLast={index === feed.length - 1}
+                        isLast={index === Math.min(feed.length, 10) - 1}
                     />
                 ))}
             </div>
