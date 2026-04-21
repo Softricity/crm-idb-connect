@@ -42,6 +42,8 @@ export const menus: MenuItem[] = [
   // Main
   { title: "Main", type: "title" },
   { title: "Dashboard", icon: <LayoutDashboard size={20} />, type: "link", link: "/dashboard" },
+  { title: "Reports", icon: <FileText size={20} />, type: "link", link: "/reports", requiredPermissions: [AdministrativePermission.REPORTS_VIEW] },
+  { title: "Activity Logs", icon: <Activity size={20} />, type: "link", link: "/activity-logs" },
 
   // Study Abroad
   { title: "Study Abroad", type: "title" },
@@ -68,10 +70,8 @@ export const menus: MenuItem[] = [
   { title: "Branches", icon: <Building size={20} />, type: "link", link: "/settings/branches", requiredPermissions: ["Branch Manage"] },
   { title: "Departments", icon: <Workflow size={20} />, type: "link", link: "/settings/departments", requiredPermissions: [BranchPermission.BRANCH_MANAGE] },
   { title: "Support", icon: <HelpCircle size={20} />, type: "link", link: "/support", requiredPermissions: [SupportPermission.SUPPORT_TICKET_VIEW, SupportPermission.SUPPORT_TICKET_MANAGE] },
-  { title: "Integrations", icon: <Link size={20} />, type: "link", link: "/settings/integrations", requiredPermissions: [BranchPermission.BRANCH_MANAGE] },
-
+  { title: "Customise", icon: <SlidersHorizontal size={20} />, type: "link", link: "/customise" },
 ];
-
 
 
 export const b2bMenus: MenuItem[] = [

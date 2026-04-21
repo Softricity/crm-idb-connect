@@ -13,6 +13,10 @@ import {
 } from "@/components/ui/select";
 import PhoneInputWithCountrySelect, { Value } from "react-phone-number-input";
 import { Agent } from "@/stores/useAgentStore"; 
+import { useCategoryStore } from "@/stores/useCategoryStore";
+import { useBranchStore } from "@/stores/useBranchStore";
+import { useEffect } from "react";
+import { ShieldCheck } from "lucide-react";
 
 type AgentFormData = Partial<Agent>;
 
@@ -23,7 +27,7 @@ interface AgentFormFieldsProps {
     showPassword: boolean;
     setShowPassword: React.Dispatch<React.SetStateAction<boolean>>;
     handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
-    handleSelectChange: (name: string, value: string) => void;
+    handleSelectChange: (name: string, value: string | null) => void;
     handlePhoneChange: (value: Value | undefined) => void;
 }
 
@@ -55,8 +59,68 @@ export function AgentFormFields({
     handleSelectChange,
     handlePhoneChange,
 }: AgentFormFieldsProps) {
+    const { categories, fetchCategories } = useCategoryStore();
+    const { branches, fetchBranches } = useBranchStore();
+
+    useEffect(() => {
+        if (categories.length === 0) {
+            fetchCategories();
+        }
+        if (branches.length === 0) {
+            fetchBranches();
+        }
+    }, [categories, fetchCategories, branches, fetchBranches]);
+
     return (
         <div className="space-y-12">
+            {/* Branch and category selection */}
+            <div className="space-y-6 rounded-xl border p-6 shadow-sm bg-purple-50 border-purple-100">
+                <h3 className="text-lg font-medium text-purple-800 border-b border-purple-200 pb-2 flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5" />
+                    Branch and Category
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <FieldWrapper label="Branch*" name="branch_id" errors={errors}>
+                        <Select
+                            value={formData.branch_id || ""}
+                            onValueChange={(val) => handleSelectChange("branch_id", val)}
+                        >
+                            <SelectTrigger className="border-purple-200 bg-white">
+                                <SelectValue placeholder="Select branch" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {branches.map((branch) => (
+                                    <SelectItem key={branch.id} value={branch.id}>
+                                        {branch.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </FieldWrapper>
+
+                    <FieldWrapper label="Category*" name="category_id" errors={errors}>
+                        <Select 
+                            value={formData.category_id || ""} 
+                            onValueChange={(val) => handleSelectChange("category_id", val)}
+                        >
+                            <SelectTrigger className="border-purple-200 bg-white">
+                                <SelectValue placeholder="Select category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {categories.map((c) => (
+                                    <SelectItem key={c.id} value={c.id}>
+                                        {c.name} {c.label ? `(${c.label})` : ""}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <p className="text-[10px] text-purple-600 mt-1">
+                            Category controls segment-specific commission and access behavior for this agent.
+                        </p>
+                    </FieldWrapper>
+                </div>
+            </div>
+
             {/* Personal Info */}
             <div className="space-y-6 rounded-xl border p-6 shadow-sm bg-white">
                 <h3 className="text-lg font-medium text-gray-800 border-b pb-2">

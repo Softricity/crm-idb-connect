@@ -25,11 +25,14 @@ import { useAuthStore } from "@/stores/useAuthStore";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { hasAnyPermission, AgentsPermission } from "@/lib/utils";
 import { useAgentStore, Agent } from "@/stores/useAgentStore"; // Only use AgentStore
+import { useCategoryStore } from "@/stores/useCategoryStore";
 import { AgentForm } from "./agentCreateUpdate";
+import { ShieldCheck } from "lucide-react";
 
 export function AgentTable() {
     // 1. Use only useAgentStore
     const { agents, fetchAgents, loading, deleteAgent } = useAgentStore();
+    const { categories, fetchCategories } = useCategoryStore();
     const { user } = useAuthStore();
     const { selectedBranch, branches, fetchBranches } = useBranchStore();
     const userPermissions = user?.permissions || [];
@@ -52,7 +55,8 @@ export function AgentTable() {
 
     React.useEffect(() => {
         fetchBranches(); // Fetch branches for displaying branch names
-    }, [fetchBranches]);
+        fetchCategories(); // Fetch categories for display
+    }, [fetchBranches, fetchCategories]);
 
     React.useEffect(() => {
         fetchAgents(undefined, selectedBranch?.id); // Fetch from new backend with branch filter
@@ -158,6 +162,7 @@ export function AgentTable() {
                     <TableColumn>Phone</TableColumn>
                     <TableColumn>Agency</TableColumn>
                     <TableColumn>Branch</TableColumn>
+                    <TableColumn>Category</TableColumn>
                     <TableColumn>Status</TableColumn>
                     <TableColumn>Actions</TableColumn>
                 </TableHeader>
@@ -168,7 +173,21 @@ export function AgentTable() {
                             <TableCell>{agent.email}</TableCell>
                             <TableCell>{agent.mobile}</TableCell>
                             <TableCell>{agent.agency_name}</TableCell>
-                            <TableCell>{getBranchName(agent.branch_id)}</TableCell>
+                             <TableCell>{getBranchName(agent.branch_id)}</TableCell>
+                            <TableCell>
+                                {agent.category_id ? (
+                                    <Chip 
+                                        size="sm" 
+                                        variant="flat" 
+                                        color="secondary"
+                                        startContent={<ShieldCheck className="h-3 w-3 mr-1" />}
+                                    >
+                                        {categories.find(c => c.id === agent.category_id)?.name || "Standard"}
+                                    </Chip>
+                                ) : (
+                                    <span className="text-default-400 text-xs">Standard</span>
+                                )}
+                            </TableCell>
                             <TableCell>
                                 <Chip size="sm" color={getStatusColor(agent.status)} variant="flat">
                                     {agent.status}

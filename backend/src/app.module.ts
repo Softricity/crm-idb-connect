@@ -66,7 +66,6 @@ import { IntegrationsModule } from './integrations/integrations.module';
     DepartmentsModule,
     IntegrationsModule,
   ],
-
   controllers: [AppController],
   providers: [AppService],
 })

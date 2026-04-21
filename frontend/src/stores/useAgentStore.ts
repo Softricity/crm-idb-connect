@@ -17,6 +17,7 @@ export interface Agent {
   postal_code?: string;
   business_reg_no?: string;
   established_year?: number;
+  category_id?: string | null;
   status: "PENDING" | "IN_REVIEW" | "APPROVED" | "REJECTED";
   is_active: boolean;
   rejection_reason?: string;
@@ -31,7 +32,9 @@ interface AgentState {
   fetchAgents: (status?: string, branch_id?: string) => Promise<void>;
   fetchAgentById: (id: string) => Promise<Agent | null>;
   addAgent: (agent: any) => Promise<void>;
+  updateAgent: (id: string, updates: Partial<Agent>) => Promise<void>;
   updateStatus: (id: string, status: "APPROVED" | "REJECTED", reason?: string) => Promise<void>;
+  assignCategory: (id: string, categoryId: string | null) => Promise<void>;
   deleteAgent: (id: string) => Promise<void>; // Added deleteAgent
   reset: () => void;
 }
@@ -76,6 +79,20 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     }
   },
 
+  updateAgent: async (id, updates) => {
+    try {
+      const response = await api.AgentsAPI.update(id, updates);
+      set((state) => ({
+        agents: state.agents.map((agent) =>
+          agent.id === id ? { ...agent, ...response } : agent
+        ),
+      }));
+    } catch (error) {
+      console.error("Error updating agent:", error);
+      throw error;
+    }
+  },
+
   updateStatus: async (id, status, reason) => {
     try {
       const response = await api.AgentsAPI.updateStatus(id, status, reason);
@@ -99,6 +116,20 @@ export const useAgentStore = create<AgentState>((set, get) => ({
     } catch (error) {
        console.error("Error deleting agent:", error);
        throw error;
+    }
+  },
+
+  assignCategory: async (id, categoryId) => {
+    try {
+      const response = await api.AgentsAPI.assignCategory(id, categoryId);
+      set((state) => ({
+        agents: state.agents.map((agent) =>
+          agent.id === id ? { ...agent, category_id: categoryId } : agent
+        ),
+      }));
+    } catch (error) {
+      console.error("Error assigning category:", error);
+      throw error;
     }
   },
   

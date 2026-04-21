@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 export interface IntegrationProvider {
   id: string;
   name: string;
-  provider: "RAZORPAY" | "GOOGLE_ADS" | "META_PIXEL";
+  provider: "RAZORPAY" | "GOOGLE_ADS" | "META_PIXEL" | "MAILSUITE" | "SENDER" | "BREVO";
   description: string;
   icon: React.ReactNode;
   color: string;
@@ -57,6 +57,13 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
             </div>
 
             <h3 className="text-2xl font-extrabold text-gray-900 mb-3">{integration.name}</h3>
+            {(integration.provider === "MAILSUITE" ||
+              integration.provider === "SENDER" ||
+              integration.provider === "BREVO") && (
+              <Chip size="sm" variant="flat" color="warning" className="w-fit mb-3 font-semibold">
+                Campaign Only
+              </Chip>
+            )}
             <p className="text-gray-500 text-[13px] leading-relaxed mb-8 flex-grow">
               {integration.description}
             </p>
@@ -101,4 +108,3 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
     </motion.div>
   );
 };
-

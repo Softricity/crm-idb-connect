@@ -19,7 +19,11 @@ export class TimelineController {
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '20',
   ) {
-    return this.timelineService.getTimelineForLead(leadId, parseInt(page), parseInt(limit));
+    return this.timelineService.getTimelineForLead(
+      leadId,
+      parseInt(page, 10) || 1,
+      parseInt(limit, 10) || 20,
+    );
   }
 
   @Get('timeline')
@@ -27,6 +31,9 @@ export class TimelineController {
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '20',
   ) {
-    return this.timelineService.getGlobalTimeline(parseInt(page), parseInt(limit));
+    return this.timelineService.getGlobalTimeline(
+      parseInt(page, 10) || 1,
+      parseInt(limit, 10) || 20,
+    );
   }
 }

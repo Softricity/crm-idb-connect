@@ -39,18 +39,19 @@ export class DepartmentsService {
     };
   }
 
-  private sortDepartmentsByOrder<T extends { name: string; department_orders: { order_index: number }[] }>(
+  private sortDepartmentsByOrder<T extends { name: string; department_orders: { order_index: number } | null }>(
     departments: T[],
   ): T[] {
     return [...departments].sort((a, b) => {
-      const aIndex = a.department_orders[0]?.order_index ?? Number.MAX_SAFE_INTEGER;
-      const bIndex = b.department_orders[0]?.order_index ?? Number.MAX_SAFE_INTEGER;
+      const aIndex = a.department_orders?.order_index ?? Number.MAX_SAFE_INTEGER;
+      const bIndex = b.department_orders?.order_index ?? Number.MAX_SAFE_INTEGER;
       if (aIndex !== bIndex) {
         return aIndex - bIndex;
       }
       return a.name.localeCompare(b.name);
     });
   }
+
 
   private async getNextOrderIndex(client: DbClient): Promise<number> {
     const latest = await client.department_order.findFirst({

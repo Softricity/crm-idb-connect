@@ -41,6 +41,38 @@ export class ContractsService {
       .trim();
   }
 
+  private resolveTemplateVariables(
+    text: string,
+    agent?: {
+      name?: string | null;
+      email?: string | null;
+      mobile?: string | null;
+      agency_name?: string | null;
+      category?: { name?: string | null; label?: string | null } | null;
+      branch?: { name?: string | null } | null;
+    } | null,
+  ): string {
+    if (!text) return text;
+
+    const now = new Date();
+    const replacements: Record<string, string> = {
+      today_date: now.toLocaleDateString('en-GB'),
+      today_iso: now.toISOString().slice(0, 10),
+      current_year: String(now.getFullYear()),
+      agent_name: agent?.name || '',
+      agent_email: agent?.email || '',
+      agent_mobile: agent?.mobile || '',
+      agency_name: agent?.agency_name || '',
+      agent_category: agent?.category?.label || agent?.category?.name || '',
+      agent_branch: agent?.branch?.name || '',
+    };
+
+    return text.replace(/{{\s*([a-zA-Z0-9_]+)\s*}}/g, (match, key) => {
+      if (!(key in replacements)) return match;
+      return replacements[key] ?? '';
+    });
+  }
+
   private async resolveSignatureBuffer(signatureUrl?: string | null): Promise<Buffer | null> {
     if (!signatureUrl) return null;
 
@@ -161,12 +193,31 @@ export class ContractsService {
     });
     if (!template) throw new NotFoundException('Template not found');
 
+    const agents = await this.prisma.agent.findMany({
+      where: { id: { in: agentIds } },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        mobile: true,
+        agency_name: true,
+        category: { select: { name: true, label: true } },
+        branch: { select: { name: true } },
+      },
+    });
+    const byId = new Map(agents.map((a) => [a.id, a]));
+
+    if (agents.length !== agentIds.length) {
+      const missing = agentIds.filter((agentId) => !byId.has(agentId));
+      throw new BadRequestException(`Some agents were not found: ${missing.join(', ')}`);
+    }
+
     const creations = agentIds.map((agentId) =>
       this.prisma.agentContract.create({
         data: {
           agent_id: agentId,
-          title: template.title,
-          content: template.content,
+          title: this.resolveTemplateVariables(template.title, byId.get(agentId)),
+          content: this.resolveTemplateVariables(template.content, byId.get(agentId)),
           status: AgentContractStatus.PENDING,
         },
       }),
@@ -365,5 +416,18 @@ export class ContractsService {
       orderBy: { created_at: 'desc' },
     });
     return latest || null;
+  }
+
+  async remove(id: string) {
+    const contract = await this.prisma.agentContract.findUnique({
+      where: { id },
+      select: { id: true },
+    });
+    if (!contract) {
+      throw new NotFoundException('Contract not found');
+    }
+
+    await this.prisma.agentContract.delete({ where: { id } });
+    return { success: true };
   }
 }

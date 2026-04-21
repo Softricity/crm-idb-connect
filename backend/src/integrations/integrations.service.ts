@@ -2,7 +2,6 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateIntegrationDto } from './dto/create-integration.dto';
 import { UpdateIntegrationDto } from './dto/update-integration.dto';
-import { IntegrationProvider } from '@prisma/client';
 
 @Injectable()
 export class IntegrationsService {
@@ -14,9 +13,9 @@ export class IntegrationsService {
     });
   }
 
-  async findByProvider(provider: IntegrationProvider) {
+  async findByProvider(provider: string) {
     const config = await this.prisma.integrationConfig.findUnique({
-      where: { provider },
+      where: { provider: provider as any },
     });
     return config;
   }
@@ -31,9 +30,9 @@ export class IntegrationsService {
     }
 
     return this.prisma.integrationConfig.upsert({
-      where: { provider },
+      where: { provider: provider as any },
       create: {
-        provider,
+        provider: provider as any,
         ...updateData,
       },
       update: updateData,

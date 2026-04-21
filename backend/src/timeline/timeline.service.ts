@@ -16,8 +16,6 @@ export class TimelineService {
     userId: string | null,
     newState?: any,
     oldState?: any,
-    source: string = 'crm',
-    actorName?: string,
   ) {
     const cleanNewState = newState && typeof newState !== 'string' ? JSON.stringify(newState) : newState;
     const cleanOldState = oldState && typeof oldState !== 'string' ? JSON.stringify(oldState) : oldState;
@@ -30,25 +28,22 @@ export class TimelineService {
         created_by: userId,
         new_state: cleanNewState,
         old_state: cleanOldState,
-        source: source,
-        actor_name: actorName,
-      } as any,
+      },
     });
   }
 
   /**
-   * Fetches the complete timeline for a specific lead with pagination.
+   * Fetches the complete timeline for a specific lead.
    */
-  async getTimelineForLead(leadId: string, page: number = 1, limit: number = 20) {
+  async getTimelineForLead(leadId: string, page = 1, limit = 20) {
     const skip = (page - 1) * limit;
-    const [events, total] = await Promise.all([
+
+    const [total, events] = await Promise.all([
+      this.prisma.timeline.count({ where: { lead_id: leadId } }),
       this.prisma.timeline.findMany({
         where: { lead_id: leadId },
         include: {
           partners: { 
-            select: { name: true },
-          },
-          leads: {
             select: { name: true },
           },
         },
@@ -58,14 +53,11 @@ export class TimelineService {
         skip,
         take: limit,
       }),
-      this.prisma.timeline.count({ where: { lead_id: leadId } }),
     ]);
 
-    // ✅ FIX: Map DB relations to Frontend property names
     const data = events.map(event => ({
         ...event,
-        partner: event.partners,
-        lead: event.leads
+        partner: event.partners
     }));
 
     return {
@@ -79,158 +71,131 @@ export class TimelineService {
     };
   }
 
+
   // --- Specific Event Logging Methods ---
 
-  async logLeadCreated(lead: any, source: string = 'crm', actorName?: string) {
+  async logLeadCreated(lead: any) {
     await this.log(
       lead.id,
       'LEAD_CREATED',
       lead.created_by || null, // If created_by is null, "System" is correct
       `Lead created for ${lead.name}`,
-      undefined,
-      source,
-      actorName,
     );
   }
 
-  async logNoteAdded(note: any, userId: string | null, source = 'crm', actorName?: string) {
+  async logNoteAdded(note: any, userId: string | null) {
     await this.log(
       note.lead_id, 
       'LEAD_NOTE_ADDED',
       userId,
-      note.text,
-      undefined,
-      source,
-      actorName
+      note.text, 
     );
   }
   
-  async logFollowupAdded(followup: any, userId: string | null, source = 'crm', actorName?: string) {
+  async logFollowupAdded(followup: any, userId: string | null) {
       await this.log(
           followup.lead_id,
           'LEAD_FOLLOWUP_ADDED',
           userId,
-          followup.title,
-          undefined,
-          source,
-          actorName
+          followup.title 
       );
   }
   
-  async logFollowupCompleted(followup: any, userId: string | null, source = 'crm', actorName?: string) {
+  async logFollowupCompleted(followup: any, userId: string | null) {
       await this.log(
           followup.lead_id,
           'LEAD_FOLLOWUP_COMPLETED',
           userId,
-          followup.title,
-          undefined,
-          source,
-          actorName
+          followup.title 
       );
   }
   
-  async logCommentAdded(leadId: string, commentText: string, userId: string | null, source = 'crm', actorName?: string) {
+  async logCommentAdded(leadId: string, commentText: string, userId: string | null) {
       await this.log(
           leadId,
           'LEAD_FOLLOWUP_COMMENT_ADDED',
           userId,
-          commentText,
-          undefined,
-          source,
-          actorName
+          commentText 
       );
   }
 
-  async logStatusChange(leadId: string, userId: string | null, oldStatus: string, newStatus: string, source: string = 'crm', actorName?: string) {
+  async logStatusChange(leadId: string, userId: string | null, oldStatus: string, newStatus: string) {
     await this.log(
       leadId,
       'LEAD_STATUS_CHANGED',
       userId,
       newStatus,
-      oldStatus,
-      source,
-      actorName
+      oldStatus
     );
   }
 
-  async logDepartmentChange(leadId: string, userId: string | null, oldDepartment: string, newDepartment: string, source = 'crm', actorName?: string) {
+  async logDepartmentChange(leadId: string, userId: string | null, oldDepartment: string, newDepartment: string) {
     await this.log(
       leadId,
       'LEAD_DEPARTMENT_CHANGED',
       userId,
       newDepartment,
       oldDepartment,
-      source,
-      actorName
     );
   }
 
-  async logNameChange(leadId: string, userId: string | null, oldName: string, newName: string, source = 'crm', actorName?: string) {
+  async logNameChange(leadId: string, userId: string | null, oldName: string, newName: string) {
     await this.log(
       leadId,
       'LEAD_NAME_CHANGED',
       userId,
       newName,
       oldName,
-      source,
-      actorName
     );
   }
 
-  async logPhoneChange(leadId: string, userId: string | null, oldPhone: string, newPhone: string, source = 'crm', actorName?: string) {
+  async logPhoneChange(leadId: string, userId: string | null, oldPhone: string, newPhone: string) {
     await this.log(
       leadId,
       'LEAD_PHONE_CHANGED',
       userId,
       newPhone,
       oldPhone,
-      source,
-      actorName
     );
   }
 
-  async logEmailChange(leadId: string, userId: string | null, oldEmail: string, newEmail: string, source = 'crm', actorName?: string) {
+  async logEmailChange(leadId: string, userId: string | null, oldEmail: string, newEmail: string) {
     await this.log(
       leadId,
       'LEAD_EMAIL_CHANGED',
       userId,
       newEmail,
       oldEmail,
-      source,
-      actorName
     );
   }
 
-  async logPurposeChange(leadId: string, userId: string | null, oldValue: string, newValue: string, source = 'crm', actorName?: string) {
+  async logPurposeChange(leadId: string, userId: string | null, oldValue: string, newValue: string) {
     await this.log(
       leadId,
       'LEAD_PURPOSE_CHANGED',
       userId,
       newValue,
       oldValue,
-      source,
-      actorName
     );
   }
 
-  async logAssignmentChange(leadId: string, userId: string | null, newOwnerName: string, source = 'crm', actorName?: string) {
+  async logAssignmentChange(leadId: string, userId: string | null, newOwnerName: string) {
     await this.log(
       leadId,
       'LEAD_OWNER_CHANGED',
       userId,
-      `Assigned to ${newOwnerName}`,
-      undefined,
-      source,
-      actorName
+      `Assigned to ${newOwnerName}`
     );
   }
 
   /**
-   * Fetches the most recent global timeline events with pagination.
+   * Fetches the most recent global timeline events.
    */
-  async getGlobalTimeline(page: number = 1, limit: number = 20) {
+  async getGlobalTimeline(page = 1, limit = 20) {
     const skip = (page - 1) * limit;
-    const [events, total] = await Promise.all([
+
+    const [total, events] = await Promise.all([
+      this.prisma.timeline.count(),
       this.prisma.timeline.findMany({
         skip,
         take: limit,
@@ -246,14 +211,11 @@ export class TimelineService {
           }
         },
       }),
-      this.prisma.timeline.count(),
     ]);
 
-    // ✅ FIX: Map 'partners' -> 'partner' and 'leads' -> 'lead'
     const data = events.map(event => ({
         ...event,
-        partner: event.partners,
-        lead: event.leads
+        partner: event.partners
     }));
 
     return {
@@ -266,4 +228,5 @@ export class TimelineService {
       },
     };
   }
+
 }

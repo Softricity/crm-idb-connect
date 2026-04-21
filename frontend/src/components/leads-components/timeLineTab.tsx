@@ -4,8 +4,7 @@ import React, { useEffect } from "react";
 import { format } from "date-fns";
 import { useTimelineStore, Timeline } from "@/stores/useTimelineStore";
 import { TimelineEvent } from "@/lib/utils";
-import { Avatar, Spinner, Pagination } from "@heroui/react";
-import { useState } from "react";
+import { Avatar, Spinner } from "@heroui/react";
 import {
   UserPlus,
   Edit3,
@@ -193,9 +192,9 @@ export const renderEventAction = (event: Timeline, leadName: string) => {
       return <>updated <Field>Lead Details</Field> from <OldValue>{old_state || "-"}</OldValue> to <NewValue>{new_state || "-"}</NewValue>.</>;
     }
     case TimelineEvent.LEAD_STATUS_CHANGED:
-      return <>changed <Field>Status</Field> for <Field>{leadName}</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
+      return <>changed <Field>Status</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
     case TimelineEvent.LEAD_DEPARTMENT_CHANGED:
-      return <>moved <Field>{leadName}</Field> from <OldValue>{old_state || "-"}</OldValue> to <NewValue>{new_state || "-"}</NewValue>.</>;
+      return <>moved the lead from <OldValue>{old_state || "-"}</OldValue> to <NewValue>{new_state || "-"}</NewValue>.</>;
     case TimelineEvent.LEAD_OWNER_CHANGED:
       return <>reassigned the lead.</>;
     case TimelineEvent.LEAD_NOTE_ADDED:
@@ -250,14 +249,7 @@ export const TimelineItem = ({ event, isLast, leadName }: { event: Timeline; isL
 
       <div className="flex-1">
         <p className="text-sm text-gray-700">
-          <strong className="font-semibold text-gray-900">
-            {event.source === 'b2b' ? `${event.actor_name || "Agent"}` : (event.partner?.name ?? "System")}
-          </strong>
-          {event.source === 'b2b' && (
-            <span className="ml-2 inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
-              B2B
-            </span>
-          )}
+          <strong className="font-semibold text-gray-900">{event.partner?.name ?? "System"}</strong>
           {' '}
           {renderEventAction(event, leadName)}
         </p>
@@ -282,14 +274,13 @@ export const TimelineItem = ({ event, isLast, leadName }: { event: Timeline; isL
 
 // 5. Main exported component
 export default function TimeLineTab({ leadId, leadName, refreshKey = 0 }: { leadId: string; leadName: string; refreshKey?: number }) {
-  const { timeline, loading, fetchTimelineByLeadId, pagination } = useTimelineStore();
-  const [page, setPage] = useState(1);
+  const { timeline, loading, fetchTimelineByLeadId } = useTimelineStore();
 
   useEffect(() => {
     if (leadId) {
-      fetchTimelineByLeadId(leadId, page);
+      fetchTimelineByLeadId(leadId);
     }
-  }, [leadId, refreshKey, fetchTimelineByLeadId, page]);
+  }, [leadId, refreshKey, fetchTimelineByLeadId]);
 
   if (loading) {
     return (
@@ -324,20 +315,6 @@ export default function TimeLineTab({ leadId, leadName, refreshKey = 0 }: { lead
           />
         ))}
       </div>
-      
-      {pagination.totalPages > 1 && (
-        <div className="flex w-full justify-center mt-6">
-            <Pagination
-                isCompact
-                showControls
-                showShadow
-                color="primary"
-                page={page}
-                total={pagination.totalPages}
-                onChange={setPage}
-            />
-        </div>
-      )}
     </div>
   );
 }

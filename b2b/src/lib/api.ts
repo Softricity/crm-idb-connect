@@ -40,7 +40,7 @@ async function handleResponse(res: Response) {
   let data: any = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
   if (!res.ok) {
-    const err: any = new Error(data?.error || res.statusText || 'API Error');
+    const err: any = new Error(data?.message || data?.error || res.statusText || 'API Error');
     err.status = res.status;
     err.statusCode = res.status;
     err.body = data;
@@ -341,6 +341,15 @@ export const AgentsAPI = {
       method: 'POST',
       headers: getHeaders(false),
       body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  uploadInquiryDocument: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/agents/inquiry/upload`, {
+      method: 'POST',
+      body: formData,
     });
     return handleResponse(res);
   },

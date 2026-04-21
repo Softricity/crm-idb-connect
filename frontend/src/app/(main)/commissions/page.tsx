@@ -25,7 +25,7 @@ import {
   DropdownItem,
 } from "@heroui/react";
 import { CommissionsAPI } from "@/lib/api";
-import { Search, RefreshCw, MoreVertical, Edit2, Trash2, Plus } from "lucide-react";
+import { Search, RefreshCw, MoreVertical, Edit2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import CommissionModal from "@/components/leads-components/CommissionModal";
 import { toast } from "sonner";
@@ -51,6 +51,8 @@ interface Commission {
     name: string;
     agency_name?: string;
     email: string;
+    branch?: { id: string; name: string };
+    category?: { id: string; name: string; label?: string };
   };
 }
 
@@ -107,6 +109,9 @@ export default function CommissionsPage() {
           commission.lead?.email?.toLowerCase().includes(query) ||
           commission.agent?.name?.toLowerCase().includes(query) ||
           commission.agent?.agency_name?.toLowerCase().includes(query) ||
+          commission.agent?.branch?.name?.toLowerCase().includes(query) ||
+          commission.agent?.category?.label?.toLowerCase().includes(query) ||
+          commission.agent?.category?.name?.toLowerCase().includes(query) ||
           commission.remarks?.toLowerCase().includes(query)
       );
     }
@@ -153,11 +158,6 @@ export default function CommissionsPage() {
 
   const handleEdit = (commission: Commission) => {
     setSelectedCommission(commission);
-    onModalOpen();
-  };
-
-  const handleCreate = () => {
-    setSelectedCommission(null);
     onModalOpen();
   };
 
@@ -209,17 +209,10 @@ export default function CommissionsPage() {
           <div className="flex justify-between items-center mb-4">
             <div>
               <p className="text-gray-600 mt-1">
-                Manage and track all agent commissions
+                Manage and track commissions by agent, branch, and category
               </p>
             </div>
             <div className="flex gap-2">
-              <Button
-                color="primary"
-                startContent={<Plus className="w-4 h-4" />}
-                onPress={handleCreate}
-              >
-                Create Commission
-              </Button>
               <Button
                 variant="flat"
                 startContent={<RefreshCw className="w-4 h-4" />}
@@ -333,6 +326,18 @@ export default function CommissionsPage() {
                           <p className="text-xs text-gray-500">
                             {commission.agent.email}
                           </p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {commission.agent.branch?.name && (
+                              <Chip size="sm" variant="flat" color="default">
+                                Branch: {commission.agent.branch.name}
+                              </Chip>
+                            )}
+                            {(commission.agent.category?.label || commission.agent.category?.name) && (
+                              <Chip size="sm" variant="flat" color="primary">
+                                Category: {commission.agent.category?.label || commission.agent.category?.name}
+                              </Chip>
+                            )}
+                          </div>
                         </div>
                       )}
                     </TableCell>
@@ -430,7 +435,7 @@ export default function CommissionsPage() {
         </Card>
       </div>
 
-      {/* Commission CRUD Modal */}
+      {/* Commission Edit Modal */}
       <CommissionModal
         isOpen={isModalOpen}
         onClose={onModalClose}

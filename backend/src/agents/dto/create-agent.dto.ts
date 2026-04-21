@@ -46,9 +46,11 @@ export class CreateAgentDto {
   @IsString()
   address: string;
 
-  @IsOptional()
   @IsUUID()
-  branch_id?: string;
+  branch_id: string;
+
+  @IsUUID()
+  category_id: string;
   
   @IsOptional()
   @IsString()

@@ -23,6 +23,7 @@ function ActivityLogsPageContent() {
   const { globalTimeline, fetchGlobalTimeline, loading, globalPagination } = useTimelineStore();
   const [page, setPage] = useState(1);
   const limit = 20;
+  const safeGlobalPagination = globalPagination || { total: 0, page: 1, limit, totalPages: 0 };
 
   useEffect(() => {
     fetchGlobalTimeline(page, limit);
@@ -43,14 +44,14 @@ function ActivityLogsPageContent() {
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg font-medium">Recent Activities</CardTitle>
-            {globalPagination.totalPages > 1 && (
+            {safeGlobalPagination.totalPages > 1 && (
                 <Pagination
                     isCompact
                     showControls
                     showShadow
                     color="primary"
                     page={page}
-                    total={globalPagination.totalPages}
+                    total={safeGlobalPagination.totalPages}
                     onChange={setPage}
                     size="sm"
                 />
@@ -96,7 +97,7 @@ function ActivityLogsPageContent() {
             </div>
           )}
           
-          {globalPagination.totalPages > 1 && (
+          {safeGlobalPagination.totalPages > 1 && (
             <div className="flex justify-center mt-6">
                  <Pagination
                     isCompact
@@ -104,7 +105,7 @@ function ActivityLogsPageContent() {
                     showShadow
                     color="primary"
                     page={page}
-                    total={globalPagination.totalPages}
+                    total={safeGlobalPagination.totalPages}
                     onChange={setPage}
                 />
             </div>

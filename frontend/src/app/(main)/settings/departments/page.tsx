@@ -408,7 +408,10 @@ export default function DepartmentsPage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          {/* Removed h1 title as it's in the universal header */}
+          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+            <Workflow size={28} />
+            Department Management
+          </h1>
           <p className="text-sm text-gray-500 mt-1">
             Configure departments, routing order, and department-specific statuses.
           </p>

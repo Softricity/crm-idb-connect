@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from 'react';
-import { AgentsAPI, ContractsAPI } from '@/lib/api';
+import { useEffect, useMemo, useState, useRef } from 'react';
+import { AgentsAPI, BranchesAPI, ContractsAPI } from '@/lib/api';
 import {
   Button,
   Card,
@@ -24,18 +24,33 @@ import {
   Tabs,
   Tab,
   Textarea,
+  Tooltip,
   useDisclosure,
 } from '@heroui/react';
-import { Pencil, Trash2, CheckCircle, XCircle, FileDown, Plus, Search } from 'lucide-react';
+import { Pencil, Trash2, CheckCircle, XCircle, FileDown, Plus, Search, Eye, Check, X, UserCheck } from 'lucide-react';
+import { Editor } from '@tinymce/tinymce-react';
 
 interface Agent {
   id: string;
   name: string;
   email: string;
   mobile?: string;
+  category_id?: string | null;
   status?: 'PENDING' | 'APPROVED' | 'REJECTED' | string;
   agency_name?: string;
   created_at?: string;
+}
+
+interface AgentCategory {
+  id: string;
+  name: string;
+  label?: string | null;
+  is_active?: boolean;
+}
+
+interface Branch {
+  id: string;
+  name: string;
 }
 
 interface Inquiry {
@@ -44,9 +59,20 @@ interface Inquiry {
   email: string;
   mobile: string;
   company_name?: string;
+  company_address?: string;
+  contact_person?: string;
+  contact_designation?: string;
+  contact_department?: string;
   website?: string;
   city?: string;
   country?: string;
+  source_country?: string;
+  operation_countries?: string;
+  accreditation_details?: string;
+  associations?: string;
+  moe_approvals?: string;
+  message?: string;
+  documents?: { id: string; label?: string; file_url: string }[];
   status: 'NEW' | 'CONTACTED' | 'CONVERTED' | 'REJECTED' | string;
   created_at?: string;
 }
@@ -62,13 +88,32 @@ interface ContractRow {
 }
 
 export default function AgreementsPage() {
+  const AGREEMENT_VARIABLES = [
+    { key: 'today_date', label: "Today's Date (DD/MM/YYYY)" },
+    { key: 'today_iso', label: "Today's Date (YYYY-MM-DD)" },
+    { key: 'current_year', label: 'Current Year' },
+    { key: 'agent_name', label: 'Agent Name' },
+    { key: 'agent_email', label: 'Agent Email' },
+    { key: 'agent_mobile', label: 'Agent Mobile' },
+    { key: 'agency_name', label: 'Agency Name' },
+    { key: 'agent_category', label: 'Agent Category' },
+    { key: 'agent_branch', label: 'Agent Branch' },
+  ] as const;
+
   const [tab, setTab] = useState('agreements');
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [branches, setBranches] = useState<Branch[]>([]);
+  const [categories, setCategories] = useState<AgentCategory[]>([]);
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [agreements, setAgreements] = useState<ContractRow[]>([]);
   const [search, setSearch] = useState('');
 
-  const [form, setForm] = useState({ agent_id: '', title: '', content: '' });
+  const [form, setForm] = useState({
+    assignment_mode: 'CATEGORY' as 'CATEGORY',
+    category_id: '',
+    title: '',
+    content: '',
+  });
   const [editingContract, setEditingContract] = useState<ContractRow | null>(null);
   
   // Bulk Assign State
@@ -76,8 +121,6 @@ export default function AgreementsPage() {
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
   const { isOpen: isAssignOpen, onOpen: onAssignOpen, onOpenChange: onAssignOpenChange } = useDisclosure();
 
-  const [rejectingContractId, setRejectingContractId] = useState<string | null>(null);
-  const [rejectionNote, setRejectionNote] = useState('');
   const [loading, setLoading] = useState(false);
   const { isOpen, onOpen, onOpenChange } = useDisclosure();
   const {
@@ -86,15 +129,52 @@ export default function AgreementsPage() {
     onOpenChange: onEditOpenChange,
   } = useDisclosure();
 
+  const [rejectingContractId, setRejectingContractId] = useState<string | null>(null);
+  const [rejectionNote, setRejectionNote] = useState('');
+
+  const [selectedInquiry, setSelectedInquiry] = useState<any>(null);
+  const [convertBranchId, setConvertBranchId] = useState('');
+  const [convertCategoryId, setConvertCategoryId] = useState('');
+  const { isOpen: isDetailOpen, onOpen: onDetailOpen, onOpenChange: onDetailOpenChange } = useDisclosure();
+  
+  const editorRef = useRef<any>(null);
+  const editEditorRef = useRef<any>(null);
+
+  const insertVariable = (key: string, mode: 'create' | 'edit') => {
+    const token = `{{${key}}}`;
+    const targetEditor = mode === 'create' ? editorRef.current : editEditorRef.current;
+    if (targetEditor && typeof targetEditor.insertContent === 'function') {
+      targetEditor.insertContent(token);
+      return;
+    }
+
+    if (mode === 'create') {
+      setForm((prev) => ({ ...prev, content: `${prev.content || ''}${token}` }));
+    } else {
+      setEditingContract((prev) =>
+        prev ? { ...prev, content: `${prev.content || ''}${token}` } : prev,
+      );
+    }
+  };
+
   const load = async () => {
-    const [a, iq, c] = await Promise.all([
-      AgentsAPI.getAll(),
-      AgentsAPI.getInquiries(),
-      ContractsAPI.getAll(),
-    ]);
-    setAgents(a || []);
-    setInquiries(iq || []);
-    setAgreements(c || []);
+    setLoading(true);
+    try {
+      const [a, cat, br, iq, c] = await Promise.all([
+        AgentsAPI.getAll(),
+        AgentsAPI.getCategories(),
+        BranchesAPI.fetchBranches(),
+        AgentsAPI.getInquiries(),
+        ContractsAPI.getAll(),
+      ]);
+      setAgents(a || []);
+      setCategories(cat || []);
+      setBranches(br || []);
+      setInquiries(iq || []);
+      setAgreements(c || []);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -123,9 +203,10 @@ export default function AgreementsPage() {
     });
   }, [agents, search]);
 
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState('ALL');
   const filteredInquiries = useMemo(() => {
     return inquiries
-      .filter((i) => i.status !== 'CONVERTED')
+      .filter((i) => inquiryStatusFilter === 'ALL' || i.status === inquiryStatusFilter)
       .filter((i) => {
         const q = search.toLowerCase();
         return (
@@ -134,21 +215,35 @@ export default function AgreementsPage() {
           i.company_name?.toLowerCase().includes(q)
         );
       });
-  }, [inquiries, search]);
+  }, [inquiries, search, inquiryStatusFilter]);
 
   const createContract = async () => {
     if (!form.title || !form.content) {
       alert('Please fill title and content');
       return;
     }
+    if (!form.category_id) {
+      alert('Please select a category');
+      return;
+    }
+
     setLoading(true);
     try {
-      await ContractsAPI.create({
-        ...form,
-        agent_id: form.agent_id || undefined
+      const template = await ContractsAPI.create({
+        title: form.title,
+        content: form.content,
       });
-      alert(form.agent_id ? 'Contract created' : 'General template created');
-      setForm({ agent_id: '', title: '', content: '' });
+      const categoryAgents = agents.filter((a) => a.category_id === form.category_id);
+      if (categoryAgents.length > 0) {
+        await ContractsAPI.bulkAssign(template.id, categoryAgents.map((a) => a.id));
+      }
+      alert(
+        categoryAgents.length > 0
+          ? `Assigned agreement to ${categoryAgents.length} agents in selected category`
+          : 'Template created. No agents currently found in selected category.'
+      );
+
+      setForm({ assignment_mode: 'CATEGORY', category_id: '', title: '', content: '' });
       await load();
     } catch (e: any) {
       alert(e?.message || 'Failed to create contract');
@@ -228,9 +323,23 @@ export default function AgreementsPage() {
     }
   };
 
-  const updateInquiryStatus = async (id: string, status: string) => {
+  const deleteAgreement = async (id: string) => {
+    if (!confirm('Delete this agreement? This action cannot be undone.')) return;
     try {
-      await AgentsAPI.updateInquiryStatus(id, status);
+      await ContractsAPI.delete(id);
+      await load();
+    } catch (e: any) {
+      alert(e?.message || 'Failed to delete agreement');
+    }
+  };
+
+  const updateInquiryStatus = async (
+    id: string,
+    status: string,
+    extras?: { branch_id?: string; category_id?: string }
+  ) => {
+    try {
+      await AgentsAPI.updateInquiryStatus(id, status, extras);
       await load(); 
     } catch (e: any) {
       alert(e?.message || 'Failed to update inquiry status');
@@ -254,15 +363,6 @@ export default function AgreementsPage() {
     } catch (e: any) {
       alert(e?.message || 'Failed to delete agent');
     }
-  };
-
-  const openCreateForAgent = (agent: Agent) => {
-    setForm((prev) => ({
-      ...prev,
-      agent_id: agent.id,
-      title: prev.title || `${agent.name} Agreement`,
-    }));
-    setTab('agreements');
   };
 
   const statusChip = (status?: string) => {
@@ -306,29 +406,70 @@ export default function AgreementsPage() {
           {tab === 'agreements' ? (
             <>
               <div className="border rounded-lg p-4 space-y-3 bg-gray-50/30">
-                <h3 className="font-semibold">{form.agent_id ? 'Create Agent Agreement' : 'Create General Template'}</h3>
+                <h3 className="font-semibold">Create Category Agreement</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Select
-                        label="Agent (Optional for Template)"
-                        selectedKeys={form.agent_id ? [form.agent_id] : []}
-                        onChange={(e) => setForm({ ...form, agent_id: e.target.value })}
-                        placeholder="Leave empty for general template"
+                      label="Category"
+                      selectedKeys={form.category_id ? [form.category_id] : []}
+                      onChange={(e) => setForm({ ...form, category_id: e.target.value })}
+                      placeholder="Select a category"
                     >
-                        {agents.map((a) => (
-                        <SelectItem key={a.id} textValue={`${a.name} (${a.email})`}>
-                            {a.name} ({a.email})
-                        </SelectItem>
+                      {categories
+                        .filter((category) => category.is_active !== false)
+                        .map((category) => (
+                          <SelectItem key={category.id} textValue={category.label || category.name}>
+                            {category.label || category.name}
+                          </SelectItem>
                         ))}
                     </Select>
                     <Input label="Contract Title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} />
                 </div>
-                <Textarea label="Contract Content (HTML allowed)" minRows={8} value={form.content} onChange={(e) => setForm({ ...form, content: e.target.value })} />
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 ml-1">Contract Content (HTML allowed)</label>
+                  <div className="flex flex-wrap items-center gap-2 p-2 border rounded-lg bg-default-50">
+                    <span className="text-xs text-default-500 mr-1">Insert Variable:</span>
+                    {AGREEMENT_VARIABLES.map((v) => (
+                      <Button
+                        key={v.key}
+                        size="sm"
+                        variant="flat"
+                        className="h-7 text-xs"
+                        onPress={() => insertVariable(v.key, 'create')}
+                      >
+                        {`{{${v.key}}}`}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-default-400 ml-1">
+                    Variables are auto-resolved when assigning agreements to agents.
+                  </p>
+                  <div className="min-h-[300px] border rounded-xl overflow-hidden bg-white shadow-inner">
+                    <Editor
+                      apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
+                      onInit={(evt, editor) => editorRef.current = editor}
+                      initialValue={form.content}
+                      onEditorChange={(content) => setForm({ ...form, content })}
+                      init={{
+                        height: 400,
+                        menubar: false,
+                        plugins: [
+                          'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                          'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                          'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                        ],
+                        toolbar: 'undo redo | blocks | ' +
+                          'bold italic forecolor | alignleft aligncenter ' +
+                          'alignright alignjustify | bullist numlist outdent indent | ' +
+                          'removeformat | help | code',
+                        content_style: 'body { font-family:Inter,Helvetica,Arial,sans-serif; font-size:14px }',
+                        skin: 'oxide',
+                      }}
+                    />
+                  </div>
+                </div>
                 <div className="flex justify-end gap-2">
-                  {form.agent_id && (
-                    <Button variant="light" size="sm" onPress={() => setForm({ ...form, agent_id: '' })}>Clear Agent</Button>
-                  )}
                   <Button color="primary" className="text-white" isLoading={loading} onPress={createContract}>
-                    <Plus className="h-4 w-4 mr-1" /> {form.agent_id ? 'Create Agreement' : 'Create Template'}
+                    <Plus className="h-4 w-4 mr-1" /> Create & Assign by Category
                   </Button>
                 </div>
               </div>
@@ -408,6 +549,15 @@ export default function AgreementsPage() {
                                     <FileDown className="h-4 w-4" />
                                 </Button>
                             )}
+                            <Button
+                              isIconOnly
+                              size="sm"
+                              variant="light"
+                              color="danger"
+                              onPress={() => deleteAgreement(row.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -437,7 +587,6 @@ export default function AgreementsPage() {
                       <TableCell>{statusChip(agent.status)}</TableCell>
                       <TableCell>
                         <div className="flex items-center justify-center gap-2">
-                          <Button size="sm" variant="flat" onPress={() => openCreateForAgent(agent)}>Create Agreement</Button>
                           {agent.status !== 'APPROVED' ? (
                             <Button size="sm" color="success" variant="flat" onPress={() => updateAgentStatus(agent.id, 'APPROVED')}>Approve</Button>
                           ) : null}
@@ -457,35 +606,97 @@ export default function AgreementsPage() {
           ) : null}
 
           {tab === 'inquiries' ? (
-            <div className="border rounded-lg">
-              <Table aria-label="Inquiries table">
-                <TableHeader>
-                  <TableColumn>NAME</TableColumn>
-                  <TableColumn>EMAIL</TableColumn>
-                  <TableColumn>MOBILE</TableColumn>
-                  <TableColumn>COMPANY</TableColumn>
-                  <TableColumn>STATUS</TableColumn>
-                  <TableColumn align="center">ACTIONS</TableColumn>
-                </TableHeader>
-                <TableBody items={filteredInquiries} emptyContent="No active inquiries found">
-                  {(iq) => (
-                    <TableRow key={iq.id}>
-                      <TableCell>{iq.name}</TableCell>
-                      <TableCell>{iq.email}</TableCell>
-                      <TableCell>{iq.mobile}</TableCell>
-                      <TableCell>{iq.company_name || '-'}</TableCell>
-                      <TableCell>{statusChip(iq.status)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center justify-center gap-2">
-                          <Button size="sm" variant="flat" onPress={() => updateInquiryStatus(iq.id, 'CONTACTED')}>Contacted</Button>
-                          <Button size="sm" color="success" variant="flat" onPress={() => updateInquiryStatus(iq.id, 'CONVERTED')}>Convert</Button>
-                          <Button size="sm" color="danger" variant="flat" onPress={() => updateInquiryStatus(iq.id, 'REJECTED')}>Reject</Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <Tabs 
+                  size="sm" 
+                  radius="full" 
+                  selectedKey={inquiryStatusFilter} 
+                  onSelectionChange={(k) => setInquiryStatusFilter(String(k))}
+                >
+                  <Tab key="ALL" title="All" />
+                  <Tab key="NEW" title="New" />
+                  <Tab key="CONTACTED" title="Contacted" />
+                  <Tab key="CONVERTED" title="Converted" />
+                  <Tab key="REJECTED" title="Rejected" />
+                </Tabs>
+              </div>
+              <div className="border rounded-lg">
+                <Table aria-label="Inquiries table">
+                  <TableHeader>
+                    <TableColumn>NAME</TableColumn>
+                    <TableColumn>EMAIL</TableColumn>
+                    <TableColumn>COMPANY</TableColumn>
+                    <TableColumn>STATUS</TableColumn>
+                    <TableColumn>DATE</TableColumn>
+                    <TableColumn align="center">ACTIONS</TableColumn>
+                  </TableHeader>
+                  <TableBody items={filteredInquiries} emptyContent="No inquiries found">
+                    {(iq) => (
+                      <TableRow key={iq.id}>
+                        <TableCell className="font-medium">{iq.name}</TableCell>
+                        <TableCell>{iq.email}</TableCell>
+                        <TableCell>{iq.company_name || '-'}</TableCell>
+                        <TableCell>{statusChip(iq.status)}</TableCell>
+                        <TableCell className="text-xs text-gray-400">
+                          {iq.created_at ? new Date(iq.created_at).toLocaleDateString() : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-center gap-2">
+                              <Tooltip content="View inquiry details">
+                              <Button 
+                                isIconOnly 
+                                size="sm" 
+                                variant="flat" 
+                                onPress={() => {
+                                setSelectedInquiry(iq);
+                                setConvertBranchId('');
+                                setConvertCategoryId('');
+                                  onDetailOpen();
+                                }}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </Tooltip>
+                            {iq.status === 'NEW' && (
+                              <Tooltip content="Mark as contacted">
+                                <Button isIconOnly size="sm" color="secondary" variant="flat" onPress={() => updateInquiryStatus(iq.id, 'CONTACTED')}>
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                              </Tooltip>
+                            )}
+                            {iq.status !== 'CONVERTED' && iq.status !== 'REJECTED' && (
+                              <Tooltip content="Convert to agent">
+                                <Button
+                                  isIconOnly
+                                  size="sm"
+                                  color="success"
+                                  variant="flat"
+                                  onPress={() => {
+                                    setSelectedInquiry(iq);
+                                    setConvertBranchId('');
+                                    setConvertCategoryId('');
+                                    onDetailOpen();
+                                  }}
+                                >
+                                  <UserCheck className="h-4 w-4" />
+                                </Button>
+                              </Tooltip>
+                            )}
+                            {iq.status !== 'REJECTED' && (
+                              <Tooltip content="Reject inquiry">
+                                <Button isIconOnly size="sm" color="danger" variant="flat" onPress={() => updateInquiryStatus(iq.id, 'REJECTED')}>
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </Tooltip>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </div>
           ) : null}
         </CardBody>
@@ -526,16 +737,220 @@ export default function AgreementsPage() {
                   value={editingContract?.title || ''}
                   onChange={(e) => setEditingContract((prev) => (prev ? { ...prev, title: e.target.value } : prev))}
                 />
-                <Textarea
-                  label="Content"
-                  value={editingContract?.content || ''}
-                  minRows={12}
-                  onChange={(e) => setEditingContract((prev) => (prev ? { ...prev, content: e.target.value } : prev))}
-                />
+                <div className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 ml-1">Content</label>
+                  <div className="flex flex-wrap items-center gap-2 p-2 border rounded-lg bg-default-50">
+                    <span className="text-xs text-default-500 mr-1">Insert Variable:</span>
+                    {AGREEMENT_VARIABLES.map((v) => (
+                      <Button
+                        key={v.key}
+                        size="sm"
+                        variant="flat"
+                        className="h-7 text-xs"
+                        onPress={() => insertVariable(v.key, 'edit')}
+                      >
+                        {`{{${v.key}}}`}
+                      </Button>
+                    ))}
+                  </div>
+                  <p className="text-[11px] text-default-400 ml-1">
+                    Variables are auto-resolved when assigning agreements to agents.
+                  </p>
+                  <div className="min-h-[400px] border rounded-xl overflow-hidden bg-white shadow-inner">
+                    <Editor
+                      apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
+                      onInit={(evt, editor) => editEditorRef.current = editor}
+                      initialValue={editingContract?.content || ''}
+                      onEditorChange={(content) => setEditingContract((prev: any) => (prev ? { ...prev, content } : prev))}
+                      init={{
+                        height: 500,
+                        menubar: false,
+                        plugins: [
+                          'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                          'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                          'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                        ],
+                        toolbar: 'undo redo | blocks | ' +
+                          'bold italic forecolor | alignleft aligncenter ' +
+                          'alignright alignjustify | bullist numlist outdent indent | ' +
+                          'removeformat | help | code',
+                        content_style: 'body { font-family:Inter,Helvetica,Arial,sans-serif; font-size:14px }',
+                        skin: 'oxide',
+                      }}
+                    />
+                  </div>
+                </div>
               </ModalBody>
               <ModalFooter>
                 <Button variant="light" onPress={close}>Cancel</Button>
                 <Button color="primary" className="text-white" isLoading={loading} onPress={updateContract}>Save</Button>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      {/* Inquiry Detail Modal */}
+      <Modal isOpen={isDetailOpen} onOpenChange={onDetailOpenChange} size="3xl" scrollBehavior="inside">
+        <ModalContent>
+          {(close) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl font-bold">Inquiry Details</span>
+                  {selectedInquiry && statusChip(selectedInquiry.status)}
+                </div>
+                <p className="text-sm text-default-400 font-normal">Received on {selectedInquiry?.created_at ? new Date(selectedInquiry.created_at).toLocaleString() : '-'}</p>
+              </ModalHeader>
+              <ModalBody className="pb-8">
+                {selectedInquiry && (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="font-bold text-primary flex items-center gap-2 border-b pb-1">
+                          <CheckCircle size={16} /> Personal Information
+                        </h4>
+                        <div className="space-y-2">
+                          <div><p className="text-xs text-default-400">Full Name</p><p className="font-medium">{selectedInquiry.name}</p></div>
+                          <div><p className="text-xs text-default-400">Email Address</p><p className="font-medium">{selectedInquiry.email}</p></div>
+                          <div><p className="text-xs text-default-400">Mobile Number</p><p className="font-medium">{selectedInquiry.mobile}</p></div>
+                          <div><p className="text-xs text-default-400">Contact Person</p><p className="font-medium">{selectedInquiry.contact_person || 'N/A'}</p></div>
+                          <div><p className="text-xs text-default-400">Designation</p><p className="font-medium">{selectedInquiry.contact_designation || 'N/A'}</p></div>
+                          <div><p className="text-xs text-default-400">Department</p><p className="font-medium">{selectedInquiry.contact_department || 'N/A'}</p></div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <h4 className="font-bold text-primary flex items-center gap-2 border-b pb-1">
+                          <Plus size={16} /> Agency Details
+                        </h4>
+                        <div className="space-y-2">
+                          <div><p className="text-xs text-default-400">Company Name</p><p className="font-medium">{selectedInquiry.company_name || 'N/A'}</p></div>
+                          <div><p className="text-xs text-default-400">Company Address</p><p className="font-medium">{selectedInquiry.company_address || 'N/A'}</p></div>
+                          <div>
+                            <p className="text-xs text-default-400">Website</p>
+                            {selectedInquiry.website ? (
+                              <a href={selectedInquiry.website} target="_blank" rel="noopener noreferrer" className="font-medium text-blue-500 underline">
+                                {selectedInquiry.website}
+                              </a>
+                            ) : (
+                              <p className="font-medium">N/A</p>
+                            )}
+                          </div>
+                          <div><p className="text-xs text-default-400">Location</p><p className="font-medium">{selectedInquiry.city}{selectedInquiry.country ? `, ${selectedInquiry.country}` : ''}</p></div>
+                          <div><p className="text-xs text-default-400">Source Country</p><p className="font-medium">{selectedInquiry.source_country || 'N/A'}</p></div>
+                          <div><p className="text-xs text-default-400">Operation Countries</p><p className="font-medium">{selectedInquiry.operation_countries || 'N/A'}</p></div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-primary flex items-center gap-2 border-b pb-1">
+                        <CheckCircle size={16} /> Accreditation & Compliance
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div><p className="text-xs text-default-400">Accreditation Details</p><p className="font-medium whitespace-pre-wrap">{selectedInquiry.accreditation_details || 'N/A'}</p></div>
+                        <div><p className="text-xs text-default-400">Associations</p><p className="font-medium whitespace-pre-wrap">{selectedInquiry.associations || 'N/A'}</p></div>
+                        <div><p className="text-xs text-default-400">MoE Approvals</p><p className="font-medium whitespace-pre-wrap">{selectedInquiry.moe_approvals || 'N/A'}</p></div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="font-bold text-primary flex items-center gap-2 border-b pb-1">
+                        <Plus size={16} /> Additional Notes
+                      </h4>
+                      <p className="font-medium whitespace-pre-wrap">{selectedInquiry.message || 'N/A'}</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <h4 className="font-bold text-primary flex items-center gap-2 border-b pb-1">
+                        <FileDown size={16} /> Attachments / Documents
+                      </h4>
+                      {selectedInquiry.documents && selectedInquiry.documents.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-2">
+                          {selectedInquiry.documents.map((doc: any) => (
+                            <a 
+                              key={doc.id}
+                              href={doc.file_url}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="flex items-center justify-between p-3 rounded-lg bg-default-50 hover:bg-default-100 border border-divider transition-colors group"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white rounded shadow-sm">
+                                  <FileDown size={16} className="text-default-400 group-hover:text-primary transition-colors" />
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium truncate max-w-[250px]">{doc.label || 'Document'}</p>
+                                </div>
+                              </div>
+                              <Button isIconOnly size="sm" variant="light" className="text-primary">
+                                <FileDown size={16} />
+                              </Button>
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-8 text-center bg-gray-50 rounded-xl border border-dashed border-divider">
+                          <p className="text-default-400 text-sm italic">No documents uploaded with this inquiry.</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {selectedInquiry.status !== 'CONVERTED' && (
+                      <div className="space-y-3">
+                        <h4 className="font-bold text-primary flex items-center gap-2 border-b pb-1">
+                          <UserCheck size={16} /> Conversion Assignment
+                        </h4>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <Select
+                            label="Assign Branch"
+                            selectedKeys={convertBranchId ? [convertBranchId] : []}
+                            onChange={(e) => setConvertBranchId(e.target.value)}
+                            placeholder="Select branch"
+                          >
+                            {branches.map((branch) => (
+                              <SelectItem key={branch.id} textValue={branch.name}>
+                                {branch.name}
+                              </SelectItem>
+                            ))}
+                          </Select>
+                          <Select
+                            label="Assign Category"
+                            selectedKeys={convertCategoryId ? [convertCategoryId] : []}
+                            onChange={(e) => setConvertCategoryId(e.target.value)}
+                            placeholder="Select category"
+                          >
+                            {categories
+                              .filter((category) => category.is_active !== false)
+                              .map((category) => (
+                                <SelectItem key={category.id} textValue={category.label || category.name}>
+                                  {category.label || category.name}
+                                </SelectItem>
+                              ))}
+                          </Select>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </ModalBody>
+              <ModalFooter className="border-t">
+                <Button variant="flat" onPress={close}>Close</Button>
+                {selectedInquiry?.status !== 'CONVERTED' && (
+                  <Button color="success" className="text-white font-bold" onPress={() => {
+                    if (!convertBranchId || !convertCategoryId) {
+                      alert('Please assign both branch and category before converting.');
+                      return;
+                    }
+                    updateInquiryStatus(selectedInquiry.id, 'CONVERTED', {
+                      branch_id: convertBranchId,
+                      category_id: convertCategoryId,
+                    });
+                    close();
+                  }} isDisabled={!convertBranchId || !convertCategoryId}>
+                    Convert to Agent
+                  </Button>
+                )}
               </ModalFooter>
             </>
           )}

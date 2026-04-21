@@ -2,13 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import { 
-  CreditCard, 
-  Target, 
-  MousePointerClick, 
+  CreditCard,
+  TrendingUp,
+  Target,
+  Mail, 
+  Send,
+  MailCheck,
   Plus, 
   RefreshCcw,
   Zap,
-  TrendingUp,
   LayoutGrid
 } from "lucide-react";
 import { Button, Spinner } from "@heroui/react";
@@ -35,8 +37,29 @@ const PROVIDERS: Omit<IntegrationProvider, "id" | "isConnected" | "lastConnected
   {
     name: "Meta Pixel",
     provider: "META_PIXEL",
-    description: "Monitor website events, build custom audiences, and measure the effectiveness of your Facebook and Instagram ads.",
+    description: "Monitor website events, build custom audiences, and measure campaign performance from a unified dashboard.",
     icon: <Target className="text-indigo-600" size={24} />,
+    color: "bg-indigo-500",
+  },
+  {
+    name: "Mailsuite",
+    provider: "MAILSUITE",
+    description: "Campaign email provider. Transactional/system emails use backend Gmail SMTP env credentials only.",
+    icon: <Mail className="text-blue-600" size={24} />,
+    color: "bg-blue-600",
+  },
+  {
+    name: "Sender",
+    provider: "SENDER",
+    description: "Campaign email provider. Keep Sender credentials here for campaign flows only.",
+    icon: <Send className="text-emerald-600" size={24} />,
+    color: "bg-emerald-600",
+  },
+  {
+    name: "Brevo",
+    provider: "BREVO",
+    description: "Campaign email provider. Transactional onboarding and system emails are not sent via Brevo in this phase.",
+    icon: <MailCheck className="text-indigo-600" size={24} />,
     color: "bg-indigo-600",
   },
 ];
@@ -122,6 +145,10 @@ export default function IntegrationsPage() {
             <p className="text-gray-500 max-w-2xl leading-relaxed text-base font-medium">
               Supercharge your workflows by connecting with industry-leading tools. 
               Manage authentication, event tracking, and automated syncs from a single, secure interface.
+              <span className="block mt-2 text-sm">
+                Transactional emails (lead/application/agent onboarding) are sent via backend Gmail SMTP env config only.
+                Mail integrations below are reserved for campaign workflows.
+              </span>
             </p>
           </div>
           <Button 
@@ -221,4 +248,3 @@ export default function IntegrationsPage() {
     </div>
   );
 }
-

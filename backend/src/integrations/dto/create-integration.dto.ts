@@ -1,9 +1,17 @@
 import { IsBoolean, IsEnum, IsObject, IsOptional, IsString } from 'class-validator';
-import { IntegrationProvider } from '@prisma/client';
+
+export enum IntegrationProviderInput {
+  RAZORPAY = 'RAZORPAY',
+  GOOGLE_ADS = 'GOOGLE_ADS',
+  META_PIXEL = 'META_PIXEL',
+  MAILSUITE = 'MAILSUITE',
+  SENDER = 'SENDER',
+  BREVO = 'BREVO',
+}
 
 export class CreateIntegrationDto {
-  @IsEnum(IntegrationProvider)
-  provider: IntegrationProvider;
+  @IsEnum(IntegrationProviderInput)
+  provider: IntegrationProviderInput;
 
   @IsString()
   display_name: string;
@@ -24,4 +32,3 @@ export class CreateIntegrationDto {
   @IsBoolean()
   is_active?: boolean;
 }
-

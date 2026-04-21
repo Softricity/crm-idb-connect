@@ -7,7 +7,7 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { PrismaExceptionFilter } from './common/filters/prisma-exception.filter';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 
 // Fix BigInt serialization issue
 (BigInt.prototype as any).toJSON = function () {
@@ -15,6 +15,7 @@ import { ValidationPipe } from '@nestjs/common';
 };
 
 async function bootstrap() {
+  const bootstrapLogger = new Logger('Bootstrap');
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   const reflector = app.get(Reflector);
@@ -39,6 +40,30 @@ async function bootstrap() {
     mkdirSync(uploadsRoot, { recursive: true });
   }
   app.useStaticAssets(uploadsRoot, { prefix: '/uploads/' });
+
+  const smtpUser = process.env.SMTP_USER?.trim();
+  const smtpPass = process.env.SMTP_PASS?.trim();
+  const smtpHost = process.env.SMTP_HOST?.trim() || 'smtp.gmail.com';
+  const smtpPort = Number.parseInt(process.env.SMTP_PORT || '587', 10);
+  const secureRaw = (process.env.SMTP_SECURE || '').trim().toLowerCase();
+  const smtpSecure =
+    secureRaw === 'true' || secureRaw === '1' || secureRaw === 'yes'
+      ? true
+      : secureRaw === 'false' || secureRaw === '0' || secureRaw === 'no'
+        ? false
+        : smtpPort === 465;
+  const fromEmail = process.env.SMTP_FROM_EMAIL?.trim() || smtpUser || '';
+  const fromName = process.env.SMTP_FROM_NAME?.trim() || 'IDB Connect';
+
+  if (smtpUser && smtpPass) {
+    bootstrapLogger.log(
+      `[MAIL_STARTUP] Transactional email service ACTIVE via Gmail/SMTP env (host=${smtpHost}, port=${smtpPort}, secure=${smtpSecure}, from="${fromName}" <${fromEmail}>)`,
+    );
+  } else {
+    bootstrapLogger.warn(
+      '[MAIL_STARTUP] Transactional email service INACTIVE: SMTP_USER/SMTP_PASS missing. Email sends will be skipped.',
+    );
+  }
   
   await app.listen(process.env.PORT ?? 5005);
 }

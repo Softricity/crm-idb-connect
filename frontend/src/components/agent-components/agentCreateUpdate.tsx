@@ -22,7 +22,7 @@ interface AgentFormProps {
 }
 
 export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
-    const { addAgent, updateStatus } = useAgentStore();
+    const { addAgent, updateAgent, updateStatus } = useAgentStore();
     const { selectedBranch } = useBranchStore();
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -41,7 +41,8 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         city: "",
         address: "",
         status: "PENDING",
-        branch_id: selectedBranch?.id
+        branch_id: selectedBranch?.id,
+        category_id: ""
     });
     
     const [errors, setErrors] = useState<Partial<Record<keyof Agent, string>>>({});
@@ -58,7 +59,8 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
                     agency_name: "", business_reg_no: "",
                     region: "", country: "India", state: "", city: "", address: "",
                     status: "PENDING",
-                    branch_id: selectedBranch?.id
+                    branch_id: selectedBranch?.id,
+                    category_id: ""
                 });
             }
             setErrors({});
@@ -74,8 +76,8 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         }
     };
 
-    const handleSelectChange = (name: string, value: string) => {
-        setFormData((prev) => ({ ...prev, [name]: value }));
+    const handleSelectChange = (name: string, value: string | null) => {
+        setFormData((prev) => ({ ...prev, [name]: value as any }));
         if (errors[name as keyof Agent]) {
             setErrors((prev) => ({ ...prev, [name]: undefined }));
         }
@@ -93,6 +95,8 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         if (!formData.mobile) newErrors.mobile = "Mobile is required";
         if (!formData.id && !formData.password) newErrors.password = "Password is required"; // Only required for new agents
         if (!formData.region) newErrors.region = "Region is required";
+        if (!formData.branch_id) newErrors.branch_id = "Branch is required";
+        if (!formData.category_id) newErrors.category_id = "Category is required";
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -108,10 +112,9 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         setIsSubmitting(true);
         try {
             if (agent?.id) {
-                // Agent Edit Mode: 
-                // Currently only status update via specific buttons is standard.
-                // If you want full edit, backend needs a PATCH /agents/:id endpoint.
-                toast.info("For security, only Approval/Rejection is allowed here for now.");
+                await updateAgent(agent.id, formData);
+                toast.success("Agent updated successfully.");
+                onOpenChange(false);
             } else {
                 // Create Mode
                 await addAgent(formData);
@@ -159,6 +162,20 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
                                         </Button>
                                         <Button color="danger" onPress={() => { updateStatus(agent.id!, "REJECTED"); onClose(); }}>
                                             Reject
+                                        </Button>
+                                    </div>
+                                )}
+
+                                {agent?.id && (
+                                    <div className="flex justify-end gap-4 pt-4 border-t mt-6">
+                                        <Button variant="light" onPress={onClose}>Close</Button>
+                                        <Button
+                                            color="primary"
+                                            type="submit"
+                                            isLoading={isSubmitting}
+                                            className="text-white"
+                                        >
+                                            Save Changes
                                         </Button>
                                     </div>
                                 )}

@@ -206,7 +206,8 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
 
       // If no leadIds provided, fetch leads with type=application and map to lightweight applications
       const response = await api.LeadsAPI.fetchApplications(branchId, page, limit);
-      const mapped = (response.data || []).map((l: any) => {
+      const rows = Array.isArray(response) ? response : (response?.data || []);
+      const mapped = rows.map((l: any) => {
         // If the lead has application data nested, use it; otherwise use lead fields
         const app = l.applications?.[0] || {};
         const prefs = app.preferences?.[0] || {};
@@ -244,7 +245,12 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
       });
       set({ 
         applications: mapped,
-        pagination: response.meta
+        pagination: response?.meta || {
+          total: mapped.length,
+          page,
+          limit,
+          totalPages: Math.max(1, Math.ceil(mapped.length / Math.max(limit, 1))),
+        },
       });
     } catch (error) {
       console.error("Error fetching applications collection:", error);

@@ -107,7 +107,6 @@ import { format } from "date-fns";
               status: payment.status,
               file: payment.file,
               due_date: payment.due_date,
-              created_at: payment.created_at,
             };
             const data = await OfflinePaymentsAPI.createPayment(payload);
             set((state) => ({ payments: [data, ...state.payments] }));

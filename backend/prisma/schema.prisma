@@ -1,6 +1,5 @@
 generator client {
   provider     = "prisma-client-js"
-  // output       = "../generated/prisma"
   moduleFormat = "cjs"
 }
 
@@ -10,50 +9,50 @@ datasource db {
 }
 
 model Branch {
-  id         String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name       String
-  code       String     @unique
-  type       String
-  address    String?
-  phone      String?
-  parent_id  String?    @db.Uuid
-  created_at DateTime   @default(now()) @db.Timestamptz(6)
-  updated_at DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
-  parent     Branch?    @relation("BranchHierarchy", fields: [parent_id], references: [id])
-  children   Branch[]   @relation("BranchHierarchy")
-  leads      leads[]
-  partners   partners[]
-  agents     Agent[]
+  id                            String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                          String
+  code                          String                         @unique
+  type                          String
+  address                       String?
+  phone                         String?
+  parent_id                     String?                        @db.Uuid
+  created_at                    DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at                    DateTime                       @default(now()) @updatedAt @db.Timestamptz(6)
+  agents                        Agent[]
+  parent                        Branch?                        @relation("BranchHierarchy", fields: [parent_id], references: [id])
+  children                      Branch[]                       @relation("BranchHierarchy")
   department_assignment_cursors department_assignment_cursor[]
+  leads                         leads[]
+  partners                      partners[]
 
   @@map("branches")
 }
 
 model department {
-  id                          String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                        String                         @unique
-  code                        String                         @unique
-  is_active                   Boolean                        @default(true)
-  created_at                  DateTime                       @default(now()) @db.Timestamptz(6)
-  updated_at                  DateTime                       @default(now()) @updatedAt @db.Timestamptz(6)
-  leads                       leads[]
-  partner_departments         partner_department[]
-  department_orders           department_order[]
-  department_statuses         department_status[]
+  id                            String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                          String                         @unique
+  code                          String                         @unique
+  is_active                     Boolean                        @default(true)
+  created_at                    DateTime                       @default(now()) @db.Timestamptz(6)
+  updated_at                    DateTime                       @default(now()) @updatedAt @db.Timestamptz(6)
   department_assignment_cursors department_assignment_cursor[]
+  department_orders             department_order?
+  department_statuses           department_status[]
+  leads                         leads[]
+  partner_departments           partner_department[]
 
   @@map("departments")
 }
 
 model partner_department {
-  partner_id     String      @db.Uuid
-  department_id  String      @db.Uuid
-  is_primary     Boolean     @default(false)
-  is_active      Boolean     @default(true)
-  created_at     DateTime    @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
-  partners       partners    @relation(fields: [partner_id], references: [id], onDelete: Cascade)
-  department     department  @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  partner_id    String     @db.Uuid
+  department_id String     @db.Uuid
+  is_primary    Boolean    @default(false)
+  is_active     Boolean    @default(true)
+  created_at    DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
+  department    department @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  partners      partners   @relation(fields: [partner_id], references: [id], onDelete: Cascade)
 
   @@id([partner_id, department_id])
   @@index([department_id, is_active], map: "idx_partner_departments_department_active")
@@ -62,33 +61,31 @@ model partner_department {
 }
 
 model department_order {
-  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  department_id  String      @db.Uuid
-  order_index    Int
-  is_default     Boolean     @default(false)
-  is_active      Boolean     @default(true)
-  created_at     DateTime    @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
-  department     department  @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  department_id String     @unique @db.Uuid
+  order_index   Int        @unique
+  is_default    Boolean    @default(false)
+  is_active     Boolean    @default(true)
+  created_at    DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
+  department    department @relation(fields: [department_id], references: [id], onDelete: Cascade)
 
-  @@unique([department_id])
-  @@unique([order_index])
   @@index([is_active, order_index], map: "idx_department_order_active_order")
   @@map("department_order")
 }
 
 model department_status {
-  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  department_id  String      @db.Uuid
-  key            String
-  label          String
-  order_index    Int
-  is_terminal    Boolean     @default(false)
-  is_default     Boolean     @default(false)
-  is_active      Boolean     @default(true)
-  created_at     DateTime    @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
-  department     department  @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  department_id String     @db.Uuid
+  key           String
+  label         String
+  order_index   Int
+  is_terminal   Boolean    @default(false)
+  is_default    Boolean    @default(false)
+  is_active     Boolean    @default(true)
+  created_at    DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
+  department    department @relation(fields: [department_id], references: [id], onDelete: Cascade)
 
   @@unique([department_id, key])
   @@unique([department_id, order_index])
@@ -97,14 +94,14 @@ model department_status {
 }
 
 model department_assignment_cursor {
-  id             String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  branch_id      String      @db.Uuid
-  department_id  String      @db.Uuid
+  id              String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  branch_id       String     @db.Uuid
+  department_id   String     @db.Uuid
   last_partner_id String?    @db.Uuid
-  updated_at     DateTime    @default(now()) @updatedAt @db.Timestamptz(6)
-  branch         Branch      @relation(fields: [branch_id], references: [id], onDelete: Cascade)
-  department     department  @relation(fields: [department_id], references: [id], onDelete: Cascade)
-  last_partner   partners?   @relation("department_assignment_cursor_last_partner", fields: [last_partner_id], references: [id], onDelete: SetNull)
+  updated_at      DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
+  branch          Branch     @relation(fields: [branch_id], references: [id], onDelete: Cascade)
+  department      department @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  last_partner    partners?  @relation("department_assignment_cursor_last_partner", fields: [last_partner_id], references: [id])
 
   @@unique([branch_id, department_id])
   @@index([last_partner_id], map: "idx_department_assignment_cursor_last_partner")
@@ -128,12 +125,12 @@ model announcements {
   content            String
   target_audience    String
   users              String[]             @default([])
-  branches           String[]             @default([])
-  roles              String[]             @default([])
   branch_id          String?
   created_by         String?              @db.Uuid
   created_at         DateTime?            @default(now()) @db.Timestamptz(6)
   is_active          Boolean?             @default(true)
+  branches           String[]             @default([])
+  roles              String[]             @default([])
   announcement_reads announcement_reads[]
   partners           partners?            @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
@@ -176,11 +173,9 @@ model application_preferences {
   budget_range          String?
   scholarship_interest  Boolean?
   travel_history        String?
-  
-  course_id             String?      
-  course                Course?      @relation(fields: [course_id], references: [id]) 
-
+  course_id             String?
   applications          applications @relation(fields: [application_id], references: [id], onDelete: Cascade)
+  course                Course?      @relation(fields: [course_id], references: [id])
 }
 
 model applications {
@@ -211,24 +206,21 @@ model applications {
   documents         application_documents[]
   education         application_education[]
   family_details    application_family_details[]
+  financials        ApplicationFinancials?
   preferences       application_preferences[]
   tests             application_tests[]
-  commissions       Commission[]
   visa_details      application_visa_details[]
   work_experience   application_work_experience[]
   leads             leads                         @relation(fields: [lead_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-
-  financials     ApplicationFinancials?
+  commissions       Commission[]
 }
 
 model ApplicationFinancials {
   id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   application_id String          @unique @db.Uuid
   status         FinancialStatus @default(PENDING)
-  
   created_at     DateTime        @default(now()) @db.Timestamptz(6)
   updated_at     DateTime        @default(now()) @updatedAt @db.Timestamptz(6)
-
   application    applications    @relation(fields: [application_id], references: [id], onDelete: Cascade)
   notes          FinancialNote[]
 
@@ -236,16 +228,14 @@ model ApplicationFinancials {
 }
 
 model FinancialNote {
-  id             String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  financial_id   String          @db.Uuid
-  stage          FinancialStatus 
-  content        String
-  
-  created_by     String?         @db.Uuid
-  created_at     DateTime        @default(now()) @db.Timestamptz(6)
-
-  financials     ApplicationFinancials @relation(fields: [financial_id], references: [id], onDelete: Cascade)
-  partner        partners?             @relation(fields: [created_by], references: [id])
+  id           String                @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  financial_id String                @db.Uuid
+  stage        FinancialStatus
+  content      String
+  created_by   String?               @db.Uuid
+  created_at   DateTime              @default(now()) @db.Timestamptz(6)
+  partner      partners?             @relation(fields: [created_by], references: [id])
+  financials   ApplicationFinancials @relation(fields: [financial_id], references: [id], onDelete: Cascade)
 
   @@map("financial_notes")
 }
@@ -340,41 +330,40 @@ model leads {
   type                                 String
   preferred_country                    String
   preferred_course                     String?
-  exam_taken                           String?
-  exam_score                           String?
   status                               String
   utm_source                           String?
   utm_medium                           String?
   utm_campaign                         String?
   assigned_to                          String?            @db.Uuid
-  assigned_agent_id                    String?            @db.Uuid
   created_at                           DateTime           @default(now()) @db.Timestamptz(6)
   created_by                           String?            @db.Uuid
-  agent_id                             String?            @db.Uuid 
-  agent                                Agent?             @relation(fields: [agent_id], references: [id])
-  assigned_agent                       Agent?             @relation("LegacyAssignedAgent", fields: [assigned_agent_id], references: [id])
   reason                               String?
-  courses                              Course[]           @relation("LeadCourses")
   password                             String?            @default("")
   is_flagged                           Boolean            @default(false)
   branch_id                            String?            @db.Uuid
+  agent_id                             String?            @db.Uuid
+  assigned_agent_id                    String?            @db.Uuid
+  agent_team_member_id                 String?            @db.Uuid
+  exam_score                           String?
+  exam_taken                           String?
   current_department_id                String?            @db.Uuid
   past_departments                     Json               @default("[]")
   past_owners                          Json               @default("[]")
   applications                         applications[]
+  chat_messages                        ChatMessage[]
+  commissions                          Commission[]
   followups                            followups[]
+  agent                                Agent?             @relation(fields: [agent_id], references: [id])
+  agent_team_member                    AgentTeamMember?   @relation(fields: [agent_team_member_id], references: [id])
+  assigned_agent                       Agent?             @relation("LegacyAssignedAgent", fields: [assigned_agent_id], references: [id])
   partners_leads_assigned_toTopartners partners?          @relation("leads_assigned_toTopartners", fields: [assigned_to], references: [id], onDelete: NoAction, onUpdate: NoAction)
   branch                               Branch?            @relation(fields: [branch_id], references: [id])
-  current_department                   department?        @relation(fields: [current_department_id], references: [id], onDelete: SetNull)
   partners_leads_created_byTopartners  partners?          @relation("leads_created_byTopartners", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  current_department                   department?        @relation(fields: [current_department_id], references: [id])
   notes                                notes[]
   offline_payments                     offline_payments[]
   timeline                             timeline[]
-  commissions                          Commission[]
-  chat_messages                        ChatMessage[]
-  
-  agent_team_member_id                 String?           @db.Uuid
-  agent_team_member                    AgentTeamMember?  @relation(fields: [agent_team_member_id], references: [id])
+  courses                              Course[]           @relation("LeadCourses")
 
   @@index([branch_id, current_department_id], map: "idx_leads_branch_department")
   @@index([current_department_id], map: "idx_leads_department")
@@ -400,21 +389,21 @@ model offline_payments {
   receiver     String?   @db.Uuid
   lead_id      String?   @db.Uuid
   created_at   DateTime  @default(now()) @db.Timestamptz(6)
-  due_date     DateTime? @db.Timestamptz(6)
-  created_by   String?   @db.Uuid
   status       String?
   file         String?
+  created_by   String?   @db.Uuid
+  due_date     DateTime? @db.Timestamptz(6)
+  creator      partners? @relation("offline_payments_creator", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   leads        leads?    @relation(fields: [lead_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   partners     partners? @relation("offline_payments_receiver", fields: [receiver], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  creator      partners? @relation("offline_payments_creator", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
 model partners {
-  id                                String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  role_id                           String               @db.Uuid
+  id                                String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  role_id                           String                         @db.Uuid
   name                              String
-  email                             String               @unique
-  mobile                            String               @unique
+  email                             String                         @unique
+  mobile                            String                         @unique
   password                          String
   address                           String
   city                              String
@@ -423,79 +412,108 @@ model partners {
   zone                              String
   remarks                           String?
   agency_name                       String?
-  created_at                        DateTime             @default(now()) @db.Timestamptz(6)
-  branch_id                         String?              @db.Uuid
+  created_at                        DateTime                       @default(now()) @db.Timestamptz(6)
+  branch_id                         String?                        @db.Uuid
   announcement_reads                announcement_reads[]
   announcements                     announcements[]
+  sent_messages                     ChatMessage[]
+  last_assignment_cursors           department_assignment_cursor[] @relation("department_assignment_cursor_last_partner")
+  financial_notes                   FinancialNote[]
   followup_comments                 followup_comments[]
   followups                         followups[]
-  leads_leads_assigned_toTopartners leads[]              @relation("leads_assigned_toTopartners")
-  leads_leads_created_byTopartners  leads[]              @relation("leads_created_byTopartners")
+  leads_leads_assigned_toTopartners leads[]                        @relation("leads_assigned_toTopartners")
+  leads_leads_created_byTopartners  leads[]                        @relation("leads_created_byTopartners")
   notes                             notes[]
-  received_payments                 offline_payments[]   @relation("offline_payments_receiver")
-  recorded_payments                 offline_payments[]   @relation("offline_payments_creator")
-  branch                            Branch?              @relation(fields: [branch_id], references: [id])
-  role                              role                 @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  recorded_payments                 offline_payments[]             @relation("offline_payments_creator")
+  received_payments                 offline_payments[]             @relation("offline_payments_receiver")
+  partner_departments               partner_department[]
+  branch                            Branch?                        @relation(fields: [branch_id], references: [id])
+  role                              role                           @relation(fields: [role_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  support_tickets                   SupportTicket[]                @relation("LegacySupportTicketPartner")
+  requested_support_tickets         SupportTicket[]                @relation("SupportTicketRequesterPartner")
   timeline                          timeline[]
   todos                             todos[]
-  sent_messages                     ChatMessage[]
-  financial_notes                   FinancialNote[]
-  partner_departments               partner_department[]
-  last_assignment_cursors           department_assignment_cursor[] @relation("department_assignment_cursor_last_partner")
-  support_tickets                   SupportTicket[] @relation("LegacySupportTicketPartner")
-  requested_support_tickets         SupportTicket[] @relation("SupportTicketRequesterPartner")
 }
 
 model Agent {
-  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  email            String   @unique
-  mobile           String   @unique
-  password         String
-  name             String
-  agency_name      String
-  website          String?
-  region           String   
-  country          String
-  state            String
-  city             String
-  address          String
-  postal_code      String?
-  business_reg_no  String?
-  established_year Int?
-  status           AgentStatus @default(PENDING)
-  agent_role       AgentRole?  @default(OWNER)
-  parent_id        String?     @db.Uuid
-  is_active        Boolean     @default(true)
-  rejection_reason String?
+  id                         String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                      String                  @unique
+  mobile                     String                  @unique
+  password                   String
+  name                       String
+  agency_name                String
+  website                    String?
+  region                     String
+  country                    String
+  state                      String
+  city                       String
+  address                    String
+  postal_code                String?
+  business_reg_no            String?
+  established_year           Int?
+  status                     AgentStatus             @default(PENDING)
+  is_active                  Boolean                 @default(true)
+  rejection_reason           String?
+  created_at                 DateTime                @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime                @default(now()) @updatedAt @db.Timestamptz(6)
+  branch_id                  String?                 @db.Uuid
+  agent_role                 AgentRole?              @default(OWNER)
+  parent_id                  String?                 @db.Uuid
+  contract_approved          Boolean                 @default(false)
+  contracts                  AgentContract[]
+  documents                  AgentDocument[]
+  team_members               AgentTeamMember[]
+  university_access          AgentUniversityAccess[]
+  branch                     Branch?                 @relation(fields: [branch_id], references: [id])
+  parent_agent               Agent?                  @relation("LegacyAgentHierarchy", fields: [parent_id], references: [id])
+  child_agents               Agent[]                 @relation("LegacyAgentHierarchy")
+  sent_messages              ChatMessage[]
+  commissions                Commission[]
+  leads                      leads[]
+  legacy_assigned_leads      leads[]                 @relation("LegacyAssignedAgent")
+  requested_support_tickets  SupportTicket[]         @relation("SupportTicketRequesterAgent")
+  team_scope_support_tickets SupportTicket[]         @relation("SupportTicketRequesterParentAgent")
 
-  documents        AgentDocument[]
-  commissions      Commission[]
-  sent_messages    ChatMessage[]
-
-  branch_id        String?         @db.Uuid
-  branch           Branch?         @relation(fields: [branch_id], references: [id])
-  parent_agent     Agent?          @relation("LegacyAgentHierarchy", fields: [parent_id], references: [id])
-  child_agents     Agent[]         @relation("LegacyAgentHierarchy")
-  
-  created_at       DateTime @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime @default(now()) @updatedAt @db.Timestamptz(6)
-  leads            leads[]
-  legacy_assigned_leads leads[] @relation("LegacyAssignedAgent")
-
-  university_access AgentUniversityAccess[]
-  contracts         AgentContract[]
-  contract_approved Boolean @default(false)
-  team_members      AgentTeamMember[]
-  requested_support_tickets SupportTicket[] @relation("SupportTicketRequesterAgent")
-  team_scope_support_tickets SupportTicket[] @relation("SupportTicketRequesterParentAgent")
+  category_id      String?         @db.Uuid
+  category         AgentCategory?  @relation(fields: [category_id], references: [id])
 
   @@map("agents")
+}
+
+model AgentCategory {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String   @unique          // "A", "B", "C"
+  label             String?                   // Display name e.g. "Premium Partners"
+  description       String?
+  is_active         Boolean  @default(true)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  university_access CategoryUniversityAccess[]
+  agents            Agent[]
+
+  @@map("agent_categories")
+}
+
+model CategoryUniversityAccess {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category_id       String   @db.Uuid
+  university_id     String
+  commission_percent Decimal  @db.Decimal(5, 2)  // e.g. 15.00%
+  is_active         Boolean  @default(true)
+  created_at        DateTime @default(now()) @db.Timestamptz(6)
+
+  category          AgentCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  university        University    @relation(fields: [university_id], references: [id], onDelete: Cascade)
+
+  @@unique([category_id, university_id])
+  @@map("category_university_access")
 }
 
 model AgentDocument {
   id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   agent_id    String   @db.Uuid
-  title       String   
+  title       String
   file_url    String
   uploaded_at DateTime @default(now()) @db.Timestamptz(6)
   is_verified Boolean  @default(false)
@@ -505,49 +523,48 @@ model AgentDocument {
 }
 
 model AgentUniversityAccess {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  agent_id      String   @db.Uuid
+  id            String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id      String     @db.Uuid
   university_id String
-  granted_at    DateTime @default(now()) @db.Timestamptz(6)
-
-  agent      Agent      @relation(fields: [agent_id], references: [id], onDelete: Cascade)
-  university University @relation(fields: [university_id], references: [id], onDelete: Cascade)
+  granted_at    DateTime   @default(now()) @db.Timestamptz(6)
+  agent         Agent      @relation(fields: [agent_id], references: [id], onDelete: Cascade)
+  university    University @relation(fields: [university_id], references: [id], onDelete: Cascade)
 
   @@unique([agent_id, university_id])
   @@map("agent_university_access")
 }
 
 model AgentContract {
-  id              String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  agent_id        String?             @db.Uuid
-  title           String
-  content         String              
-  is_signed       Boolean             @default(false)
-  signature_url   String?             
-  signed_at       DateTime?           @db.Timestamptz(6)
-  status          AgentContractStatus @default(PENDING)
-  approved_by     String?             @db.Uuid
-  approved_at     DateTime?           @db.Timestamptz(6)
-  rejection_note  String?
-  created_at      DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
-  agent           Agent?               @relation(fields: [agent_id], references: [id], onDelete: Cascade)
+  id             String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id       String?             @db.Uuid
+  signature_url  String?
+  signed_at      DateTime?           @db.Timestamptz(6)
+  approved_at    DateTime?           @db.Timestamptz(6)
+  approved_by    String?             @db.Uuid
+  content        String
+  created_at     DateTime            @default(now()) @db.Timestamptz(6)
+  is_signed      Boolean             @default(false)
+  rejection_note String?
+  status         AgentContractStatus @default(PENDING)
+  title          String
+  updated_at     DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+  agent          Agent?              @relation(fields: [agent_id], references: [id], onDelete: Cascade)
 
   @@map("agent_contracts")
 }
 
 model AgentTeamMember {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  agent_id    String   @db.Uuid
-  name        String
-  email       String   @unique
-  mobile      String   @unique
-  password    String
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
-  agent       Agent    @relation(fields: [agent_id], references: [id], onDelete: Cascade)
-  leads       leads[]
+  id                        String          @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  agent_id                  String          @db.Uuid
+  name                      String
+  email                     String          @unique
+  mobile                    String          @unique
+  password                  String
+  is_active                 Boolean         @default(true)
+  created_at                DateTime        @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime        @default(now()) @updatedAt @db.Timestamptz(6)
+  agent                     Agent           @relation(fields: [agent_id], references: [id], onDelete: Cascade)
+  leads                     leads[]
   requested_support_tickets SupportTicket[] @relation("SupportTicketRequesterTeamMember")
 
   @@map("agent_team_members")
@@ -563,40 +580,38 @@ model AgentInquiry {
   country          String?
   city             String?
   experience_years Int?
-  student_volume   String?       
+  student_volume   String?
   message          String?
   status           InquiryStatus @default(NEW)
   created_at       DateTime      @default(now()) @db.Timestamptz(6)
   updated_at       DateTime      @default(now()) @updatedAt @db.Timestamptz(6)
 
+  // New fields for enhanced onboarding
+  company_address  String?
+  contact_person   String?
+  contact_designation String?
+  contact_department  String?
+  source_country   String?
+  operation_countries String?
+  phone            String?
+  accreditation_details String?
+  associations     String?
+  moe_approvals    String?
+
+  documents        AgentInquiryDocument[]
+
   @@map("agent_inquiries")
 }
 
-enum AgentStatus {
-  PENDING
-  IN_REVIEW
-  APPROVED
-  REJECTED
-  SUSPENDED
-}
+model AgentInquiryDocument {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  inquiry_id  String   @db.Uuid
+  label       String   
+  file_url    String
+  uploaded_at DateTime @default(now()) @db.Timestamptz(6)
+  inquiry     AgentInquiry @relation(fields: [inquiry_id], references: [id], onDelete: Cascade)
 
-enum AgentRole {
-  OWNER
-  MEMBER
-}
-
-enum AgentContractStatus {
-  PENDING
-  SIGNED
-  APPROVED
-  REJECTED
-}
-
-enum InquiryStatus {
-  NEW
-  CONTACTED
-  CONVERTED
-  REJECTED
+  @@map("agent_inquiry_documents")
 }
 
 model timeline {
@@ -605,11 +620,11 @@ model timeline {
   event_type timeline_event
   old_state  String?
   new_state  String?
-  source     String?         // 'crm', 'b2b', 'api', etc.
-  actor_name String?         // Name of the person who performed the action
-  created_by String?         @db.Uuid
+  created_by String?        @db.Uuid
   created_at DateTime       @default(now()) @db.Timestamptz(6)
-  partners   partners?       @relation(fields: [created_by], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  source     String?
+  actor_name String?
+  partners   partners?      @relation(fields: [created_by], references: [id], onUpdate: NoAction)
   leads      leads          @relation(fields: [lead_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([created_at(sort: Desc)], map: "idx_timeline_created_at")
@@ -619,29 +634,21 @@ model timeline {
 }
 
 model Commission {
-  id              String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lead_id         String?          @db.Uuid
-  application_id  String?          @db.Uuid
-  agent_id        String?          @db.Uuid
-  amount          Decimal          @db.Decimal(10, 2)
-  currency        String           @default("INR")
-  status          CommissionStatus @default(PENDING)
-  remarks         String?
-  created_at      DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lead_id        String?          @db.Uuid
+  application_id String?          @db.Uuid
+  agent_id       String?          @db.Uuid
+  amount         Decimal          @db.Decimal(10, 2)
+  currency       String           @default("INR")
+  status         CommissionStatus @default(PENDING)
+  remarks        String?
+  created_at     DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
+  agent          Agent?           @relation(fields: [agent_id], references: [id])
+  application    applications?    @relation(fields: [application_id], references: [id])
+  lead           leads?           @relation(fields: [lead_id], references: [id])
 
-  lead            leads?           @relation(fields: [lead_id], references: [id])
-  application     applications?    @relation(fields: [application_id], references: [id])
-  agent           Agent?           @relation(fields: [agent_id], references: [id]) 
-  
   @@map("commissions")
-}
-
-enum CommissionStatus {
-  PENDING
-  APPROVED
-  PAID
-  REJECTED
 }
 
 model permission_group {
@@ -686,60 +693,58 @@ model Country {
 }
 
 model University {
-  id        String   @id @default(uuid())
-  name      String
-  logo      String?
-  city      String?
-  countryId String   @map("country_id")
-  courses   Course[]
-  country   Country  @relation(fields: [countryId], references: [id], onDelete: Cascade)
-
-  commission_type   CommissionType? @default(PERCENTAGE) 
-  commission_value  Decimal?        @db.Decimal(10, 2)   
-  currency          String?         @default("INR")      
-
-  excluded_countries  String[]   @default([])
-  allowed_countries   String[]   @default([])
-  agent_access        AgentUniversityAccess[]
+  id                 String                  @id @default(uuid())
+  name               String
+  logo               String?
+  city               String?
+  countryId          String                  @map("country_id")
+  commission_type    CommissionType?         @default(PERCENTAGE)
+  commission_value   Decimal?                @db.Decimal(10, 2)
+  currency           String?                 @default("INR")
+  excluded_countries String[]                @default([])
+  allowed_countries  String[]                @default([])
+  agent_access       AgentUniversityAccess[]
+  category_access    CategoryUniversityAccess[]
+  courses            Course[]
+  country            Country                 @relation(fields: [countryId], references: [id], onDelete: Cascade)
 
   @@map("universities")
 }
 
 model Course {
-  id                  String     @id @default(uuid())
-  name                String
-  description         String?
-  level               String?
-  category            String?
-  duration            Int?
-  feeType             String?    @map("fee_type")
-  originalFee         Decimal?   @map("original_fee") @db.Decimal(10, 2)
-  feeCurrency         String?    @default("PLN") @map("fee_currency")
-  fee                 Decimal?   @map("fee") @db.Decimal(10, 2)
-  courseCurrency      String?    @default("PLN") @map("course_currency")
-  applicationFee      Decimal?   @map("application_fee") @db.Decimal(10, 2)
-  applicationCurrency String?    @default("PLN") @map("application_currency")
-  intakeMonth         String?    @map("intake_month")
-  commissionType      String?    @default("%") @map("commission_type")
-  commissionValue     Decimal?   @map("commission_value") @db.Decimal(10, 2)
-  details             Json?
-  universityId        String     @map("university_id")
-  createdAt           DateTime   @default(now()) @map("created_at")
-  university          University @relation(fields: [universityId], references: [id], onDelete: Cascade)
-  leads               leads[]    @relation("LeadCourses")
-  excluded_countries  String[]   @default([])
-
+  id                      String                    @id @default(uuid())
+  name                    String
+  description             String?
+  level                   String?
+  category                String?
+  duration                Int?
+  feeType                 String?                   @map("fee_type")
+  originalFee             Decimal?                  @map("original_fee") @db.Decimal(10, 2)
+  feeCurrency             String?                   @default("PLN") @map("fee_currency")
+  fee                     Decimal?                  @map("fee") @db.Decimal(10, 2)
+  courseCurrency          String?                   @default("PLN") @map("course_currency")
+  applicationFee          Decimal?                  @map("application_fee") @db.Decimal(10, 2)
+  applicationCurrency     String?                   @default("PLN") @map("application_currency")
+  intakeMonth             String?                   @map("intake_month")
+  commissionType          String?                   @default("%") @map("commission_type")
+  commissionValue         Decimal?                  @map("commission_value") @db.Decimal(10, 2)
+  details                 Json?
+  universityId            String                    @map("university_id")
+  createdAt               DateTime                  @default(now()) @map("created_at")
+  excluded_countries      String[]                  @default([])
   application_preferences application_preferences[]
+  university              University                @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  leads                   leads[]                   @relation("LeadCourses")
 
   @@map("courses")
 }
 
 model todos {
-  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid 
   title      String
   created_by String    @db.Uuid
   completed  Boolean   @default(false)
   dueDate    DateTime?
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   partners   partners  @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
@@ -754,73 +759,71 @@ model OptionList {
 }
 
 model ChatMessage {
-  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  lead_id         String      @db.Uuid
-  partner_id      String?     @db.Uuid
-  agent_id        String?     @db.Uuid
-  sender_type     SenderType
-  message         String
-  is_read         Boolean     @default(false)
-  created_at      DateTime    @default(now()) @db.Timestamptz(6)
+  id          String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lead_id     String     @db.Uuid
+  partner_id  String?    @db.Uuid
+  agent_id    String?    @db.Uuid
+  sender_type SenderType
+  message     String
+  is_read     Boolean    @default(false)
+  created_at  DateTime   @default(now()) @db.Timestamptz(6)
+  agent       Agent?     @relation(fields: [agent_id], references: [id])
+  lead        leads      @relation(fields: [lead_id], references: [id], onDelete: Cascade)
+  partner     partners?  @relation(fields: [partner_id], references: [id])
 
-  lead            leads       @relation(fields: [lead_id], references: [id], onDelete: Cascade)
-  partner         partners?   @relation(fields: [partner_id], references: [id])
-  agent           Agent?      @relation(fields: [agent_id], references: [id])
-
-  @@index([lead_id]) 
+  @@index([lead_id])
   @@map("chat_messages")
 }
 
 model DropdownCategory {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String   @unique 
-  label       String?  
-  is_system   Boolean  @default(false) 
-  options     DropdownOption[]
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
-  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+  id         String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String           @unique
+  label      String?
+  is_system  Boolean          @default(false)
+  created_at DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
+  options    DropdownOption[]
 
   @@map("dropdown_categories")
 }
 
 model DropdownOption {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  id          String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   label       String
   value       String
-  category_id String   @db.Uuid
+  category_id String           @db.Uuid
+  is_active   Boolean          @default(true)
+  created_at  DateTime         @default(now()) @db.Timestamptz(6)
   category    DropdownCategory @relation(fields: [category_id], references: [id], onDelete: Cascade)
-  is_active   Boolean  @default(true)
-  created_at  DateTime @default(now()) @db.Timestamptz(6)
 
   @@map("dropdown_options")
 }
 
 model SupportTicket {
-  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  case_number     Int            @default(autoincrement())
-  partner_id      String?        @db.Uuid
-  requester_type  TicketRequesterType?
-  requester_partner_id String?   @db.Uuid
-  requester_agent_id String?     @db.Uuid
-  requester_team_member_id String? @db.Uuid
-  requester_parent_agent_id String? @db.Uuid
-  topic           String         
-  category        String         
-  institution_id  String?        
-  subject         String
-  description     String
-  priority        TicketPriority @default(MEDIUM)
-  status          TicketStatus   @default(OPEN)
-  attachment_urls String[]       @default([])
-  created_at      DateTime       @default(now()) @db.Timestamptz(6)
-  updated_at      DateTime       @default(now()) @updatedAt @db.Timestamptz(6)
-
-  partner         partners?      @relation("LegacySupportTicketPartner", fields: [partner_id], references: [id], onDelete: SetNull)
-  requester_partner partners?    @relation("SupportTicketRequesterPartner", fields: [requester_partner_id], references: [id], onDelete: SetNull)
-  requester_agent Agent?         @relation("SupportTicketRequesterAgent", fields: [requester_agent_id], references: [id], onDelete: SetNull)
-  requester_team_member AgentTeamMember? @relation("SupportTicketRequesterTeamMember", fields: [requester_team_member_id], references: [id], onDelete: SetNull)
-  requester_parent_agent Agent?  @relation("SupportTicketRequesterParentAgent", fields: [requester_parent_agent_id], references: [id], onDelete: SetNull)
-  comments        SupportTicketComment[]
+  id                        String                 @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  case_number               Int                    @default(autoincrement())
+  partner_id                String?                @db.Uuid
+  topic                     String
+  category                  String
+  institution_id            String?
+  subject                   String
+  description               String
+  priority                  TicketPriority         @default(MEDIUM)
+  status                    TicketStatus           @default(OPEN)
+  attachment_urls           String[]               @default([])
+  created_at                DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime               @default(now()) @updatedAt @db.Timestamptz(6)
+  requester_agent_id        String?                @db.Uuid
+  requester_parent_agent_id String?                @db.Uuid
+  requester_partner_id      String?                @db.Uuid
+  requester_team_member_id  String?                @db.Uuid
+  requester_type            TicketRequesterType?
+  comments                  SupportTicketComment[]
+  partner                   partners?              @relation("LegacySupportTicketPartner", fields: [partner_id], references: [id])
+  requester_agent           Agent?                 @relation("SupportTicketRequesterAgent", fields: [requester_agent_id], references: [id])
+  requester_parent_agent    Agent?                 @relation("SupportTicketRequesterParentAgent", fields: [requester_parent_agent_id], references: [id])
+  requester_partner         partners?              @relation("SupportTicketRequesterPartner", fields: [requester_partner_id], references: [id])
+  requester_team_member     AgentTeamMember?       @relation("SupportTicketRequesterTeamMember", fields: [requester_team_member_id], references: [id])
 
   @@index([requester_type, requester_partner_id], map: "idx_support_tickets_req_partner")
   @@index([requester_type, requester_agent_id], map: "idx_support_tickets_req_agent")
@@ -831,17 +834,80 @@ model SupportTicket {
 }
 
 model SupportTicketComment {
-  id              String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  ticket_id       String         @db.Uuid
-  sender_id       String         @db.Uuid 
-  sender_type     String         
-  sender_name     String         
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticket_id       String        @db.Uuid
+  sender_id       String        @db.Uuid
+  sender_type     String
+  sender_name     String
   message         String
-  attachment_urls String[]       @default([])
-  created_at      DateTime       @default(now()) @db.Timestamptz(6)
-  ticket          SupportTicket  @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
+  attachment_urls String[]      @default([])
+  created_at      DateTime      @default(now()) @db.Timestamptz(6)
+  ticket          SupportTicket @relation(fields: [ticket_id], references: [id], onDelete: Cascade)
 
   @@map("support_ticket_comments")
+}
+
+model EmailTemplate {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique
+  subject     String
+  body        String   @db.Text
+  category    String?  // Folder/Purpose category e.g. "Credentials", "Inquiry", "Campaign"
+  variables   String[] // List of supported variables for this template
+  created_at  DateTime @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("email_templates")
+}
+
+model IntegrationConfig {
+  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider     IntegrationProvider @unique
+  display_name String
+  api_key      String?
+  api_secret   String?
+  config_json  Json?               @default("{}")
+  is_active    Boolean             @default(false)
+  connected_at DateTime?           @db.Timestamptz(6)
+  created_at   DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at   DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
+
+  @@map("integration_configs")
+}
+
+enum AgentStatus {
+  PENDING
+  IN_REVIEW
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum AgentRole {
+  OWNER
+  MEMBER
+}
+
+enum AgentContractStatus {
+  PENDING
+  SIGNED
+  APPROVED
+  REJECTED
+}
+
+enum InquiryStatus {
+  NEW
+  CONTACTED
+  APPROVED
+  CONVERTED
+  REJECTED
+}
+
+enum CommissionStatus {
+  PENDING
+  APPROVED
+  PAID
+  REJECTED
 }
 
 enum CommissionType {
@@ -850,9 +916,9 @@ enum CommissionType {
 }
 
 enum SenderType {
-  PARTNER 
-  LEAD    
-  AGENT   
+  PARTNER
+  LEAD
+  AGENT
 }
 
 enum academic_level_enum {
@@ -902,7 +968,6 @@ enum timeline_event {
   LEAD_PURPOSE_CHANGED
   LEAD_OWNER_CHANGED
   LEAD_STATUS_CHANGED
-  LEAD_DEPARTMENT_CHANGED
   LEAD_NOTE_ADDED
   LEAD_NOTE_DELETED
   LEAD_NOTE_UPDATED
@@ -916,6 +981,7 @@ enum timeline_event {
   LEAD_FOLLOWUP_COMMENT_UPDATED
   OFFLINE_PAYMENT_ADDED
   OFFLINE_PAYMENT_DELETED
+  LEAD_DEPARTMENT_CHANGED
 }
 
 enum FinancialStatus {
@@ -947,25 +1013,11 @@ enum TicketRequesterType {
   AGENT_TEAM_MEMBER
 }
 
-model IntegrationConfig {
-  id           String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  provider     IntegrationProvider
-  display_name String
-  api_key      String?
-  api_secret   String?
-  config_json  Json?               @default("{}")
-  is_active    Boolean             @default(false)
-  connected_at DateTime?           @db.Timestamptz(6)
-  created_at   DateTime            @default(now()) @db.Timestamptz(6)
-  updated_at   DateTime            @default(now()) @updatedAt @db.Timestamptz(6)
-
-  @@unique([provider])
-  @@map("integration_configs")
-}
-
 enum IntegrationProvider {
   RAZORPAY
   GOOGLE_ADS
   META_PIXEL
+  MAILSUITE
+  SENDER
+  BREVO
 }
-

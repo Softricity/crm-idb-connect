@@ -34,73 +34,79 @@ export interface Lead {
 
 interface LeadState {
   leads: Lead[];
-  loading: boolean;
   pagination: {
     total: number;
     page: number;
     limit: number;
     totalPages: number;
-    counts: Record<string, number>;
   };
-  fetchLeads: (branchId?: string, page?: number, limit?: number) => Promise<void>;
-  fetchLeadsBasedOnPermission: (userId: string, permissions: string[], branchId?: string, role?: string, page?: number, limit?: number) => Promise<void>;
+  loading: boolean;
+  fetchLeads: (branchId?: string) => Promise<void>;
+  fetchLeadsBasedOnPermission: (userId: string, permissions: string[], branchId?: string, role?: string, page?: number) => Promise<void>;
   fetchLeadById: (id: string) => Promise<Lead | null>;
-  getAgentLeads: (agentId: string, branchId?: string, page?: number, limit?: number) => Promise<void>;
-  getCounsellorLeads: (counsellorId: string, branchId?: string, page?: number, limit?: number) => Promise<void>;
+  getAgentLeads: (agentId: string, branchId?: string) => Promise<void>;
+  getCounsellorLeads: (counsellorId: string, branchId?: string) => Promise<void>;
   addLead: (lead: Omit<Lead, "id" | "created_at">) => Promise<void>;
   updateLead: (id: string, updates: Partial<Lead>) => Promise<void>;
   getLeadIds: () => string[];
   reset: () => void;
 }
 
+
 export const useLeadStore = create<LeadState>((set, get) => ({
   leads: [],
-  loading: false,
   pagination: {
     total: 0,
     page: 1,
     limit: 10,
     totalPages: 0,
-    counts: {},
   },
+  loading: false,
 
-  fetchLeads: async (branchId, page = 1, limit = 10) => {
+
+  fetchLeads: async (branchId) => {
     set({ loading: true });
     try {
-      const response = await api.LeadsAPI.fetchLeads(branchId, page, limit);
-      set({ 
-        leads: response.data as Lead[],
-        pagination: response.meta
-      });
+      const data = await api.LeadsAPI.fetchLeads(branchId);
+      set({ leads: data as Lead[] });
     } catch (error: any) {
       console.error("Error fetching leads:", error.message || error);
     }
     set({ loading: false });
   },
 
-  fetchLeadsBasedOnPermission: async (userId: string, permissions: string[], branchId?: string, role?: string, page = 1, limit = 10) => {
+  fetchLeadsBasedOnPermission: async (userId: string, permissions: string[], branchId?: string, role?: string, page = 1) => {
     set({ loading: true });
     try {
-      const isSuper = role === 'super admin' || role === 'superadmin' || canViewAllLeads(permissions);
-      if (isSuper) {
-        const response = await api.LeadsAPI.fetchLeads(branchId, page, limit);
-        set({ 
-          leads: response.data as Lead[],
-          pagination: response.meta
-        });
+      if (canViewAllLeads(permissions)) {
+        const response = await api.LeadsAPI.fetchLeads(branchId, page);
+        const leads = Array.isArray(response) ? response : (response?.data || []);
+        const meta = response?.meta || {
+          total: leads.length,
+          page: page,
+          limit: leads.length,
+          totalPages: 1,
+        };
+        set({ leads: leads as Lead[], pagination: meta });
       } else {
         console.log("User is restricted to their own leads.");
-        const response = await api.LeadsAPI.getCounsellorLeads(userId, branchId, page, limit);
-        set({ 
-          leads: response.data as Lead[],
-          pagination: response.meta
-        });
+        const response = await api.LeadsAPI.getCounsellorLeads(userId, branchId, page);
+        const leads = Array.isArray(response) ? response : (response?.data || []);
+        const meta = response?.meta || {
+          total: leads.length,
+          page: page,
+          limit: leads.length,
+          totalPages: 1,
+        };
+        set({ leads: leads as Lead[], pagination: meta });
       }
     } catch (error: any) {
       console.error("Error fetching leads:", error.message || error);
     }
     set({ loading: false });
   },
+
+
 
   fetchLeadById: async (id) => {
     try {
@@ -112,14 +118,11 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     }
   },
 
-  getAgentLeads: async (agentId: string, branchId?: string, page = 1, limit = 10) => {
+  getAgentLeads: async (agentId: string, branchId?: string) => {
     set({ loading: true });
     try {
-      const response = await api.LeadsAPI.getAgentLeads(agentId, branchId, page, limit);
-      set({ 
-        leads: response.data as Lead[],
-        pagination: response.meta
-      });
+      const data = await api.LeadsAPI.getAgentLeads(agentId, branchId);
+      set({ leads: data as Lead[] });
     } catch (error) {
       console.error("Error fetching agent leads:", error);
       throw error;
@@ -127,14 +130,11 @@ export const useLeadStore = create<LeadState>((set, get) => ({
     set({ loading: false });
   },
 
-  getCounsellorLeads: async (counsellorId: string, branchId?: string, page = 1, limit = 10) => {
+  getCounsellorLeads: async (counsellorId: string, branchId?: string) => {
     set({ loading: true });
     try {
-      const response = await api.LeadsAPI.getCounsellorLeads(counsellorId, branchId, page, limit);
-      set({ 
-        leads: response.data as Lead[],
-        pagination: response.meta
-      });
+      const data = await api.LeadsAPI.getCounsellorLeads(counsellorId, branchId);
+      set({ leads: data as Lead[] });
     } catch (error) {
       console.error("Error fetching counsellor leads:", error);
       throw error;
@@ -189,7 +189,13 @@ export const useLeadStore = create<LeadState>((set, get) => ({
 
   reset: () => set({ 
     leads: [], 
-    loading: false, 
-    pagination: { total: 0, page: 1, limit: 10, totalPages: 0, counts: {} } 
+    loading: false,
+    pagination: {
+      total: 0,
+      page: 1,
+      limit: 10,
+      totalPages: 0,
+    }
   }),
+
 }));

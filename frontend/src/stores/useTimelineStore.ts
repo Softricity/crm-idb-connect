@@ -42,10 +42,17 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     set({ loading: true });
     try {
       const resp = await api.TimelineAPI.fetchTimelineByLeadId(leadId, page, limit);
+      const rows = Array.isArray(resp) ? resp : (resp?.data || []);
+      const meta = resp?.meta || {
+        total: rows.length,
+        page,
+        limit,
+        totalPages: Math.ceil(rows.length / Math.max(limit, 1)),
+      };
       set((state) => ({ 
-        timeline: resp.data as Timeline[],
-        timelineByLead: { ...state.timelineByLead, [leadId]: resp.data as Timeline[] },
-        pagination: resp.meta
+        timeline: rows as Timeline[],
+        timelineByLead: { ...state.timelineByLead, [leadId]: rows as Timeline[] },
+        pagination: meta
       }));
     } catch (error: any) {
       console.error("Error fetching timeline:", error.message || error);
@@ -58,9 +65,16 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
     set({ loading: true });
     try {
       const resp = await api.TimelineAPI.fetchGlobalTimeline(page, limit);
+      const rows = Array.isArray(resp) ? resp : (resp?.data || []);
+      const meta = resp?.meta || {
+        total: rows.length,
+        page,
+        limit,
+        totalPages: Math.ceil(rows.length / Math.max(limit, 1)),
+      };
       set({ 
-        globalTimeline: resp.data as Timeline[],
-        globalPagination: resp.meta
+        globalTimeline: rows as Timeline[],
+        globalPagination: meta
       });
     } catch (error: any) {
       console.error("Error fetching global timeline:", error.message || error);

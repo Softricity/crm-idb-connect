@@ -30,24 +30,42 @@ export const IntegrationConfigModal: React.FC<IntegrationConfigModalProps> = ({
   existingConfig,
 }) => {
   const [loading, setLoading] = useState(false);
+  const isMailProvider =
+    integration?.provider === "MAILSUITE" ||
+    integration?.provider === "SENDER" ||
+    integration?.provider === "BREVO";
+
   const [formData, setFormData] = useState({
     api_key: "",
     api_secret: "",
     is_active: true,
+    host: "",
+    port: "587",
+    secure: false,
+    from_email: "",
   });
 
   useEffect(() => {
+    const configJson = existingConfig?.config_json || {};
     if (existingConfig) {
       setFormData({
         api_key: existingConfig.api_key || "",
         api_secret: existingConfig.api_secret || "",
         is_active: existingConfig.is_active ?? true,
+        host: configJson.host || "",
+        port: String(configJson.port || "587"),
+        secure: Boolean(configJson.secure),
+        from_email: configJson.from_email || "",
       });
     } else {
       setFormData({
         api_key: "",
         api_secret: "",
         is_active: true,
+        host: "",
+        port: "587",
+        secure: false,
+        from_email: "",
       });
     }
   }, [existingConfig, isOpen]);
@@ -56,7 +74,12 @@ export const IntegrationConfigModal: React.FC<IntegrationConfigModalProps> = ({
     if (!integration) return;
     
     if (!formData.api_key) {
-      toast.error("API Key is required");
+      toast.error("API key is required");
+      return;
+    }
+
+    if ((isMailProvider || integration.provider === "RAZORPAY" || integration.provider === "GOOGLE_ADS") && !formData.api_secret) {
+      toast.error("Secret/token is required");
       return;
     }
 
@@ -68,6 +91,14 @@ export const IntegrationConfigModal: React.FC<IntegrationConfigModalProps> = ({
         api_key: formData.api_key,
         api_secret: formData.api_secret,
         is_active: formData.is_active,
+        config_json: isMailProvider
+          ? {
+              host: formData.host || undefined,
+              port: Number(formData.port) || 587,
+              secure: formData.secure,
+              from_email: formData.from_email || undefined,
+            }
+          : {},
       });
       toast.success(`${integration.name} configuration saved successfully`);
       onSuccess();
@@ -106,8 +137,12 @@ export const IntegrationConfigModal: React.FC<IntegrationConfigModalProps> = ({
 
                 <div className="space-y-6">
                   <Input
-                    label={integration.provider === "RAZORPAY" ? "Key ID" : "API Key / Pixel ID"}
-                    placeholder={`Enter your ${integration.name} identifier`}
+                    label={isMailProvider ? "Campaign Provider Username / API Key" : integration.provider === "RAZORPAY" ? "Key ID" : "API Key / Pixel ID"}
+                    placeholder={
+                      isMailProvider
+                        ? `Enter your ${integration.name} campaign credential key`
+                        : `Enter your ${integration.name} identifier`
+                    }
                     labelPlacement="outside"
                     value={formData.api_key}
                     onValueChange={(val) => setFormData({ ...formData, api_key: val })}
@@ -120,10 +155,10 @@ export const IntegrationConfigModal: React.FC<IntegrationConfigModalProps> = ({
                     }}
                   />
                   
-                  {(integration.provider === "RAZORPAY" || integration.provider === "GOOGLE_ADS") && (
+                  {(isMailProvider || integration.provider === "RAZORPAY" || integration.provider === "GOOGLE_ADS") && (
                     <Input
-                      label={integration.provider === "RAZORPAY" ? "Key Secret" : "Developer Token"}
-                      placeholder={`Enter your ${integration.name} secret/token`}
+                      label={isMailProvider ? "Campaign Provider Secret / Token" : integration.provider === "RAZORPAY" ? "Key Secret" : "Developer Token"}
+                      placeholder={isMailProvider ? `Enter your ${integration.name} campaign secret/token` : `Enter your ${integration.name} secret/token`}
                       labelPlacement="outside"
                       type="password"
                       value={formData.api_secret}
@@ -137,6 +172,57 @@ export const IntegrationConfigModal: React.FC<IntegrationConfigModalProps> = ({
                       }}
                     />
                   )}
+
+                  {isMailProvider && (
+                    <Input
+                      label="SMTP Host (Optional)"
+                      placeholder="e.g. smtp-relay.brevo.com"
+                      labelPlacement="outside"
+                      value={formData.host}
+                      onValueChange={(val) => setFormData({ ...formData, host: val })}
+                      variant="bordered"
+                      radius="lg"
+                    />
+                  )}
+
+                  {isMailProvider && (
+                    <Input
+                      label="SMTP Port"
+                      placeholder="587"
+                      labelPlacement="outside"
+                      value={formData.port}
+                      onValueChange={(val) => setFormData({ ...formData, port: val })}
+                      variant="bordered"
+                      radius="lg"
+                    />
+                  )}
+
+                  {isMailProvider && (
+                    <Input
+                      label="From Email (Optional)"
+                      placeholder="noreply@yourdomain.com"
+                      labelPlacement="outside"
+                      value={formData.from_email}
+                      onValueChange={(val) => setFormData({ ...formData, from_email: val })}
+                      variant="bordered"
+                      radius="lg"
+                    />
+                  )}
+
+                  {isMailProvider && (
+                    <div className="flex items-center justify-between p-5 bg-gradient-to-r from-gray-50/80 to-white rounded-2xl border border-gray-100 shadow-sm">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="font-bold text-gray-900">Use SSL/TLS</span>
+                        <span className="text-[11px] text-gray-500 font-medium">Enable for port 465 or provider-specific SSL</span>
+                      </div>
+                      <Switch
+                        isSelected={formData.secure}
+                        onValueChange={(val) => setFormData({ ...formData, secure: val })}
+                        color="primary"
+                        size="sm"
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex gap-3 p-4 bg-blue-50/50 rounded-2xl border border-blue-100/50">
@@ -144,7 +230,7 @@ export const IntegrationConfigModal: React.FC<IntegrationConfigModalProps> = ({
                     <Info size={16} className="text-blue-600" />
                   </div>
                   <p className="text-[11px] text-blue-800 leading-relaxed font-semibold">
-                    Note: Your credentials are encrypted and stored securely. We use these only to interact with the respective service APIs.
+                    Note: Transactional emails are sent via backend Gmail SMTP env credentials. These mail-provider credentials are kept for campaign workflows only.
                   </p>
                 </div>
               </div>
@@ -170,4 +256,3 @@ export const IntegrationConfigModal: React.FC<IntegrationConfigModalProps> = ({
 
   );
 };
-

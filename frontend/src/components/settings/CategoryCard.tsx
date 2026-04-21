@@ -76,6 +76,24 @@ export default function CategoryCard({ category, onUpdate }: CategoryCardProps) 
     }
   };
 
+  const handleDeleteCategory = async () => {
+    if (category.is_system) {
+      toast.error("System categories cannot be deleted");
+      return;
+    }
+    if (!confirm(`Are you sure you want to delete "${category.label}" category? This will remove all its options.`)) {
+      return;
+    }
+
+    try {
+      await api.DropdownsAPI.deleteCategory(category.id);
+      toast.success("Category deleted successfully");
+      onUpdate();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete category");
+    }
+  };
+
   const activeCount = category.options.filter(opt => opt.is_active).length;
 
   return (
@@ -87,9 +105,22 @@ export default function CategoryCard({ category, onUpdate }: CategoryCardProps) 
             <Chip size="sm" color="primary" variant="flat">System</Chip>
           )}
         </div>
-        <Chip size="sm" variant="flat">
-          {activeCount} / {category.options.length} active
-        </Chip>
+        <div className="flex items-center gap-2">
+          {!category.is_system && (
+            <Button
+              isIconOnly
+              size="sm"
+              variant="light"
+              color="danger"
+              onClick={handleDeleteCategory}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
+          <Chip size="sm" variant="flat">
+            {activeCount} / {category.options.length} active
+          </Chip>
+        </div>
       </CardHeader>
       
       <CardBody className="p-6 space-y-6">

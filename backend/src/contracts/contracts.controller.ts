@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -100,6 +101,12 @@ export class ContractsController {
   @Roles(Role.Admin, Role.SuperAdmin)
   reject(@Param('id') id: string, @Body() dto: RejectContractDto) {
     return this.contractsService.reject(id, dto);
+  }
+
+  @Delete(':id')
+  @Roles(Role.Admin, Role.SuperAdmin)
+  remove(@Param('id') id: string) {
+    return this.contractsService.remove(id);
   }
 
   @Get(':id/download')

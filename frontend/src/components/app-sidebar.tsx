@@ -2,8 +2,6 @@
 import * as React from "react"
 import {
   LayoutDashboard,
-  FileText,
-  Activity,
   GraduationCap,
   Bell,
   Users,
@@ -17,7 +15,13 @@ import {
   HelpCircle,
   Settings,
   Plus,
-  ShieldUser
+  ShieldUser,
+  Mail,
+  Tags,
+  Settings2,
+  Briefcase,
+  UserPlus,
+  Fingerprint
 } from "lucide-react";
 
 const data = {
@@ -33,16 +37,6 @@ const data = {
       url: "/dashboard",
       icon: LayoutDashboard,
     },
-    {
-      title: "Reports",
-      url: "#",
-      icon: FileText,
-    },
-    {
-      title: "Activity Logs",
-      url: "/activity-logs",
-      icon: Activity,
-    },
   ],
   navStudentManagement: [
     {
@@ -53,7 +47,7 @@ const data = {
     {
       title: "Announcements",
       icon: Bell,
-      url: "#",
+      url: "/announcements",
     },
     {
       title: "Leads",
@@ -61,62 +55,84 @@ const data = {
       url: "/leads",
     },
     {
-      title: "Counsellings",
-      icon: MessageCircle,
-      url: "/counsellings",
+      title: "Applications",
+      icon: Briefcase,
+      url: "/applications",
     },
     {
-      title: "Admissions",
+      title: "Universities",
       icon: School,
-      url: "#",
+      url: "/universities",
     },
     {
-      title: "Visas",
-      icon: FileCheck,
-      url: "#",
+      title: "Referrals",
+      icon: UserPlus,
+      url: "/referrals",
     },
   ],
   navBusiness: [
     {
-      title: "B2B Hub",
+      title: "Agreements Hub",
       icon: Building,
-      url: "#",
-      badge: "42",
+      url: "/agents/agreements",
     },
     {
       title: "Agents",
-      icon: ShieldUser ,
+      icon: ShieldUser,
       url: "/agents",
+    },
+    {
+      title: "Agent Categories",
+      icon: Tags,
+      url: "/agents/categories",
     },
     {
       title: "Commissions",
       icon: DollarSign,
-      url: "#",
+      url: "/commissions",
     },
   ],
   navTaskManagement: [
     {
       title: "Tasks",
       icon: CheckSquare,
-      url: "#",
-      badge: "1",
+      url: "/tasks",
     },
     {
       title: "Follow Ups",
       icon: Clock,
-      url: "#",
-      badge: "25",
+      url: "/follow-ups",
     },
   ],
   navSupport: [
     {
       title: "Helpdesk",
-      url: "#",
+      url: "/support",
       icon: HelpCircle,
     },
     {
+      title: "Email Templates",
+      url: "/settings/email-templates",
+      icon: Mail,
+    },
+    {
+      title: "Team Management",
+      url: "/team",
+      icon: Users,
+    },
+    {
+      title: "Roles & Permissions",
+      url: "/roles-permissions",
+      icon: Fingerprint,
+    },
+    {
+      title: "Customise",
+      url: "/customise",
+      icon: Settings2,
+    },
+    {
       title: "Settings",
-      url: "#",
+      url: "/settings",
       icon: Settings,
     },
   ],
@@ -219,11 +235,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <a href={item.url}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
-                        {item.badge && (
-                          <span className="ml-auto bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs">
-                            {item.badge}
-                          </span>
-                        )}
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
@@ -247,11 +258,6 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
                       <a href={item.url}>
                         <item.icon className="h-4 w-4" />
                         <span>{item.title}</span>
-                        {item.badge && (
-                          <span className="ml-auto bg-primary/10 text-primary px-1.5 py-0.5 rounded text-xs">
-                            {item.badge}
-                          </span>
-                        )}
                       </a>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

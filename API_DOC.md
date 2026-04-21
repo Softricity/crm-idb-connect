@@ -24,6 +24,12 @@ All routes are relative to the NestJS server URL (e.g., `http://localhost:5005`)
 -   **422 Unprocessable Entity:** Validation failed.
 -   **500 Internal Server Error:** Server-side failure.
 
+### Email Delivery Policy
+-   **Transactional Emails:** Sent only through backend `MailService` using env SMTP config (`SMTP_USER`, `SMTP_PASS`, optional `SMTP_HOST/PORT/SECURE/FROM_*`).
+-   **Gmail Defaults:** If not provided, host defaults to `smtp.gmail.com`, port to `587`, and secure to `false`.
+-   **Campaign Templates:** Any email template with category `campaign` is intentionally skipped/deferred in this phase.
+-   **Campaign Providers in Integrations:** `MAILSUITE`, `SENDER`, `BREVO` remain for future campaign-email workflows and are not used for transactional sends.
+
 ---
 
 ## 🏠 App API
