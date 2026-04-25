@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -58,6 +59,15 @@ export class ContractsController {
     return this.contractsService.create(dto);
   }
 
+  @Post(':id/assign')
+  @Roles(Role.Admin, Role.SuperAdmin)
+  bulkAssign(
+    @Param('id') id: string,
+    @Body('agent_ids') agentIds: string[],
+  ) {
+    return this.contractsService.bulkAssign(id, agentIds);
+  }
+
   @Patch(':id/content')
   @Roles(Role.Admin, Role.SuperAdmin)
   updateContent(@Param('id') id: string, @Body() dto: UpdateContractContentDto) {
@@ -91,6 +101,12 @@ export class ContractsController {
   @Roles(Role.Admin, Role.SuperAdmin)
   reject(@Param('id') id: string, @Body() dto: RejectContractDto) {
     return this.contractsService.reject(id, dto);
+  }
+
+  @Delete(':id')
+  @Roles(Role.Admin, Role.SuperAdmin)
+  remove(@Param('id') id: string) {
+    return this.contractsService.remove(id);
   }
 
   @Get(':id/download')

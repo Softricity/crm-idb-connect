@@ -23,16 +23,53 @@ import { ColumnConfig } from "./columnVisibilitySelector";
 import { toast } from "sonner";
 import { AssignCounsellorModal } from "./assignCounsellorModal";
 
-const statusColorMap: { [key: string]: "primary" | "secondary" | "success" | "warning" | "danger" | "default" } = {
-  new: "primary",
-  interested: "secondary",
-  inprocess: "warning",
-  hot: "warning",
-  engaged: "warning",
-  contacted: "secondary",
-  assigned: "success",
-  cold: "default",
-  rejected: "danger",
+type ChipColor = "primary" | "secondary" | "success" | "warning" | "danger" | "default";
+
+export interface DepartmentStatusConfig {
+  key: string;
+  label: string;
+  order_index: number;
+  is_terminal?: boolean;
+  is_default?: boolean;
+}
+
+const normalizeStatusToken = (value?: string | null) =>
+  (value || "").toString().trim().toLowerCase();
+
+const getStatusColor = (
+  statusValue: string | null | undefined,
+  departmentStatuses: DepartmentStatusConfig[],
+): ChipColor => {
+  const token = normalizeStatusToken(statusValue);
+  if (!token) {
+    return "default";
+  }
+
+  const matchedStatus = departmentStatuses.find((status) => {
+    const keyToken = normalizeStatusToken(status.key);
+    const labelToken = normalizeStatusToken(status.label);
+    return token === keyToken || token === labelToken;
+  });
+
+  if (matchedStatus?.is_terminal) {
+    return "danger";
+  }
+
+  if (matchedStatus?.is_default) {
+    return "primary";
+  }
+
+  if (matchedStatus) {
+    if ((matchedStatus.order_index ?? 0) <= 1) {
+      return "secondary";
+    }
+    if ((matchedStatus.order_index ?? 0) <= 3) {
+      return "warning";
+    }
+    return "success";
+  }
+
+  return "default";
 };
 
 interface LeadsTableProps {
@@ -40,9 +77,16 @@ interface LeadsTableProps {
   selectedLeadIds: string[];
   setSelectedLeadIds: Dispatch<SetStateAction<string[]>>;
   columns: ColumnConfig[];
+  departmentStatuses?: DepartmentStatusConfig[];
 }
 
-export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds, columns }: LeadsTableProps) {
+export default function LeadsTable({
+  leads,
+  selectedLeadIds,
+  setSelectedLeadIds,
+  columns,
+  departmentStatuses = [],
+}: LeadsTableProps) {
   const router = useRouter();
   const { user } = useAuthStore();
   const { updateLead, fetchLeads } = useLeadStore();
@@ -200,7 +244,7 @@ export default function LeadsTable({ leads, selectedLeadIds, setSelectedLeadIds,
         case "status":
           return (
             <Chip
-              color={statusColorMap[lead.status?.toLowerCase()] || "default"}
+              color={getStatusColor(lead.status, departmentStatuses)}
               radius="sm"
               size="sm"
               variant="flat"

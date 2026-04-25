@@ -62,7 +62,11 @@ export class SupabaseService {
     }
 
     // Create a unique file path: folder/timestamp-filename
-    const fileName = `${Date.now()}-${file.originalname.replace(/\s/g, '_')}`;
+    // Sanitize filename to exclude special characters that break URL routes (like &, (, ))
+    const safeName = file.originalname
+      .replace(/[^a-zA-Z0-9._-]/g, '_')
+      .replace(/_+/g, '_'); // Collapse consecutive underscores
+    const fileName = `${Date.now()}-${safeName}`;
     const filePath = `${folder}/${fileName}`;
 
     const { data, error } = await this.supabase.storage

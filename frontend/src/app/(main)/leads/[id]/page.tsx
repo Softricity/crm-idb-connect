@@ -21,6 +21,9 @@ import PaymentsTab from "@/components/leads-components/paymentsTab";
 import ChatComponent from "@/components/chat/ChatComponent";
 import FinancialsTab from "@/components/FinancialsTab";
 import CoursesTab from "@/components/leads-components/coursesTab";
+import { ForwardDepartmentModal } from "@/components/leads-components/forwardDepartmentModal";
+import { useAuthStore } from "@/stores/useAuthStore";
+import { ApplicationPermission, hasPermission } from "@/lib/utils";
 
 const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
 const EmailsTab = () => <div className="p-4 text-gray-700">📧 Emails Component</div>;
@@ -44,11 +47,14 @@ export default function LeadDetailPage() {
     const searchParams = useSearchParams();
     const defaultTab = searchParams.get("tab") || "details";
     const { fetchLeadById, updateLead } = useLeadStore();
+    const { user } = useAuthStore();
     const [lead, setLead] = useState<Lead | null>(null);
     const [loading, setLoading] = useState(true);
     const [isSheetOpen, setSheetOpen] = useState(false);
     const [selectedTab, setSelectedTab] = useState(defaultTab);
     const [studentPanelOpen, setStudentPanelOpen] = useState(false);
+    const [forwardModalOpen, setForwardModalOpen] = useState(false);
+    const [timelineRefreshKey, setTimelineRefreshKey] = useState(0);
 
     const fetchAndSetLead = useCallback(async () => {
         setLoading(true);
@@ -71,7 +77,15 @@ export default function LeadDetailPage() {
 
         try {
             await updateLead(lead.id, payload);
-            setLead((prev) => (prev ? { ...prev, ...payload } : null));
+
+            const refreshedLead = await fetchLeadById(lead.id);
+            if (refreshedLead) {
+                setLead(refreshedLead);
+            } else {
+                setLead((prev) => (prev ? { ...prev, ...payload } : null));
+            }
+
+            setTimelineRefreshKey((prev) => prev + 1);
             toast.success("Lead status updated successfully!");
         } catch (error) {
             toast.error("Failed to update lead status.");
@@ -80,7 +94,10 @@ export default function LeadDetailPage() {
 
     const handleSheetStateChange = (isOpen: boolean) => {
         setSheetOpen(isOpen);
-        if (!isOpen) fetchAndSetLead();
+        if (!isOpen) {
+            fetchAndSetLead();
+            setTimelineRefreshKey((prev) => prev + 1);
+        }
     };
 
     if (loading) {
@@ -113,6 +130,17 @@ export default function LeadDetailPage() {
     if (!lead) {
         return <div className="p-8 text-center text-red-500">Lead not found.</div>;
     }
+
+    const normalizedLeadType = (lead.type || "").toLowerCase();
+    const nextDepartmentLabel =
+        normalizedLeadType === "lead"
+            ? "Admissions"
+            : normalizedLeadType === "application"
+                ? "Visa"
+                : null;
+    const canForwardToNextDepartment =
+        Boolean(nextDepartmentLabel && lead.can_forward_to_next_department) &&
+        hasPermission(user?.permissions || [], ApplicationPermission.LEAD_TO_APPLICATION);
 
     // Memoize token so it only changes when lead changes
     const studentPanelToken = () => {
@@ -152,6 +180,15 @@ export default function LeadDetailPage() {
                         >
                             Update Details
                         </Button>
+                        {canForwardToNextDepartment && (
+                            <Button
+                                onPress={() => setForwardModalOpen(true)}
+                                color="secondary"
+                                variant="flat"
+                            >
+                                {`Forward to ${nextDepartmentLabel}`}
+                            </Button>
+                        )}
                         <Button
                             onPress={() => setStudentPanelOpen(true)}
                             color="secondary"
@@ -177,6 +214,7 @@ export default function LeadDetailPage() {
                 </div>
                 <StatusTimeline
                     currentStatus={lead.status || "new"}
+                    currentDepartmentId={lead.current_department_id}
                     onChange={handleStatusChange}
                 />
                 <Tabs 
@@ -272,7 +310,11 @@ export default function LeadDetailPage() {
                     </Tab>
 
                     <Tab key="timeline" title="Timeline">
-                        <TimeLineTab leadName={lead?.name ?? ""} leadId={lead?.id ?? ""} />
+                        <TimeLineTab
+                            leadName={lead?.name ?? ""}
+                            leadId={lead?.id ?? ""}
+                            refreshKey={timelineRefreshKey}
+                        />
                     </Tab>
                 </Tabs>
             </div>
@@ -281,6 +323,13 @@ export default function LeadDetailPage() {
                 isOpen={isSheetOpen}
                 onOpenChange={handleSheetStateChange}
                 lead={lead}
+            />
+
+            <ForwardDepartmentModal
+                isOpen={forwardModalOpen}
+                onOpenChange={setForwardModalOpen}
+                lead={lead}
+                onForwarded={fetchAndSetLead}
             />
         </>
     );

@@ -3,7 +3,7 @@ import { Timeline, useTimelineStore } from "@/stores/useTimelineStore";
 import { Spinner } from "@heroui/react";
 import { History } from "lucide-react";
 import { useEffect, useMemo } from "react";
-import { eventColors, eventIcons } from "../leads-components/timeLineTab";
+import { buildLeadDetailsDiffList, eventColors, eventIcons } from "../leads-components/timeLineTab";
 import { format } from "date-fns";
 
 export const TimelineItem = ({
@@ -126,11 +126,56 @@ export const renderEventAction = (event: Timeline) => {
                 </>
             );
 
+        case TimelineEvent.LEAD_PURPOSE_CHANGED: {
+            const detailChanges = buildLeadDetailsDiffList(old_state, new_state);
+
+            if (detailChanges.length === 1) {
+                const change = detailChanges[0];
+                return (
+                    <>
+                        updated <Field>{change.field}</Field> from <OldValue>{change.oldValue}</OldValue> to{" "}
+                        <NewValue>{change.newValue}</NewValue>.
+                    </>
+                );
+            }
+
+            if (detailChanges.length > 1) {
+                return (
+                    <>
+                        updated <Field>Lead Details</Field>:
+                        {detailChanges.map((change, index) => (
+                            <span key={`${change.field}-${index}`}>
+                                {index > 0 ? "; " : " "}
+                                <Field>{change.field}</Field> from <OldValue>{change.oldValue}</OldValue> to{" "}
+                                <NewValue>{change.newValue}</NewValue>
+                            </span>
+                        ))}
+                        .
+                    </>
+                );
+            }
+
+            return (
+                <>
+                    updated <Field>Lead Details</Field> from <OldValue>{old_state || "-"}</OldValue> to{" "}
+                    <NewValue>{new_state || "-"}</NewValue>.
+                </>
+            );
+        }
+
         case TimelineEvent.LEAD_STATUS_CHANGED:
             return (
                 <>
                     changed <Field>Status</Field> from <OldValue>{old_state}</OldValue> to{" "}
                     <NewValue>{new_state}</NewValue>.
+                </>
+            );
+
+        case TimelineEvent.LEAD_DEPARTMENT_CHANGED:
+            return (
+                <>
+                    moved the lead from <OldValue>{old_state || '-'}</OldValue> to{' '}
+                    <NewValue>{new_state || '-'}</NewValue>.
                 </>
             );
 

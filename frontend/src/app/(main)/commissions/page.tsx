@@ -19,10 +19,17 @@ import {
   Input,
   Select,
   SelectItem,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
 } from "@heroui/react";
 import { CommissionsAPI } from "@/lib/api";
-import { Search, RefreshCw } from "lucide-react";
+import { Search, RefreshCw, MoreVertical, Edit2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
+import CommissionModal from "@/components/leads-components/CommissionModal";
+import { toast } from "sonner";
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure } from "@heroui/react";
 
 interface Commission {
   id: string;
@@ -44,6 +51,8 @@ interface Commission {
     name: string;
     agency_name?: string;
     email: string;
+    branch?: { id: string; name: string };
+    category?: { id: string; name: string; label?: string };
   };
 }
 
@@ -60,6 +69,13 @@ export default function CommissionsPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("");
+  
+  // CRUD state
+  const { isOpen: isModalOpen, onOpen: onModalOpen, onClose: onModalClose } = useDisclosure();
+  const { isOpen: isDeleteOpen, onOpen: onDeleteOpen, onClose: onDeleteClose } = useDisclosure();
+  const [selectedCommission, setSelectedCommission] = useState<Commission | null>(null);
+  const [commissionToDelete, setCommissionToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     fetchCommissions();
@@ -93,6 +109,9 @@ export default function CommissionsPage() {
           commission.lead?.email?.toLowerCase().includes(query) ||
           commission.agent?.name?.toLowerCase().includes(query) ||
           commission.agent?.agency_name?.toLowerCase().includes(query) ||
+          commission.agent?.branch?.name?.toLowerCase().includes(query) ||
+          commission.agent?.category?.label?.toLowerCase().includes(query) ||
+          commission.agent?.category?.name?.toLowerCase().includes(query) ||
           commission.remarks?.toLowerCase().includes(query)
       );
     }
@@ -137,6 +156,41 @@ export default function CommissionsPage() {
 
   const totals = calculateTotals();
 
+  const handleEdit = (commission: Commission) => {
+    setSelectedCommission(commission);
+    onModalOpen();
+  };
+
+  const handleDeleteClick = (id: string) => {
+    setCommissionToDelete(id);
+    onDeleteOpen();
+  };
+
+  const confirmDelete = async () => {
+    if (!commissionToDelete) return;
+    try {
+      setIsDeleting(true);
+      await CommissionsAPI.delete(commissionToDelete);
+      toast.success("Commission deleted successfully");
+      fetchCommissions();
+      onDeleteClose();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete commission");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleStatusChange = async (id: string, newStatus: string) => {
+    try {
+      await CommissionsAPI.update(id, { status: newStatus });
+      toast.success(`Status updated to ${newStatus}`);
+      fetchCommissions();
+    } catch (error: any) {
+      toast.error(error.message || "Failed to update status");
+    }
+  };
+
   if (loading) {
     return (
       <PermissionGuard requiredPermissions={[CommissionPermission.COMMISSION_MANAGE]}>
@@ -154,19 +208,20 @@ export default function CommissionsPage() {
         <div className="mb-6">
           <div className="flex justify-between items-center mb-4">
             <div>
-              <h1 className="text-3xl font-bold">Commissions</h1>
               <p className="text-gray-600 mt-1">
-                Manage and track all agent commissions
+                Manage and track commissions by agent, branch, and category
               </p>
             </div>
-            <Button
-              color="primary"
-              startContent={<RefreshCw className="w-4 h-4" />}
-              onPress={fetchCommissions}
-              isLoading={loading}
-            >
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="flat"
+                startContent={<RefreshCw className="w-4 h-4" />}
+                onPress={fetchCommissions}
+                isLoading={loading}
+              >
+                Refresh
+              </Button>
+            </div>
           </div>
 
           {/* Summary Cards */}
@@ -241,6 +296,7 @@ export default function CommissionsPage() {
                 <TableColumn>AMOUNT</TableColumn>
                 <TableColumn>STATUS</TableColumn>
                 <TableColumn>REMARKS</TableColumn>
+                <TableColumn align="center">ACTIONS</TableColumn>
               </TableHeader>
               <TableBody
                 emptyContent={
@@ -270,6 +326,18 @@ export default function CommissionsPage() {
                           <p className="text-xs text-gray-500">
                             {commission.agent.email}
                           </p>
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {commission.agent.branch?.name && (
+                              <Chip size="sm" variant="flat" color="default">
+                                Branch: {commission.agent.branch.name}
+                              </Chip>
+                            )}
+                            {(commission.agent.category?.label || commission.agent.category?.name) && (
+                              <Chip size="sm" variant="flat" color="primary">
+                                Category: {commission.agent.category?.label || commission.agent.category?.name}
+                              </Chip>
+                            )}
+                          </div>
                         </div>
                       )}
                     </TableCell>
@@ -309,6 +377,56 @@ export default function CommissionsPage() {
                         {commission.remarks || "-"}
                       </p>
                     </TableCell>
+                    <TableCell>
+                      <div className="flex justify-center">
+                        <Dropdown>
+                          <DropdownTrigger>
+                            <Button isIconOnly size="sm" variant="light">
+                              <MoreVertical className="w-4 h-4 text-gray-500" />
+                            </Button>
+                          </DropdownTrigger>
+                          <DropdownMenu aria-label="Action Menu">
+                            <DropdownItem
+                              key="edit"
+                              startContent={<Edit2 className="w-4 h-4" />}
+                              onPress={() => handleEdit(commission)}
+                            >
+                              Edit
+                            </DropdownItem>
+                            <DropdownItem
+                              key="status_pending"
+                              onPress={() => handleStatusChange(commission.id, "PENDING")}
+                              className={commission.status === "PENDING" ? "hidden" : ""}
+                            >
+                              Mark as Pending
+                            </DropdownItem>
+                            <DropdownItem
+                              key="status_approved"
+                              onPress={() => handleStatusChange(commission.id, "APPROVED")}
+                              className={commission.status === "APPROVED" ? "hidden" : ""}
+                            >
+                              Mark as Approved
+                            </DropdownItem>
+                            <DropdownItem
+                              key="status_paid"
+                              onPress={() => handleStatusChange(commission.id, "PAID")}
+                              className={commission.status === "PAID" ? "hidden" : ""}
+                            >
+                              Mark as Paid
+                            </DropdownItem>
+                            <DropdownItem
+                              key="delete"
+                              className="text-danger"
+                              color="danger"
+                              startContent={<Trash2 className="w-4 h-4" />}
+                              onPress={() => handleDeleteClick(commission.id)}
+                            >
+                              Delete
+                            </DropdownItem>
+                          </DropdownMenu>
+                        </Dropdown>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -316,6 +434,35 @@ export default function CommissionsPage() {
           </CardBody>
         </Card>
       </div>
+
+      {/* Commission Edit Modal */}
+      <CommissionModal
+        isOpen={isModalOpen}
+        onClose={onModalClose}
+        editData={selectedCommission ? {
+          id: selectedCommission.id,
+          amount: selectedCommission.amount,
+          currency: selectedCommission.currency,
+          status: selectedCommission.status,
+          remarks: selectedCommission.remarks,
+          lead: selectedCommission.lead
+        } : undefined}
+        onSuccess={fetchCommissions}
+      />
+
+      {/* Delete Confirmation Modal */}
+      <Modal isOpen={isDeleteOpen} onClose={onDeleteClose}>
+        <ModalContent>
+          <ModalHeader>Delete Commission</ModalHeader>
+          <ModalBody>
+            <p>Are you sure you want to delete this commission record? This action cannot be undone.</p>
+          </ModalBody>
+          <ModalFooter>
+            <Button variant="light" onPress={onDeleteClose}>Cancel</Button>
+            <Button color="danger" onPress={confirmDelete} isLoading={isDeleting}>Delete</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </PermissionGuard>
   );
 }

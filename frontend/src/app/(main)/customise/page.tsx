@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, Spinner, Input } from "@heroui/react";
-import { Plus } from "lucide-react";
+import { Button, Spinner, Input, Card, CardBody } from "@heroui/react";
+import { Plus, Mail, Tags } from "lucide-react";
 import CategoryCard from "@/components/settings/CategoryCard";
 import api from "@/lib/api";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 interface Option {
@@ -25,6 +26,7 @@ interface Category {
 export default function CustomisePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
   const [showAddCategory, setShowAddCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState("");
   const [newCategoryLabel, setNewCategoryLabel] = useState("");
@@ -92,8 +94,48 @@ export default function CustomisePage() {
           startContent={<Plus className="h-4 w-4" />}
           onPress={() => setShowAddCategory(!showAddCategory)}
         >
-          New Category
+          New Dropdown Category
         </Button>
+      </div>
+
+      {/* Settings Hub Section */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+        <Card 
+          isPressable 
+          className="border-none shadow-lg bg-gradient-to-br from-primary/10 to-blue-500/5 hover:from-primary/20 transition-all group"
+          onPress={() => router.push('/settings/email-templates')}
+        >
+          <CardBody className="p-6 flex flex-row items-center gap-4">
+            <div className="p-4 bg-primary rounded-2xl text-white shadow-lg shadow-primary/30 group-hover:scale-110 transition-transform">
+              <Mail size={32} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-800">Email Templates</h3>
+              <p className="text-gray-500 text-sm">Design and manage automated system communications.</p>
+            </div>
+          </CardBody>
+        </Card>
+
+        <Card 
+          isPressable 
+          className="border-none shadow-lg bg-gradient-to-br from-secondary/10 to-purple-500/5 hover:from-secondary/20 transition-all group"
+          onPress={() => router.push('/agents/categories')}
+        >
+          <CardBody className="p-6 flex flex-row items-center gap-4">
+            <div className="p-4 bg-secondary rounded-2xl text-white shadow-lg shadow-secondary/30 group-hover:scale-110 transition-transform">
+              <Tags size={32} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-gray-800">Agent Categories</h3>
+              <p className="text-gray-500 text-sm">Manage agent tiers and university commission access.</p>
+            </div>
+          </CardBody>
+        </Card>
+      </div>
+
+      <div className="mb-4">
+        <h2 className="text-xl font-bold text-gray-800">Dropdown Management</h2>
+        <p className="text-gray-500 text-sm">Configure dynamic options for leads, applications, and agents.</p>
       </div>
 
       {/* Add New Category Form */}

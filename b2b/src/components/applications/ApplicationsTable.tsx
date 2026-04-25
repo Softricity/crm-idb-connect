@@ -21,8 +21,20 @@ import {
   SelectItem,
 } from "@heroui/react";
 import { format } from "date-fns";
-import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Repeat } from "lucide-react";
 import { generateStudentPanelToken } from "@/utils/token";
+import { ForwardDepartmentModal } from "./ForwardDepartmentModal";
+
+type ChipColor = "primary" | "secondary" | "success" | "warning" | "danger" | "default";
+
+export interface DepartmentStatusConfig {
+  key: string;
+  label: string;
+  order_index: number;
+  is_default?: boolean;
+  is_terminal?: boolean;
+  is_active?: boolean;
+}
 
 export interface Lead {
   id: string;
@@ -33,14 +45,14 @@ export interface Lead {
   preferred_course?: string;
   preferred_country?: string;
   status: string;
+  current_department_id?: string;
   created_at: string;
   updated_at: string;
   created_by?: string;
+  can_forward_to_next_department?: boolean;
 }
 
-const statusColorMap: {
-  [key: string]: "primary" | "secondary" | "success" | "warning" | "danger" | "default";
-} = {
+const fallbackStatusColorMap: Record<string, ChipColor> = {
   new: "primary",
   interested: "secondary",
   inprocess: "warning",
@@ -50,6 +62,45 @@ const statusColorMap: {
   assigned: "success",
   cold: "default",
   rejected: "danger",
+};
+
+const normalizeStatusToken = (value?: string | null) =>
+  (value || "").toString().trim().toLowerCase();
+
+const getStatusColor = (
+  statusValue: string | null | undefined,
+  departmentStatuses: DepartmentStatusConfig[],
+): ChipColor => {
+  const token = normalizeStatusToken(statusValue);
+  if (!token) {
+    return "default";
+  }
+
+  const matchedStatus = departmentStatuses.find((status) => {
+    const keyToken = normalizeStatusToken(status.key);
+    const labelToken = normalizeStatusToken(status.label);
+    return token === keyToken || token === labelToken;
+  });
+
+  if (matchedStatus?.is_terminal) {
+    return "danger";
+  }
+
+  if (matchedStatus?.is_default) {
+    return "primary";
+  }
+
+  if (matchedStatus) {
+    if ((matchedStatus.order_index ?? 0) <= 1) {
+      return "secondary";
+    }
+    if ((matchedStatus.order_index ?? 0) <= 3) {
+      return "warning";
+    }
+    return "success";
+  }
+
+  return fallbackStatusColorMap[token] || "default";
 };
 
 interface ApplicationsTableProps {
@@ -64,6 +115,8 @@ interface ApplicationsTableProps {
   teamMembers?: { id: string; name: string }[];
   onAssignTeamMember?: (leadId: string, teamMemberId: string) => Promise<void> | void;
   hideTeamAssignment?: boolean;
+  departmentStatuses?: DepartmentStatusConfig[];
+  onForwarded?: () => void | Promise<void>;
 }
 
 export default function ApplicationsTable({
@@ -78,14 +131,23 @@ export default function ApplicationsTable({
   teamMembers = [],
   onAssignTeamMember,
   hideTeamAssignment = false,
+  departmentStatuses = [],
+  onForwarded,
 }: ApplicationsTableProps) {
   const [studentPanelOpen, setStudentPanelOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [assigningLeadId, setAssigningLeadId] = useState<string | null>(null);
+  const [forwardModalOpen, setForwardModalOpen] = useState(false);
+  const [forwardLead, setForwardLead] = useState<Lead | null>(null);
 
   const handleOpenStudentPanel = (lead: Lead) => {
     setSelectedLead(lead);
     setStudentPanelOpen(true);
+  };
+
+  const handleOpenForwardModal = (lead: Lead) => {
+    setForwardLead(lead);
+    setForwardModalOpen(true);
   };
 
   const studentPanelToken = () => {
@@ -120,6 +182,8 @@ export default function ApplicationsTable({
   ].concat(!hideTeamAssignment && teamMembers.length > 0 ? [{ key: "team", label: "TEAM ASSIGN", sortable: false }] : []);
 
   const renderCell = (lead: Lead, columnKey: React.Key) => {
+    const canForward = Boolean(lead.can_forward_to_next_department);
+
     switch (columnKey) {
       case "created_at":
         return (
@@ -150,7 +214,7 @@ export default function ApplicationsTable({
       case "status":
         return (
           <Chip
-            color={statusColorMap[lead.status?.toLowerCase()] || "default"}
+            color={getStatusColor(lead.status, departmentStatuses)}
             radius="sm"
             size="sm"
             variant="flat"
@@ -169,7 +233,21 @@ export default function ApplicationsTable({
 
       case "actions":
         return (
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-1">
+            {canForward && (
+              <Tooltip content="Forward To Next Department">
+                <Button
+                  isIconOnly
+                  size="sm"
+                  variant="light"
+                  color="primary"
+                  onPress={() => handleOpenForwardModal(lead)}
+                >
+                  <Repeat className="w-4 h-4" />
+                </Button>
+              </Tooltip>
+            )}
+
             <Tooltip content="Open Student Panel">
               <Button
                 isIconOnly
@@ -312,6 +390,13 @@ export default function ApplicationsTable({
           )}
         </ModalContent>
       </Modal>
+
+      <ForwardDepartmentModal
+        isOpen={forwardModalOpen}
+        onOpenChange={setForwardModalOpen}
+        lead={forwardLead}
+        onForwarded={onForwarded}
+      />
     </div>
   );
 }

@@ -32,20 +32,16 @@ export default function FollowUpsPage() {
   }
 
   useEffect(() => {
-    if (user?.id) {
-      // Fetch followups for current user and selected date
-      fetchAllFollowups({ userId: user.id, date: selectedDate });
-    }
-  }, [user?.id, selectedDate, fetchAllFollowups]);
+    // Fetch followups for current user's lead scope and selected date
+    fetchAllFollowups({ date: selectedDate });
+  }, [selectedDate, fetchAllFollowups]);
 
   const handleMarkComplete = async (followupId: string) => {
     try {
       await markComplete(followupId);
       toast.success("Follow-up marked as complete");
       // Refresh the list
-      if (user?.id) {
-        fetchAllFollowups({ userId: user.id, date: selectedDate });
-      }
+      fetchAllFollowups({ date: selectedDate });
     } catch (error) {
       toast.error("Failed to mark follow-up as complete");
       console.error(error);
@@ -101,7 +97,7 @@ export default function FollowUpsPage() {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">My Follow-ups</h1>
+          {/* Removed h1 title as it's in the universal header */}
           <p className="mt-2 text-gray-600">
             View and manage your scheduled follow-ups
           </p>

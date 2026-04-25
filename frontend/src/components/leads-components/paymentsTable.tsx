@@ -131,7 +131,11 @@ export default function PaymentsTable({ onEdit }: Props) {
                       <div className="flex flex-col justify-center items-center">
                         <StatusChip value={p.status} />
                         <div className="text-tiny text-default-500 mt-1">
-                         {p.created_at ? format(new Date(p.created_at), "dd-MM-yyyy") : ""}
+                          {p.status === "SCHEDULED" && p.due_date
+                            ? format(new Date(p.due_date), "dd-MM-yyyy")
+                            : p.created_at
+                            ? format(new Date(p.created_at), "dd-MM-yyyy")
+                            : ""}
                         </div>
                       </div>
                     </TableCell>

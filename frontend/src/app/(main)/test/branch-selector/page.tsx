@@ -16,7 +16,7 @@ export default function BranchSelectorDemo() {
 
   return (
     <div className="container mx-auto p-6 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">Branch Selector Component Demo</h1>
+      {/* Removed h1 title as it's in the universal header */}
 
       <div className="grid gap-6">
         {/* User Info Card */}

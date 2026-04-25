@@ -1,5 +1,5 @@
 // src/timeline/timeline.controller.ts
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
 import { TimelineService } from './timeline.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
@@ -14,12 +14,26 @@ export class TimelineController {
    * GET /leads/:leadId/timeline
    */
   @Get('leads/:leadId/timeline')
-  getTimelineForLead(@Param('leadId') leadId: string) {
-    return this.timelineService.getTimelineForLead(leadId);
+  getTimelineForLead(
+    @Param('leadId') leadId: string,
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    return this.timelineService.getTimelineForLead(
+      leadId,
+      parseInt(page, 10) || 1,
+      parseInt(limit, 10) || 20,
+    );
   }
 
   @Get('timeline')
-  getAllTimeline() {
-    return this.timelineService.getGlobalTimeline();
+  getAllTimeline(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    return this.timelineService.getGlobalTimeline(
+      parseInt(page, 10) || 1,
+      parseInt(limit, 10) || 20,
+    );
   }
 }

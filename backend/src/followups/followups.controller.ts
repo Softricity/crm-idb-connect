@@ -15,6 +15,7 @@ import { UpdateFollowupDto } from './dto/update-followup.dto';
 import { CreateFollowupCommentDto } from './dto/create-comment.dto';
 import { UpdateFollowupCommentDto } from './dto/update-comment.dto';
 import { GetUser } from '../auth/get-user.decorator';
+import { Role } from '../auth/roles.enum';
 
 // The global JwtAuthGuard protects all these routes
 
@@ -30,10 +31,11 @@ export class FollowupsController {
    */
   @Get('followups')
   findAll(
+    @GetUser() user: any,
     @Query('userId') userId?: string,
     @Query('date') date?: string,
   ) {
-    return this.followupsService.findAll(userId, date);
+    return this.followupsService.findAll(user, userId, date);
   }
 
   /**

@@ -33,12 +33,18 @@ interface ApplicationsDataTableProps {
     applications: Application[];
     selectedApplicationIds: string[];
     setSelectedApplicationIds: Dispatch<SetStateAction<string[]>>;
+    pagination: { total: number; page: number; limit: number; totalPages: number };
+    onPageChange: (page: number) => void;
 }
+
+import { Pagination } from "@heroui/react";
 
 export default function ApplicationsDataTable({
     applications,
     selectedApplicationIds,
     setSelectedApplicationIds,
+    pagination,
+    onPageChange,
 }: ApplicationsDataTableProps) {
 
     const { loading } = useApplicationStore();
@@ -51,6 +57,10 @@ export default function ApplicationsDataTable({
         citizenship: "",
     });
     const [showFilters, setShowFilters] = useState(false);
+    const safePagination = pagination || { total: applications.length, page: 1, limit: 10, totalPages: 1 };
+    const hasActiveFilters = Boolean(
+        filters.search || filters.application_stage || filters.preferred_country || filters.gender || filters.citizenship
+    );
 
     const handleColumnsChange = (updatedColumns: ColumnConfig[]) => {
         setColumns(updatedColumns);
@@ -219,7 +229,7 @@ export default function ApplicationsDataTable({
                             </Button>
                         )}
                         <span className="text-sm text-default-500">
-                            {filteredApplications.length} of {applications.length} applications
+                            {filteredApplications.length} of {hasActiveFilters ? applications.length : safePagination.total} applications
                         </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -335,6 +345,20 @@ export default function ApplicationsDataTable({
 
             <div className="mt-4">
                 {renderContent()}
+                
+                {!hasActiveFilters && safePagination.totalPages > 1 && (
+                    <div className="flex w-full justify-center mt-6">
+                        <Pagination
+                            isCompact
+                            showControls
+                            showShadow
+                            color="primary"
+                            page={safePagination.page}
+                            total={safePagination.totalPages}
+                            onChange={onPageChange}
+                        />
+                    </div>
+                )}
             </div>
         </div>
     );

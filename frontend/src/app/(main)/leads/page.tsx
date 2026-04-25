@@ -4,23 +4,24 @@ import { PermissionGuard } from "@/components/PermissionGuard";
 import { LeadPermission } from "@/lib/utils";
 import { useLeadStore } from "@/stores/useLeadStore";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useBranchStore } from "@/stores/useBranchStore";
 
 export default function Page() {
-    const { leads, fetchLeadsBasedOnPermission } = useLeadStore();
+    const { leads, pagination, fetchLeadsBasedOnPermission } = useLeadStore();
     const { user } = useAuthStore();
     const { selectedBranch } = useBranchStore();
+    const [page, setPage] = useState(1);
     
     useEffect(() => {
         if (user?.id && user?.permissions) {
-            fetchLeadsBasedOnPermission(user.id, user.permissions, selectedBranch?.id);
+            fetchLeadsBasedOnPermission(user.id, user.permissions, selectedBranch?.id, user?.role, page);
         }
-    }, [fetchLeadsBasedOnPermission, user?.id, user?.permissions, selectedBranch?.id]);
+    }, [fetchLeadsBasedOnPermission, user?.id, user?.permissions, user?.role, selectedBranch?.id, page]);
     
     return (
         <PermissionGuard requiredPermissions={[LeadPermission.LEAD_MANAGE, LeadPermission.LEAD_UPDATE]}>
-            <TabsWrapper leads={leads} />
+            <TabsWrapper leads={leads} pagination={pagination} onPageChange={setPage} />
         </PermissionGuard>
     )
 }

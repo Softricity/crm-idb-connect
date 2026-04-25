@@ -21,6 +21,7 @@ import {
   MessageSquare,
   History,
   DollarSign,
+  ArrowRightLeft,
 } from "lucide-react";
 
 // 1. Color scheme for different event types
@@ -34,9 +35,11 @@ export const eventColors: { [key: string]: { bg: string; icon: string } } = {
   [TimelineEvent.LEAD_NAME_CHANGED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   [TimelineEvent.LEAD_EMAIL_CHANGED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   [TimelineEvent.LEAD_PHONE_CHANGED]: { bg: "bg-blue-50", icon: "text-blue-600" },
+  [TimelineEvent.LEAD_PURPOSE_CHANGED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   [TimelineEvent.LEAD_NOTE_UPDATED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   [TimelineEvent.LEAD_FOLLOWUP_UPDATED]: { bg: "bg-blue-50", icon: "text-blue-600" },
   [TimelineEvent.LEAD_STATUS_CHANGED]: { bg: "bg-indigo-50", icon: "text-indigo-600" },
+  [TimelineEvent.LEAD_DEPARTMENT_CHANGED]: { bg: "bg-violet-50", icon: "text-violet-600" },
   [TimelineEvent.LEAD_FOLLOWUP_DATE_EXTENDED]: { bg: "bg-cyan-50", icon: "text-cyan-600" },
   // Completion -> Purple
   [TimelineEvent.LEAD_FOLLOWUP_COMPLETED]: { bg: "bg-purple-50", icon: "text-purple-600" },
@@ -63,6 +66,7 @@ export const eventIcons: { [key in TimelineEvent]?: React.ElementType } = {
   [TimelineEvent.LEAD_PURPOSE_CHANGED]: Briefcase,
   [TimelineEvent.LEAD_OWNER_CHANGED]: UserCheck,
   [TimelineEvent.LEAD_STATUS_CHANGED]: Flag,
+  [TimelineEvent.LEAD_DEPARTMENT_CHANGED]: ArrowRightLeft,
   [TimelineEvent.LEAD_NOTE_ADDED]: FileText,
   [TimelineEvent.LEAD_NOTE_DELETED]: Trash2,
   [TimelineEvent.LEAD_NOTE_UPDATED]: Edit3,
@@ -76,6 +80,72 @@ export const eventIcons: { [key in TimelineEvent]?: React.ElementType } = {
   [TimelineEvent.OFFLINE_PAYMENT_ADDED]: DollarSign,
   [TimelineEvent.OFFLINE_PAYMENT_UPDATED]: DollarSign,
   [TimelineEvent.OFFLINE_PAYMENT_DELETED]: Trash2,
+};
+
+const LEAD_DETAILS_FIELD_LABELS: Record<string, string> = {
+  country: "Country",
+  preferred_country: "Country",
+  course: "Course",
+  preferred_course: "Course",
+  exam: "Exam",
+  exam_taken: "Exam",
+  score: "Score",
+  exam_score: "Score",
+  source: "Source",
+  utm_source: "Source",
+  medium: "Medium",
+  utm_medium: "Medium",
+  campaign: "Campaign",
+  utm_campaign: "Campaign",
+  type: "Type",
+};
+
+const formatLeadDetailsField = (field: string) => {
+  const normalized = field.trim().toLowerCase();
+  if (LEAD_DETAILS_FIELD_LABELS[normalized]) {
+    return LEAD_DETAILS_FIELD_LABELS[normalized];
+  }
+
+  return normalized
+    .replace(/[_-]+/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+};
+
+const parseLeadDetailsState = (state?: string | null): Record<string, string> => {
+  if (!state) {
+    return {};
+  }
+
+  return state
+    .split("|")
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .reduce((acc, part) => {
+      const separatorIndex = part.indexOf(":");
+      if (separatorIndex === -1) {
+        return acc;
+      }
+
+      const key = part.slice(0, separatorIndex).trim().toLowerCase();
+      const value = part.slice(separatorIndex + 1).trim() || "-";
+      acc[key] = value;
+      return acc;
+    }, {} as Record<string, string>);
+};
+
+export const buildLeadDetailsDiffList = (oldState?: string | null, newState?: string | null) => {
+  const oldMap = parseLeadDetailsState(oldState);
+  const newMap = parseLeadDetailsState(newState);
+
+  const keys = Array.from(new Set([...Object.keys(oldMap), ...Object.keys(newMap)]));
+
+  return keys
+    .filter((key) => (oldMap[key] ?? "-") !== (newMap[key] ?? "-"))
+    .map((key) => ({
+      field: formatLeadDetailsField(key),
+      oldValue: oldMap[key] ?? "-",
+      newValue: newMap[key] ?? "-",
+    }));
 };
 
 // 3. Function to render the human-readable action string
@@ -96,8 +166,35 @@ export const renderEventAction = (event: Timeline, leadName: string) => {
       return <>changed <Field>Lead Phone</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
     case TimelineEvent.LEAD_EMAIL_CHANGED:
       return <>changed <Field>Lead Email</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
+    case TimelineEvent.LEAD_PURPOSE_CHANGED: {
+      const detailChanges = buildLeadDetailsDiffList(old_state, new_state);
+
+      if (detailChanges.length === 1) {
+        const change = detailChanges[0];
+        return <>updated <Field>{change.field}</Field> from <OldValue>{change.oldValue}</OldValue> to <NewValue>{change.newValue}</NewValue>.</>;
+      }
+
+      if (detailChanges.length > 1) {
+        return (
+          <>
+            updated <Field>Lead Details</Field>:
+            {detailChanges.map((change, index) => (
+              <span key={`${change.field}-${index}`}>
+                {index > 0 ? "; " : " "}
+                <Field>{change.field}</Field> from <OldValue>{change.oldValue}</OldValue> to <NewValue>{change.newValue}</NewValue>
+              </span>
+            ))}
+            .
+          </>
+        );
+      }
+
+      return <>updated <Field>Lead Details</Field> from <OldValue>{old_state || "-"}</OldValue> to <NewValue>{new_state || "-"}</NewValue>.</>;
+    }
     case TimelineEvent.LEAD_STATUS_CHANGED:
       return <>changed <Field>Status</Field> from <OldValue>{old_state}</OldValue> to <NewValue>{new_state}</NewValue>.</>;
+    case TimelineEvent.LEAD_DEPARTMENT_CHANGED:
+      return <>moved the lead from <OldValue>{old_state || "-"}</OldValue> to <NewValue>{new_state || "-"}</NewValue>.</>;
     case TimelineEvent.LEAD_OWNER_CHANGED:
       return <>reassigned the lead.</>;
     case TimelineEvent.LEAD_NOTE_ADDED:
@@ -176,14 +273,14 @@ export const TimelineItem = ({ event, isLast, leadName }: { event: Timeline; isL
 };
 
 // 5. Main exported component
-export default function TimeLineTab({ leadId, leadName }: { leadId: string; leadName: string }) {
+export default function TimeLineTab({ leadId, leadName, refreshKey = 0 }: { leadId: string; leadName: string; refreshKey?: number }) {
   const { timeline, loading, fetchTimelineByLeadId } = useTimelineStore();
 
   useEffect(() => {
     if (leadId) {
       fetchTimelineByLeadId(leadId);
     }
-  }, [leadId, fetchTimelineByLeadId]);
+  }, [leadId, refreshKey, fetchTimelineByLeadId]);
 
   if (loading) {
     return (

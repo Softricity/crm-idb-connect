@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react"; // Added useEffect, useRef
-import { Lock, LogOut, Plus, Settings, University } from "lucide-react";
+import { Lock, LogOut, Mail, Plus, Settings, University } from "lucide-react";
 import SidebarMenus from "./sidebar-menus";
 import { menus } from "@/config/menus";
 import { NavUser } from "@/components/nav-user";
@@ -122,6 +122,12 @@ export default function Sidebar() {
           <Link href="/roles-permissions" className="flex items-center gap-4 px-3 text-sm py-3 hover:bg-gray-200 rounded-xl text-black transition-colors">
             <Lock size={20} />
             <span>Roles & Permission</span>
+          </Link>
+        )}
+        {hasPermission(user?.permissions ?? [], PermissionPermission.ROLES_CREATE) && (
+          <Link href="/settings/integrations" className="flex items-center gap-4 px-3 text-sm py-3 hover:bg-gray-200 rounded-xl text-black transition-colors">
+            <Mail size={20} />
+            <span>Integrations</span>
           </Link>
         )}
       </div>

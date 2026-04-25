@@ -55,16 +55,42 @@ export class CommissionsService {
       const university = course?.university;
 
       if (university && university.commission_value) {
-        if (university.commission_type === 'FIXED') {
+        let commissionPercent = Number(university.commission_value);
+        let commissionType = university.commission_type;
+
+        // NEW: Check for Category-based commission if agent exists
+        if (agentId) {
+          const agent = await this.prisma.agent.findUnique({
+            where: { id: agentId },
+            select: { category_id: true },
+          });
+
+          if (agent?.category_id) {
+            const categoryAccess = await this.prisma.categoryUniversityAccess.findUnique({
+              where: {
+                category_id_university_id: {
+                  category_id: agent.category_id,
+                  university_id: university.id,
+                },
+              },
+            });
+
+            if (categoryAccess && categoryAccess.is_active) {
+              commissionPercent = Number(categoryAccess.commission_percent);
+              commissionType = 'PERCENTAGE'; // Category commissions are always percentage-based in this requirement
+            }
+          }
+        }
+
+        if (commissionType === 'FIXED') {
           // Flat Fee
-          amount = Number(university.commission_value);
+          amount = Number(commissionPercent);
           currency = university.currency || 'INR';
         } 
-        else if (university.commission_type === 'PERCENTAGE') {
+        else {
           // Percentage of Tuition Fee
-          // Note: Using 'fee' based on your Course model schema
           const tuitionFee = course?.fee || 0; 
-          amount = (Number(tuitionFee) * Number(university.commission_value)) / 100;
+          amount = (Number(tuitionFee) * Number(commissionPercent)) / 100;
         }
       }
     }
@@ -81,8 +107,18 @@ export class CommissionsService {
         remarks: createDto.remarks
       },
       include: {
-        agent: { select: { name: true, agency_name: true } },
-        lead: { select: { name: true } }
+        agent: {
+          select: {
+            id: true,
+            name: true,
+            agency_name: true,
+            email: true,
+            branch: { select: { id: true, name: true } },
+            category: { select: { id: true, name: true, label: true } },
+          },
+        },
+        lead: { select: { id: true, name: true, email: true } },
+        application: { select: { id: true, student_id: true } },
       }
     });
   }
@@ -91,9 +127,18 @@ export class CommissionsService {
   async findAll() {
     return this.prisma.commission.findMany({
       include: {
-        agent: { select: { name: true, agency_name: true } },
-        lead: { select: { name: true } },
-        application: { select: { student_id: true } }
+        agent: {
+          select: {
+            id: true,
+            name: true,
+            agency_name: true,
+            email: true,
+            branch: { select: { id: true, name: true } },
+            category: { select: { id: true, name: true, label: true } },
+          },
+        },
+        lead: { select: { id: true, name: true, email: true } },
+        application: { select: { id: true, student_id: true } },
       },
       orderBy: { created_at: 'desc' }
     });
@@ -103,8 +148,15 @@ export class CommissionsService {
     return this.prisma.commission.findMany({
       where: { agent_id: agentId },
       include: {
-        lead: { select: { name: true } },
-        application: { select: { student_id: true, application_stage: true } }
+        lead: { select: { id: true, name: true, email: true } },
+        application: { select: { id: true, student_id: true, application_stage: true } },
+        agent: {
+          select: {
+            id: true,
+            branch: { select: { id: true, name: true } },
+            category: { select: { id: true, name: true, label: true } },
+          },
+        },
       },
       orderBy: { created_at: 'desc' }
     });

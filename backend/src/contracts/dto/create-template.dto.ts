@@ -1,8 +1,9 @@
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsOptional, IsString, IsUUID } from 'class-validator';
 
 export class CreateTemplateDto {
+  @IsOptional()
   @IsUUID()
-  agent_id: string;
+  agent_id?: string;
 
   @IsString()
   @IsNotEmpty()

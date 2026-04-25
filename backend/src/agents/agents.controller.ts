@@ -6,34 +6,108 @@ import {
   Param,
   Patch,
   Post,
+  Req,
   Put,
   Query,
+  UploadedFile,
   UseGuards,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+
 import { AgentsService } from './agents.service';
 import { CreateAgentDto } from './dto/create-agent.dto';
+import { UpdateAgentDto } from './dto/update-agent.dto';
 import { Public } from '../auth/public.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/roles.enum';
 import { RolesGuard } from '../auth/roles.guard';
 import { GetUser } from '../auth/get-user.decorator';
+import { 
+  CreateCategoryDto, 
+  UpdateCategoryDto, 
+  SetCategoryAccessDto, 
+  AssignAgentCategoryDto 
+} from './dto/category.dto';
 
 @Controller('agents')
 export class AgentsController {
   constructor(private readonly agentsService: AgentsService) {}
 
-  @Public()
-  @Post('onboard')
-  async onboard(@Body() createAgentDto: CreateAgentDto) {
-    return this.agentsService.onboard(createAgentDto);
+  // --- Categories ---
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Get('categories')
+  async findAllCategories() {
+    return this.agentsService.findAllCategories();
   }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Get('categories/:id')
+  async findOneCategory(@Param('id') id: string) {
+    return this.agentsService.findOneCategory(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Post('categories')
+  async createCategory(@Body() dto: CreateCategoryDto) {
+    return this.agentsService.createCategory(dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Patch('categories/:id')
+  async updateCategory(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
+    return this.agentsService.updateCategory(id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Delete('categories/:id')
+  async removeCategory(@Param('id') id: string) {
+    return this.agentsService.removeCategory(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Get('categories/:id/universities')
+  async getCategoryAccess(@Param('id') id: string) {
+    return this.agentsService.getCategoryAccess(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Put('categories/:id/universities')
+  async setCategoryAccess(@Param('id') id: string, @Body() dto: SetCategoryAccessDto) {
+    return this.agentsService.setCategoryAccess(id, dto);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Patch(':id/category')
+  async assignCategory(@Param('id') id: string, @Body() dto: AssignAgentCategoryDto) {
+    return this.agentsService.assignCategory(id, dto.category_id);
+  }
+
+  // --- Inquiries ---
 
   @Public()
   @Post('inquiry')
   async createInquiry(@Body() body: any) {
     return this.agentsService.createInquiry(body);
   }
+
+  @Public()
+  @Post('inquiry/upload')
+  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } })) // 10MB limit
+  async uploadInquiryFile(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
+    return this.agentsService.uploadInquiryDocument(file, req);
+  }
+
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Admin, Role.SuperAdmin)
@@ -45,8 +119,19 @@ export class AgentsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Admin, Role.SuperAdmin)
   @Patch('inquiries/:id/status')
-  async updateInquiryStatus(@Param('id') id: string, @Body('status') status: any) {
-    return this.agentsService.updateInquiryStatus(id, status);
+  async updateInquiryStatus(
+    @Param('id') id: string,
+    @Body() body: { status: any; branch_id?: string; category_id?: string },
+  ) {
+    return this.agentsService.updateInquiryStatus(id, body.status, body.branch_id, body.category_id);
+  }
+
+  // --- Agents ---
+
+  @Public()
+  @Post('onboard')
+  async onboard(@Body() createAgentDto: CreateAgentDto) {
+    return this.agentsService.onboard(createAgentDto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
@@ -55,6 +140,7 @@ export class AgentsController {
   async findAll(@Query('status') status?: any) {
     return this.agentsService.findAll(status);
   }
+
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.Agent)
@@ -100,6 +186,13 @@ export class AgentsController {
   @Get(':id')
   async findOne(@Param('id') id: string) {
     return this.agentsService.findOne(id);
+  }
+
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() dto: UpdateAgentDto) {
+    return this.agentsService.updateAgent(id, dto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

@@ -48,8 +48,22 @@ export class LeadsController {
     @Query('branch_id') branchId?: string,
     @Query('email') email?: string,
     @Query('source') source?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.leadsService.findAll(user, assignedTo, createdBy, type, branchId, email, source);
+    const parsedPage = Number.parseInt(page || '1', 10);
+    const parsedLimit = Number.parseInt(limit || '10', 10);
+    return this.leadsService.findAll(
+      user,
+      assignedTo,
+      createdBy,
+      type,
+      branchId,
+      email,
+      source,
+      Number.isFinite(parsedPage) ? parsedPage : 1,
+      Number.isFinite(parsedLimit) ? parsedLimit : 10,
+    );
   }
   
   @Get(':id')
@@ -58,8 +72,12 @@ export class LeadsController {
   }
   
   @Patch(':id')
-  update(@Param('id') id: string, @Body() updateLeadDto: Partial<CreateLeadDto>) {
-    return this.leadsService.update(id, updateLeadDto);
+  update(
+    @Param('id') id: string,
+    @Body() updateLeadDto: Partial<CreateLeadDto>,
+    @GetUser() user: any,
+  ) {
+    return this.leadsService.update(id, updateLeadDto, user);
   }
   
   @Post('bulk/assign')

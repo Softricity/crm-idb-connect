@@ -34,18 +34,20 @@ export default function CreateUpdatePayments({
   initial,
   receivers = [],
   leadId,
+  mode = "record",
 }: {
   open: boolean;
   onClose: () => void;
   initial?: OfflinePayment | null;
   receivers?: Receiver[];
   leadId: string;
+  mode?: "record" | "schedule";
 }) {
   const { addPayment, updatePayment, uploadPaymentFile, saving } =
     useOfflinePaymentStore() as any;
 
   const [payment, setPayment] = useState<
-    OfflinePayment & { date: Date; localFile?: File | null; uploading?: boolean }
+    OfflinePayment & { date: Date; due_date_val: Date | null; localFile?: File | null; uploading?: boolean }
   >({
     currency: "INR",
     payment_mode: "Cash",
@@ -54,6 +56,8 @@ export default function CreateUpdatePayments({
     receiver: "",
     reference_id: "",
     date: new Date(),
+    due_date_val: null,
+    status: mode === "schedule" ? "SCHEDULED" : "RECEIVED",
     file: "",
     localFile: null,
     lead_id: leadId,
@@ -88,6 +92,7 @@ export default function CreateUpdatePayments({
         ...prev,
         ...initial,
         date: initial.created_at ? new Date(initial.created_at) : new Date(),
+        due_date_val: initial.due_date ? new Date(initial.due_date) : null,
         localFile: null,
       }));
     } else {
@@ -99,17 +104,21 @@ export default function CreateUpdatePayments({
         receiver: "",
         reference_id: "",
         date: new Date(),
+        due_date_val: null,
+        status: mode === "schedule" ? "SCHEDULED" : "RECEIVED",
         file: "",
         localFile: null,
         lead_id: leadId,
       });
     }
-  }, [open, initial, leadId]);
+  }, [open, initial, leadId, mode]);
 
   const canSave = useMemo(() => {
-    const { amount, payment_type, receiver, date } = payment;
-    return Number(amount) > 0 && payment_type && receiver && date;
-  }, [payment]);
+    const { amount, payment_type, receiver, date, due_date_val } = payment;
+    const baseValid = Number(amount) > 0 && payment_type && receiver;
+    if (mode === "schedule") return baseValid && due_date_val;
+    return baseValid && date;
+  }, [payment, mode]);
 
   const handleSave = async () => {
     if (!canSave) return;
@@ -128,15 +137,17 @@ export default function CreateUpdatePayments({
       amount: Number(payment.amount),
       payment_mode: payment.payment_mode,
       payment_type: payment.payment_type,
-      reference_id: payment.reference_id,
+      reference_id: mode === "schedule" ? "" : payment.reference_id,
       receiver: payment.receiver,
-      file: uploadedUrl,
+      file: mode === "schedule" ? "" : uploadedUrl,
       created_at: payment.date?.toISOString(),
+      due_date: mode === "schedule" ? payment.due_date_val?.toISOString() : undefined,
+      status: mode === "schedule" ? "SCHEDULED" : "RECEIVED",
       lead_id: leadId,
     };
 
     if (initial?.id) await updatePayment(initial.id, payload);
-    else await addPayment(payload);
+    else await addPayment(payload as any);
 
     onClose();
   };
@@ -167,7 +178,7 @@ export default function CreateUpdatePayments({
     <Drawer isOpen={open} onOpenChange={onClose} placement="right" size="xl">
       <DrawerContent className="h-full">
         <DrawerHeader className="border-b border-default-200">
-          Record Payment
+          {mode === "schedule" ? "Schedule Payment" : "Record Payment"}
         </DrawerHeader>
 
         <DrawerBody className="gap-6">
@@ -225,22 +236,33 @@ export default function CreateUpdatePayments({
               ))}
             </Select>
 
-            <Input
-              label="Payment Reference ID"
-              placeholder="UTR/Txn ID"
-              value={payment.reference_id || ""}
-              onValueChange={(v) =>
-                updatePaymentField("reference_id", v as string)
-              }
-              startContent={<Barcode className="h-4 w-4" />}
-            />
+            {mode === "record" && (
+              <Input
+                label="Payment Reference ID"
+                placeholder="UTR/Txn ID"
+                value={payment.reference_id || ""}
+                onValueChange={(v) =>
+                  updatePaymentField("reference_id", v as string)
+                }
+                startContent={<Barcode className="h-4 w-4" />}
+              />
+            )}
 
-            <DatePicker
-              label="Date"
-              value={toDateValue(payment.date)}
-              onChange={(dv) => updatePaymentField("date", toJSDate(dv)!)}
-              startContent={<Calendar className="h-4 w-4" />}
-            />
+            {mode === "record" ? (
+              <DatePicker
+                label="Date"
+                value={toDateValue(payment.date)}
+                onChange={(dv) => updatePaymentField("date", toJSDate(dv)!)}
+                startContent={<Calendar className="h-4 w-4" />}
+              />
+            ) : (
+              <DatePicker
+                label="Scheduled Due Date"
+                value={toDateValue(payment.due_date_val)}
+                onChange={(dv) => updatePaymentField("due_date_val", toJSDate(dv))}
+                startContent={<Calendar className="h-4 w-4" />}
+              />
+            )}
           </div>
 
           {/* <div

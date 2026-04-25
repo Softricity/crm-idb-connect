@@ -40,7 +40,7 @@ async function handleResponse(res: Response) {
   let data: any = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
   if (!res.ok) {
-    const err: any = new Error(data?.error || res.statusText || 'API Error');
+    const err: any = new Error(data?.message || data?.error || res.statusText || 'API Error');
     err.status = res.status;
     err.statusCode = res.status;
     err.body = data;
@@ -233,6 +233,42 @@ export const LeadsAPI = {
   },
 };
 
+export const PartnersAPI = {
+  fetchPartners: async (branchId?: string, role?: string, token?: string) => {
+    const params = new URLSearchParams();
+    if (branchId) params.append('branch_id', branchId);
+    if (role) params.append('role', role);
+    const url = params.toString() ? `${API_BASE}/partners?${params.toString()}` : `${API_BASE}/partners`;
+    const res = await fetch(url, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+};
+
+export const DepartmentsAPI = {
+  fetchDepartments: async (includeInactive = false, token?: string) => {
+    const params = new URLSearchParams();
+    if (includeInactive) params.append('includeInactive', 'true');
+
+    const url = params.toString()
+      ? `${API_BASE}/departments?${params.toString()}`
+      : `${API_BASE}/departments`;
+
+    const res = await fetch(url, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+  fetchDepartmentStatuses: async (departmentId: string, includeInactive = false, token?: string) => {
+    const params = new URLSearchParams();
+    if (includeInactive) params.append('includeInactive', 'true');
+
+    const url = params.toString()
+      ? `${API_BASE}/departments/${departmentId}/statuses?${params.toString()}`
+      : `${API_BASE}/departments/${departmentId}/statuses`;
+
+    const res = await fetch(url, { headers: getHeaders(true, token) });
+    return handleResponse(res);
+  },
+};
+
 // --- Agents ---
 export const AgentsAPI = {
   onboard: async (data: any) => {
@@ -305,6 +341,15 @@ export const AgentsAPI = {
       method: 'POST',
       headers: getHeaders(false),
       body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  uploadInquiryDocument: async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await fetch(`${API_BASE}/agents/inquiry/upload`, {
+      method: 'POST',
+      body: formData,
     });
     return handleResponse(res);
   },

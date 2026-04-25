@@ -13,7 +13,7 @@ export class TimelineService {
   private async log(
     leadId: string,
     eventType: timeline_event,
-    userId: string,
+    userId: string | null,
     newState?: any,
     oldState?: any,
   ) {
@@ -35,25 +35,42 @@ export class TimelineService {
   /**
    * Fetches the complete timeline for a specific lead.
    */
-  async getTimelineForLead(leadId: string) {
-    const events = await this.prisma.timeline.findMany({
-      where: { lead_id: leadId },
-      include: {
-        partners: { 
-          select: { name: true },
-        },
-      },
-      orderBy: {
-        created_at: 'desc',
-      },
-    });
+  async getTimelineForLead(leadId: string, page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
 
-    // ✅ FIX: Map 'partners' (DB name) to 'partner' (Frontend name)
-    return events.map(event => ({
+    const [total, events] = await Promise.all([
+      this.prisma.timeline.count({ where: { lead_id: leadId } }),
+      this.prisma.timeline.findMany({
+        where: { lead_id: leadId },
+        include: {
+          partners: { 
+            select: { name: true },
+          },
+        },
+        orderBy: {
+          created_at: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+    ]);
+
+    const data = events.map(event => ({
         ...event,
         partner: event.partners
     }));
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
+
 
   // --- Specific Event Logging Methods ---
 
@@ -66,7 +83,7 @@ export class TimelineService {
     );
   }
 
-  async logNoteAdded(note: any, userId: string) {
+  async logNoteAdded(note: any, userId: string | null) {
     await this.log(
       note.lead_id, 
       'LEAD_NOTE_ADDED',
@@ -75,7 +92,7 @@ export class TimelineService {
     );
   }
   
-  async logFollowupAdded(followup: any, userId: string) {
+  async logFollowupAdded(followup: any, userId: string | null) {
       await this.log(
           followup.lead_id,
           'LEAD_FOLLOWUP_ADDED',
@@ -84,7 +101,7 @@ export class TimelineService {
       );
   }
   
-  async logFollowupCompleted(followup: any, userId: string) {
+  async logFollowupCompleted(followup: any, userId: string | null) {
       await this.log(
           followup.lead_id,
           'LEAD_FOLLOWUP_COMPLETED',
@@ -93,7 +110,7 @@ export class TimelineService {
       );
   }
   
-  async logCommentAdded(leadId: string, commentText: string, userId: string) {
+  async logCommentAdded(leadId: string, commentText: string, userId: string | null) {
       await this.log(
           leadId,
           'LEAD_FOLLOWUP_COMMENT_ADDED',
@@ -102,7 +119,7 @@ export class TimelineService {
       );
   }
 
-  async logStatusChange(leadId: string, userId: string, oldStatus: string, newStatus: string) {
+  async logStatusChange(leadId: string, userId: string | null, oldStatus: string, newStatus: string) {
     await this.log(
       leadId,
       'LEAD_STATUS_CHANGED',
@@ -112,7 +129,57 @@ export class TimelineService {
     );
   }
 
-  async logAssignmentChange(leadId: string, userId: string, newOwnerName: string) {
+  async logDepartmentChange(leadId: string, userId: string | null, oldDepartment: string, newDepartment: string) {
+    await this.log(
+      leadId,
+      'LEAD_DEPARTMENT_CHANGED',
+      userId,
+      newDepartment,
+      oldDepartment,
+    );
+  }
+
+  async logNameChange(leadId: string, userId: string | null, oldName: string, newName: string) {
+    await this.log(
+      leadId,
+      'LEAD_NAME_CHANGED',
+      userId,
+      newName,
+      oldName,
+    );
+  }
+
+  async logPhoneChange(leadId: string, userId: string | null, oldPhone: string, newPhone: string) {
+    await this.log(
+      leadId,
+      'LEAD_PHONE_CHANGED',
+      userId,
+      newPhone,
+      oldPhone,
+    );
+  }
+
+  async logEmailChange(leadId: string, userId: string | null, oldEmail: string, newEmail: string) {
+    await this.log(
+      leadId,
+      'LEAD_EMAIL_CHANGED',
+      userId,
+      newEmail,
+      oldEmail,
+    );
+  }
+
+  async logPurposeChange(leadId: string, userId: string | null, oldValue: string, newValue: string) {
+    await this.log(
+      leadId,
+      'LEAD_PURPOSE_CHANGED',
+      userId,
+      newValue,
+      oldValue,
+    );
+  }
+
+  async logAssignmentChange(leadId: string, userId: string | null, newOwnerName: string) {
     await this.log(
       leadId,
       'LEAD_OWNER_CHANGED',
@@ -124,26 +191,42 @@ export class TimelineService {
   /**
    * Fetches the most recent global timeline events.
    */
-  async getGlobalTimeline(limit: number = 100) {
-    const events = await this.prisma.timeline.findMany({
-      take: limit,
-      orderBy: {
-        created_at: 'desc',
-      },
-      include: {
-        partners: {
-          select: { name: true },
-        },
-        leads: {
-            select: { name: true } 
-        }
-      },
-    });
+  async getGlobalTimeline(page = 1, limit = 20) {
+    const skip = (page - 1) * limit;
 
-    // ✅ FIX: Map 'partners' -> 'partner' here as well
-    return events.map(event => ({
+    const [total, events] = await Promise.all([
+      this.prisma.timeline.count(),
+      this.prisma.timeline.findMany({
+        skip,
+        take: limit,
+        orderBy: {
+          created_at: 'desc',
+        },
+        include: {
+          partners: {
+            select: { name: true },
+          },
+          leads: {
+              select: { name: true } 
+          }
+        },
+      }),
+    ]);
+
+    const data = events.map(event => ({
         ...event,
         partner: event.partners
     }));
+
+    return {
+      data,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   }
+
 }

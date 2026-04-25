@@ -20,7 +20,10 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:precheck": "node scripts/pre_migration_validate.js",
-    "db:reconcile:contracts": "node scripts/reconcile_contract_approved.js"
+    "db:reconcile:contracts": "node scripts/reconcile_contract_approved.js",
+    "db:reset:departments:current-flow": "ts-node scripts/reset_departments_to_current_flow.ts",
+    "db:assign:staff-departments": "ts-node scripts/assign_staff_departments_from_sheet.ts",
+    "db:enforce:departments-staff-sheet": "ts-node scripts/enforce_departments_and_staff_from_sheet.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.9",

@@ -13,7 +13,7 @@ export interface Announcement {
   created_at?: string;
   created_by?: string;
   announcement_reads?: {
-    user_id: string;
+    partner_id: string;
     read_at: string;
   }[];
 }
@@ -28,6 +28,7 @@ interface AnnouncementState {
   updateAnnouncement: (id: string, updates: Partial<Announcement>) => Promise<void>;
   deleteAnnouncement: (id: string) => Promise<void>;
   markAsRead: (id: string) => Promise<void>;
+  markAllAsRead: () => Promise<void>;
   fetchUnreadCount: () => Promise<void>;
   reset: () => void;
 }
@@ -105,7 +106,7 @@ export const useAnnouncementStore = create<AnnouncementState>((set) => ({
                 ...announcement,
                 announcement_reads: [
                   ...(announcement.announcement_reads || []),
-                  { user_id: "", read_at: new Date().toISOString() },
+                  { partner_id: "", read_at: new Date().toISOString() },
                 ],
               }
             : announcement
@@ -115,6 +116,18 @@ export const useAnnouncementStore = create<AnnouncementState>((set) => ({
       await useAnnouncementStore.getState().fetchUnreadCount();
     } catch (error) {
       console.error("Error marking announcement as read:", error);
+      throw error;
+    }
+  },
+  
+  markAllAsRead: async () => {
+    try {
+      await api.AnnouncementsAPI.markAllAsRead();
+      // Re-fetch to sync everything
+      await useAnnouncementStore.getState().fetchAnnouncements();
+      await useAnnouncementStore.getState().fetchUnreadCount();
+    } catch (error) {
+      console.error("Error marking all as read:", error);
       throw error;
     }
   },

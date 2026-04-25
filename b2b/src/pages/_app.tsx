@@ -8,12 +8,12 @@ import { useRouter } from "next/router";
 
 export default function App({ Component, pageProps }: AppProps) {
   const router = useRouter();
-  const isLoginPage = router.pathname === '/login';
+  const isPublicPage = router.pathname === '/login' || router.pathname === '/become-an-agent';
 
   return (
     <HeroUIProvider>
       <AuthProvider>
-        {isLoginPage ? (
+        {isPublicPage ? (
           <Component {...pageProps} />
         ) : (
           <CommonLayout>

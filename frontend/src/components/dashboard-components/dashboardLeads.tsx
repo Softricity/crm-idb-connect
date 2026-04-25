@@ -8,10 +8,13 @@ import DashboardTimeline from './timeline'
 import { LeadsLast7Days } from './last7DaysLeads'
 import { useLeadStore } from '@/stores/useLeadStore'
 
+import { useAuthStore } from '@/stores/useAuthStore'
+
 export default function DashboardLeads() {
   const { loading, metrics, bySource, byStatus, last7Days, refresh } = useDashboardStore();
-  const fetchLeads = useLeadStore((s) => s.fetchLeads);
+  const fetchLeadsBasedOnPermission = useLeadStore((s) => s.fetchLeadsBasedOnPermission);
   const leads = useLeadStore((s) => s.leads);
+  const { user } = useAuthStore();
   const leadIds = useMemo(
     () => leads.map((lead) => lead.id!).filter(Boolean),
     [leads]
@@ -19,8 +22,10 @@ export default function DashboardLeads() {
 
   useEffect(() => {
     refresh();
-    fetchLeads();
-  }, [refresh, fetchLeads]);
+    if (user?.id && user?.permissions) {
+      fetchLeadsBasedOnPermission(user.id, user.permissions, undefined, user.role);
+    }
+  }, [refresh, fetchLeadsBasedOnPermission, user]);
 
 
   return (

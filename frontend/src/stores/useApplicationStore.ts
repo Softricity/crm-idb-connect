@@ -154,7 +154,13 @@ interface ApplicationState {
   applications: Application[];
   currentApplication: Application | null;
   loading: boolean;
-  fetchApplications: (leadIds?: string[], branchId?: string) => Promise<void>;
+  pagination: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  fetchApplications: (leadIds?: string[], branchId?: string, page?: number, limit?: number) => Promise<void>;
   fetchApplicationByLeadId: (leadId: string) => Promise<void>;
   createApplication: (leadId: string) => Promise<Application>; // create via minimal trigger (server auto-creates)
   patchSection: (leadId: string, section: string, body: any) => Promise<void>;
@@ -167,12 +173,20 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
   applications: [],
   currentApplication: null,
   loading: false,
+  pagination: {
+    total: 0,
+    page: 1,
+    limit: 10,
+    totalPages: 0,
+  },
 
-  fetchApplications: async (leadIds, branchId?: string) => {
+  fetchApplications: async (leadIds, branchId?: string, page = 1, limit = 10) => {
     set({ loading: true });
     try {
       // If leadIds provided, fetch per-lead using Applications API
       if (leadIds && leadIds.length > 0) {
+        // NOTE: This usually doesn't need pagination as it's a specific subset, 
+        // but we'll stick to the leads-based fetch for the main table.
         const results: Application[] = [];
         for (const leadId of leadIds) {
           try {
@@ -182,13 +196,18 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
             console.warn(`Failed to fetch application for lead ${leadId}`);
           }
         }
-        set({ applications: results });
+        set({ 
+            applications: results,
+            pagination: { total: results.length, page: 1, limit: results.length, totalPages: 1 }
+        });
+        set({ loading: false });
         return;
       }
 
       // If no leadIds provided, fetch leads with type=application and map to lightweight applications
-      const leads = await api.LeadsAPI.fetchApplications(branchId);
-      const mapped = (leads || []).map((l: any) => {
+      const response = await api.LeadsAPI.fetchApplications(branchId, page, limit);
+      const rows = Array.isArray(response) ? response : (response?.data || []);
+      const mapped = rows.map((l: any) => {
         // If the lead has application data nested, use it; otherwise use lead fields
         const app = l.applications?.[0] || {};
         const prefs = app.preferences?.[0] || {};
@@ -224,7 +243,15 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
           is_flagged: l.is_flagged || false,
         } as Application;
       });
-      set({ applications: mapped });
+      set({ 
+        applications: mapped,
+        pagination: response?.meta || {
+          total: mapped.length,
+          page,
+          limit,
+          totalPages: Math.max(1, Math.ceil(mapped.length / Math.max(limit, 1))),
+        },
+      });
     } catch (error) {
       console.error("Error fetching applications collection:", error);
       throw error;
@@ -302,5 +329,10 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
   setCurrentApplication: (application: Application | null) => {
     set({ currentApplication: application });
   },
-  reset: () => set({ applications: [], currentApplication: null, loading: false }),
+  reset: () => set({ 
+    applications: [], 
+    currentApplication: null, 
+    loading: false,
+    pagination: { total: 0, page: 1, limit: 20, totalPages: 0 }
+  }),
 }));

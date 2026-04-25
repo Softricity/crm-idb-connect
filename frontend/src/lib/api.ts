@@ -35,7 +35,7 @@ async function handleResponse(res: Response) {
   let data: any = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
   if (!res.ok) {
-    const err: any = new Error(data?.error || res.statusText || 'API Error');
+    const err: any = new Error(data?.message || data?.error || res.statusText || 'API Error');
     err.status = res.status;
     err.statusCode = res.status;
     err.body = data;
@@ -83,11 +83,11 @@ export const AgentsAPI = {
     const res = await fetch(url, { headers: getHeaders() });
     return handleResponse(res);
   },
-  updateInquiryStatus: async (id: string, status: string) => {
+  updateInquiryStatus: async (id: string, status: string, extras?: { branch_id?: string; category_id?: string }) => {
     const res = await fetch(`${API_BASE}/agents/inquiries/${id}/status`, {
       method: 'PATCH',
       headers: getHeaders(),
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status, ...extras }),
     });
     return handleResponse(res);
   },
@@ -103,37 +103,115 @@ export const AgentsAPI = {
     });
     return handleResponse(res);
   },
+
+  // --- Categories ---
+  getCategories: async () => {
+    const res = await fetch(`${API_BASE}/agents/categories`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createCategory: async (data: any) => {
+    const res = await fetch(`${API_BASE}/agents/categories`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  updateCategory: async (id: string, data: any) => {
+    const res = await fetch(`${API_BASE}/agents/categories/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  deleteCategory: async (id: string) => {
+    const res = await fetch(`${API_BASE}/agents/categories/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+  assignCategory: async (agentId: string, categoryId: string) => {
+    const res = await fetch(`${API_BASE}/agents/${agentId}/category`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ category_id: categoryId }),
+    });
+    return handleResponse(res);
+  },
+  getCategoryAccess: async (categoryId: string) => {
+    const res = await fetch(`${API_BASE}/agents/categories/${categoryId}/universities`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  setCategoryAccess: async (categoryId: string, access: any[]) => {
+    const res = await fetch(`${API_BASE}/agents/categories/${categoryId}/universities`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ access }),
+    });
+    return handleResponse(res);
+  },
+
+  // --- Inquiries ---
+  createInquiry: async (data: any) => {
+    const res = await fetch(`${API_BASE}/agents/inquiry`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  uploadInquiryDocument: async (file: File) => {
+    const form = new FormData();
+    form.append('file', file);
+    const res = await fetch(`${API_BASE}/agents/inquiry/upload`, {
+      method: 'POST',
+      body: form,
+    });
+    return handleResponse(res);
+  },
 };
 
 export const LeadsAPI = {
-  fetchLeads: async (branchId?: string) => {
+  fetchLeads: async (branchId?: string, page?: number, limit?: number) => {
     const params = new URLSearchParams({ type: 'lead' });
     if (branchId) params.append('branch_id', branchId);
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
     const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  fetchApplications: async (branchId?: string) => {
+  fetchApplications: async (branchId?: string, page?: number, limit?: number) => {
     const params = new URLSearchParams({ type: 'application' });
     if (branchId) params.append('branch_id', branchId);
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
     const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
+
   fetchLeadById: async (id: string) => {
     const res = await fetch(`${API_BASE}/leads/${id}`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  getAgentLeads: async (agentId: string, branchId?: string) => {
+  getAgentLeads: async (agentId: string, branchId?: string, page?: number, limit?: number) => {
     const params = new URLSearchParams({ created_by: agentId });
     if (branchId) params.append('branch_id', branchId);
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
     const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
-  getCounsellorLeads: async (counsellorId: string, branchId?: string) => {
+  getCounsellorLeads: async (counsellorId: string, branchId?: string, page?: number, limit?: number) => {
     const params = new URLSearchParams({ assigned_to: counsellorId, type: 'lead' });
     if (branchId) params.append('branch_id', branchId);
+    if (page) params.append('page', page.toString());
+    if (limit) params.append('limit', limit.toString());
     const res = await fetch(`${API_BASE}/leads?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
+
   createLead: async (lead: any) => {
     const res = await fetch(`${API_BASE}/leads`, { method: 'POST', headers: getHeaders(true), body: JSON.stringify(lead) });
     return handleResponse(res);
@@ -341,11 +419,17 @@ export const NotesAPI = {
 
 export const TimelineAPI = {
   fetchTimelineByLeadId: async (leadId: string) => {
-    const res = await fetch(`${API_BASE}/leads/${leadId}/timeline`, { headers: getHeaders() });
+    const res = await fetch(`${API_BASE}/leads/${leadId}/timeline?t=${Date.now()}`, {
+      headers: getHeaders(),
+      cache: 'no-store',
+    });
     return handleResponse(res);
   },
   fetchGlobalTimeline: async () => {
-    const res = await fetch(`${API_BASE}/timeline`, { headers: getHeaders() });
+    const res = await fetch(`${API_BASE}/timeline?t=${Date.now()}`, {
+      headers: getHeaders(),
+      cache: 'no-store',
+    });
     return handleResponse(res);
   },
   createTimelineEvent: async (event: any) => {
@@ -358,7 +442,12 @@ export const TimelineAPI = {
   },
   fetchAllTimelines: async (leadIds: string[]) => {
     const rows = await Promise.all(
-      leadIds.map((leadId) => fetch(`${API_BASE}/leads/${leadId}/timeline`, { headers: getHeaders() }).then(handleResponse))
+      leadIds.map((leadId) =>
+        fetch(`${API_BASE}/leads/${leadId}/timeline?t=${Date.now()}`, {
+          headers: getHeaders(),
+          cache: 'no-store',
+        }).then(handleResponse),
+      )
     );
     return rows.flat();
   },
@@ -398,6 +487,13 @@ export const OfflinePaymentsAPI = {
       headers: getHeaders(),
       body: JSON.stringify({ fileUrl }),
     });
+    return handleResponse(res);
+  },
+  fetchTodaySummary: async (start?: string, end?: string) => {
+    const params = new URLSearchParams();
+    if (start) params.append('start', start);
+    if (end) params.append('end', end);
+    const res = await fetch(`${API_BASE}/offline-payments/today-summary?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
 };
@@ -628,7 +724,22 @@ export const ContractsAPI = {
     const res = await fetch(`${API_BASE}/contracts/${id}/download`, { headers: getHeaders() });
     if (!res.ok) throw new Error('Failed to download contract PDF');
     return res.blob();
-  }
+  },
+  bulkAssign: async (id: string, agentIds: string[]) => {
+    const res = await fetch(`${API_BASE}/contracts/${id}/assign`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify({ agent_ids: agentIds }),
+    });
+    return handleResponse(res);
+  },
+  delete: async (id: string) => {
+    const res = await fetch(`${API_BASE}/contracts/${id}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
 };
 
 export const SupportAPI = {
@@ -787,6 +898,107 @@ export const BranchesAPI = {
     const res = await fetch(`${API_BASE}/branches/${id}`, {
       method: 'DELETE',
       headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+};
+
+export interface DepartmentOrderItemInput {
+  department_id: string;
+  order_index: number;
+  is_active?: boolean;
+  is_default?: boolean;
+}
+
+export interface DepartmentStatusInput {
+  key: string;
+  label: string;
+  order_index: number;
+  is_terminal?: boolean;
+  is_default?: boolean;
+  is_active?: boolean;
+}
+
+export interface DepartmentInput {
+  name: string;
+  code: string;
+  is_active?: boolean;
+  order_index?: number;
+  is_default?: boolean;
+}
+
+export const DepartmentsAPI = {
+  fetchDepartments: async (includeInactive = false) => {
+    const params = new URLSearchParams();
+    if (includeInactive) {
+      params.append('includeInactive', 'true');
+    }
+
+    const url = params.toString()
+      ? `${API_BASE}/departments?${params.toString()}`
+      : `${API_BASE}/departments`;
+
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  fetchDepartmentById: async (id: string, includeInactive = false) => {
+    const params = new URLSearchParams();
+    if (includeInactive) {
+      params.append('includeInactive', 'true');
+    }
+
+    const url = params.toString()
+      ? `${API_BASE}/departments/${id}?${params.toString()}`
+      : `${API_BASE}/departments/${id}`;
+
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createDepartment: async (data: DepartmentInput) => {
+    const res = await fetch(`${API_BASE}/departments`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  updateDepartment: async (id: string, data: Partial<DepartmentInput>) => {
+    const res = await fetch(`${API_BASE}/departments/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  updateDepartmentOrder: async (items: DepartmentOrderItemInput[]) => {
+    const res = await fetch(`${API_BASE}/departments/order`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ items }),
+    });
+    return handleResponse(res);
+  },
+  fetchDepartmentStatuses: async (departmentId: string, includeInactive = false) => {
+    const params = new URLSearchParams();
+    if (includeInactive) {
+      params.append('includeInactive', 'true');
+    }
+
+    const url = params.toString()
+      ? `${API_BASE}/departments/${departmentId}/statuses?${params.toString()}`
+      : `${API_BASE}/departments/${departmentId}/statuses`;
+
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  upsertDepartmentStatuses: async (
+    departmentId: string,
+    statuses: DepartmentStatusInput[],
+  ) => {
+    const res = await fetch(`${API_BASE}/departments/${departmentId}/statuses`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ statuses }),
     });
     return handleResponse(res);
   },
@@ -972,6 +1184,71 @@ export const TodosAPI = {
   },
 };
 
+export const IntegrationsAPI = {
+  getAll: async () => {
+    const res = await fetch(`${API_BASE}/integrations`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  upsert: async (data: any) => {
+    const res = await fetch(`${API_BASE}/integrations`, {
+      method: "POST",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  update: async (id: string, data: any) => {
+    const res = await fetch(`${API_BASE}/integrations/${id}`, {
+      method: "PATCH",
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  remove: async (id: string) => {
+    const res = await fetch(`${API_BASE}/integrations/${id}`, {
+      method: "DELETE",
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+};
+
+export const MailAPI = {
+  getTemplates: async (category?: string) => {
+    const url = category ? `${API_BASE}/mail/templates?category=${category}` : `${API_BASE}/mail/templates`;
+    const res = await fetch(url, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getTemplate: async (id: string) => {
+    const res = await fetch(`${API_BASE}/mail/templates/${id}`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  createTemplate: async (data: any) => {
+    const res = await fetch(`${API_BASE}/mail/templates`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  updateTemplate: async (id: string, data: any) => {
+    const res = await fetch(`${API_BASE}/mail/templates/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  deleteTemplate: async (id: string) => {
+    const res = await fetch(`${API_BASE}/mail/templates/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+};
+
 export default {
   ReportsAPI,
   LeadsAPI,
@@ -980,7 +1257,10 @@ export default {
   FollowupsAPI,
   NotesAPI,
   TimelineAPI,
+  OfflinePaymentsAPI,
   DashboardAPI,
+  IntegrationsAPI,
+  MailAPI,
   ApplicationsAPI,
   CountriesAPI,
   UniversitiesAPI,
@@ -993,6 +1273,7 @@ export default {
   FinancialsAPI,
   OptionsAPI,
   BranchesAPI,
+  DepartmentsAPI,
   PermissionsAPI,
   PermissionGroupsAPI,
   RolesAPI,

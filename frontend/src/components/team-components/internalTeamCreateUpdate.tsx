@@ -20,9 +20,8 @@ import { toast } from "sonner";
 import PhoneInputWithCountrySelect, { Value } from "react-phone-number-input";
 import "react-phone-number-input/style.css";
 import { validateMobile } from "@/lib/validation";
-import { PartnersAPI, RolesAPI } from "@/lib/api";
+import { DepartmentsAPI, RolesAPI } from "@/lib/api";
 import { BranchPermission, hasPermission } from "@/lib/utils";
-import { Eye, EyeOff } from "lucide-react";
 
 interface InternalTeamCreateUpdateProps {
     isOpen: boolean;
@@ -43,6 +42,15 @@ interface FormData {
     area: string;
     zone: string;
     remarks: string;
+    department_ids: string[];
+    primary_department_id: string;
+}
+
+interface DepartmentOption {
+    id: string;
+    name: string;
+    code: string;
+    is_active: boolean;
 }
 
 export function InternalTeamCreateUpdate({
@@ -56,6 +64,8 @@ export function InternalTeamCreateUpdate({
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [roles, setRoles] = useState<any[]>([]);
     const [loadingRoles, setLoadingRoles] = useState(false);
+    const [departments, setDepartments] = useState<DepartmentOption[]>([]);
+    const [loadingDepartments, setLoadingDepartments] = useState(false);
     const currentUserRole = (user?.role || '').toLowerCase();
     const isUserSuperAdmin = currentUserRole === 'super admin';
     
@@ -77,6 +87,8 @@ export function InternalTeamCreateUpdate({
         area: "",
         zone: "",
         remarks: "",
+        department_ids: [],
+        primary_department_id: "",
     });
 
     const [errors, setErrors] = useState<Partial<Record<keyof FormData, string>>>({});
@@ -86,12 +98,7 @@ export function InternalTeamCreateUpdate({
         const fetchRoles = async () => {
             setLoadingRoles(true);
             try {
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/roles`, {
-                    headers: {
-                        'Authorization': `Bearer ${getAuthToken()}`,
-                    },
-                });
-                const data = await response.json();
+                const data = await RolesAPI.getAll();
                 // Filter out agent role for internal team
                 setRoles(data.filter((r: any) => r.name?.toLowerCase() !== 'agent'));
             } catch (error) {
@@ -102,30 +109,37 @@ export function InternalTeamCreateUpdate({
             }
         };
 
+        const fetchDepartments = async () => {
+            setLoadingDepartments(true);
+            try {
+                const data = await DepartmentsAPI.fetchDepartments(false);
+                setDepartments(Array.isArray(data) ? data : []);
+            } catch (error) {
+                console.error("Failed to fetch departments:", error);
+                toast.error("Failed to load departments");
+            } finally {
+                setLoadingDepartments(false);
+            }
+        };
+
         if (isOpen) {
             fetchRoles();
             fetchBranches();
+            fetchDepartments();
         }
     }, [isOpen, fetchBranches]);
-
-    // Helper to get auth token
-    const getAuthToken = () => {
-        if (typeof document === 'undefined') return null;
-        const cookies = document.cookie.split(';');
-        const tokenCookie =
-            cookies.find(c => c.trim().startsWith('crm-auth-token=')) ||
-            cookies.find(c => c.trim().startsWith('auth-token='));
-        if (!tokenCookie) return null;
-        try {
-            return decodeURIComponent(tokenCookie.split('=')[1]);
-        } catch {
-            return null;
-        }
-    };
 
     useEffect(() => {
         if (isOpen) {
             if (member) {
+                const existingDepartmentIds = member.department_ids ||
+                    member.partner_departments
+                        ?.filter((department) => department.is_active)
+                        .map((department) => department.department_id) || [];
+
+                const existingPrimaryDepartmentId = member.primary_department_id ||
+                    member.partner_departments?.find((department) => department.is_primary)?.department_id || "";
+
                 setFormData({
                     name: member.name || "",
                     email: member.email || "",
@@ -139,6 +153,8 @@ export function InternalTeamCreateUpdate({
                     area: member.area || "",
                     zone: member.zone || "",
                     remarks: member.remarks || "",
+                    department_ids: existingDepartmentIds,
+                    primary_department_id: existingPrimaryDepartmentId,
                 });
             } else {
                 setFormData({
@@ -154,6 +170,8 @@ export function InternalTeamCreateUpdate({
                     area: "",
                     zone: "",
                     remarks: "",
+                    department_ids: [],
+                    primary_department_id: "",
                 });
             }
             setErrors({});
@@ -178,6 +196,8 @@ export function InternalTeamCreateUpdate({
                 return "";
             case "role_id":
                 return !value ? "Role is required" : "";
+            case "branch_id":
+                return !value ? "Branch is required" : "";
             case "address":
             case "city":
             case "state":
@@ -204,17 +224,67 @@ export function InternalTeamCreateUpdate({
         setErrors((prev) => ({ ...prev, mobile: error }));
     };
 
+    const handleDepartmentsChange = (keys: any) => {
+        const departmentIds =
+            keys === "all"
+                ? departments.map((department) => department.id)
+                : Array.from(keys as Set<string>).map(String);
+
+        setFormData((prev) => {
+            const nextPrimaryDepartmentId = departmentIds.includes(prev.primary_department_id)
+                ? prev.primary_department_id
+                : "";
+
+            return {
+                ...prev,
+                department_ids: departmentIds,
+                primary_department_id: nextPrimaryDepartmentId,
+            };
+        });
+
+        setErrors((prev) => ({
+            ...prev,
+            department_ids: "",
+            primary_department_id: "",
+        }));
+    };
+
     const validateForm = () => {
         const newErrors: Partial<Record<keyof FormData, string>> = {};
-        Object.keys(formData).forEach((key) => {
-            const field = key as keyof FormData;
-            if (field !== "remarks") {
-                const error = validateField(field, formData[field]);
-                if (error) {
-                    newErrors[field] = error;
-                }
+
+        const fieldsToValidate: Array<keyof FormData> = [
+            "name",
+            "email",
+            "mobile",
+            "password",
+            "role_id",
+            "branch_id",
+            "address",
+            "city",
+            "state",
+            "area",
+            "zone",
+        ];
+
+        fieldsToValidate.forEach((field) => {
+            if (field === "password" && member?.id) {
+                return;
+            }
+
+            const value = String(formData[field] || "");
+            const error = validateField(field, value);
+            if (error) {
+                newErrors[field] = error;
             }
         });
+
+        if (
+            formData.primary_department_id &&
+            !formData.department_ids.includes(formData.primary_department_id)
+        ) {
+            newErrors.primary_department_id = "Primary department must be selected from assigned departments";
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -230,7 +300,14 @@ export function InternalTeamCreateUpdate({
         }
 
         try {
-            const partnerData = { ...formData };
+            const partnerData = {
+                ...formData,
+                primary_department_id: formData.primary_department_id || undefined,
+            };
+
+            if (partnerData.department_ids.length === 0) {
+                partnerData.primary_department_id = undefined;
+            }
 
             if (member?.id) {
                 if (!partnerData.password) {
@@ -351,6 +428,54 @@ export function InternalTeamCreateUpdate({
                                             </SelectItem>
                                         );
                                     })}
+                                </Select>
+                                <Select
+                                    label="Departments"
+                                    selectionMode="multiple"
+                                    selectedKeys={new Set(formData.department_ids)}
+                                    onSelectionChange={handleDepartmentsChange}
+                                    isLoading={loadingDepartments}
+                                    description="Assign this team member to one or more departments"
+                                    isInvalid={!!errors.department_ids}
+                                    errorMessage={errors.department_ids}
+                                >
+                                    {departments.map((department) => (
+                                        <SelectItem key={department.id}>
+                                            {department.code
+                                                ? `${department.name} (${department.code})`
+                                                : department.name}
+                                        </SelectItem>
+                                    ))}
+                                </Select>
+                                <Select
+                                    label="Primary Department"
+                                    selectedKeys={formData.primary_department_id ? [formData.primary_department_id] : []}
+                                    onChange={(e) => {
+                                        const value = e.target.value;
+                                        setFormData((prev) => ({
+                                            ...prev,
+                                            primary_department_id: value,
+                                        }));
+                                        setErrors((prev) => ({ ...prev, primary_department_id: "" }));
+                                    }}
+                                    isDisabled={formData.department_ids.length === 0}
+                                    description={
+                                        formData.department_ids.length === 0
+                                            ? "Select departments first"
+                                            : "Used as the default department for assignment"
+                                    }
+                                    isInvalid={!!errors.primary_department_id}
+                                    errorMessage={errors.primary_department_id}
+                                >
+                                    {departments
+                                        .filter((department) => formData.department_ids.includes(department.id))
+                                        .map((department) => (
+                                            <SelectItem key={department.id}>
+                                                {department.code
+                                                    ? `${department.name} (${department.code})`
+                                                    : department.name}
+                                            </SelectItem>
+                                        ))}
                                 </Select>
                                 <Input
                                     label="Address"

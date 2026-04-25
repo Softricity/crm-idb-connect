@@ -14,7 +14,7 @@
   --popover: #fcfcfc;
   --popover-foreground: #525252;
   --primary: #2B7FFF;
-  --primary-foreground: #1e2723;
+  --primary-foreground: #ffffff;
   --secondary: #2B7FFF;
   --secondary-foreground: #171717;
   --muted: #ededed;
@@ -171,6 +171,38 @@ body {
     @apply border-border outline-ring/50;
     scrollbar-width: none;
   }
+}
+
+/* Custom Hover Scrollbar Utility */
+.hover-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.hover-scrollbar::-webkit-scrollbar {
+  display: none;
+  width: 6px;
+}
+
+/* Show on element hover or when a parent card (.group) is hovered */
+.hover-scrollbar:hover,
+.group:hover .hover-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.hover-scrollbar:hover::-webkit-scrollbar,
+.group:hover .hover-scrollbar::-webkit-scrollbar {
+  display: block;
+}
+
+.hover-scrollbar:hover::-webkit-scrollbar-thumb,
+.group:hover .hover-scrollbar::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 10px;
+}
+
+@layer base {
   body {
     @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
