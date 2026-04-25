@@ -66,6 +66,14 @@ export const AgentsAPI = {
     const res = await fetch(`${API_BASE}/agents/${id}`, { headers: getHeaders() });
     return handleResponse(res);
   },
+  update: async (id: string, updates: any) => {
+    const res = await fetch(`${API_BASE}/agents/${id}`, { 
+      method: 'PATCH', 
+      headers: getHeaders(), 
+      body: JSON.stringify(updates) 
+    });
+    return handleResponse(res);
+  },
   updateStatus: async (id: string, status: 'APPROVED' | 'REJECTED', reason?: string) => {
     const res = await fetch(`${API_BASE}/agents/${id}/status`, { 
       method: 'PATCH', 
@@ -132,7 +140,7 @@ export const AgentsAPI = {
     });
     return handleResponse(res);
   },
-  assignCategory: async (agentId: string, categoryId: string) => {
+  assignCategory: async (agentId: string, categoryId: string | null) => {
     const res = await fetch(`${API_BASE}/agents/${agentId}/category`, {
       method: 'PATCH',
       headers: getHeaders(),
@@ -418,15 +426,25 @@ export const NotesAPI = {
 };
 
 export const TimelineAPI = {
-  fetchTimelineByLeadId: async (leadId: string) => {
-    const res = await fetch(`${API_BASE}/leads/${leadId}/timeline?t=${Date.now()}`, {
+  fetchTimelineByLeadId: async (leadId: string, page: number = 1, limit: number = 20) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      t: Date.now().toString(),
+    });
+    const res = await fetch(`${API_BASE}/leads/${leadId}/timeline?${params.toString()}`, {
       headers: getHeaders(),
       cache: 'no-store',
     });
     return handleResponse(res);
   },
-  fetchGlobalTimeline: async () => {
-    const res = await fetch(`${API_BASE}/timeline?t=${Date.now()}`, {
+  fetchGlobalTimeline: async (page: number = 1, limit: number = 20) => {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      limit: limit.toString(),
+      t: Date.now().toString(),
+    });
+    const res = await fetch(`${API_BASE}/timeline?${params.toString()}`, {
       headers: getHeaders(),
       cache: 'no-store',
     });
@@ -496,6 +514,10 @@ export const OfflinePaymentsAPI = {
     const res = await fetch(`${API_BASE}/offline-payments/today-summary?${params.toString()}`, { headers: getHeaders() });
     return handleResponse(res);
   },
+  fetchAllPayments: async () => {
+    const res = await fetch(`${API_BASE}/offline-payments`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
 };
 
 export const DashboardAPI = {
@@ -505,6 +527,10 @@ export const DashboardAPI = {
   },
   fetchDashboardLeads: async () => {
     const res = await fetch(`${API_BASE}/leads`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getApplicationStats: async () => {
+    const res = await fetch(`${API_BASE}/dashboard/application-stats`, { headers: getHeaders() });
     return handleResponse(res);
   },
 };
@@ -652,6 +678,21 @@ export const CommissionsAPI = {
     const res = await fetch(`${API_BASE}/commissions/my-commissions`, { headers: getHeaders() });
     return handleResponse(res);
   },
+  delete: async (id: string) => {
+    const res = await fetch(`${API_BASE}/commissions/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+  update: async (id: string, data: any) => {
+    const res = await fetch(`${API_BASE}/commissions/${id}`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
 };
 
 export const ContractsAPI = {
@@ -788,6 +829,13 @@ export const DropdownsAPI = {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  deleteCategory: async (id: string) => {
+    const res = await fetch(`${API_BASE}/dropdowns/categories/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(),
     });
     return handleResponse(res);
   },
@@ -1121,6 +1169,13 @@ export const AnnouncementsAPI = {
   },
   markAsRead: async (id: string) => {
     const res = await fetch(`${API_BASE}/announcements/${id}/mark-read`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+  markAllAsRead: async () => {
+    const res = await fetch(`${API_BASE}/announcements/mark-all-read`, {
       method: 'POST',
       headers: getHeaders(),
     });

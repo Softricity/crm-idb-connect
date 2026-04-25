@@ -1,6 +1,6 @@
 //tabsWrapper.tsx
 import { useState, useMemo, useEffect } from "react";
-import { Tabs, Tab, Card, CardBody } from "@heroui/react";
+import { Tabs, Tab, Card, CardBody, Pagination } from "@heroui/react";
 import LeadsTableToolbar from "./leadsTableToolbar";
 import LeadsDisplay from "./displayLeads";
 import { Lead } from "@/stores/useLeadStore";
@@ -82,11 +82,20 @@ const DEFAULT_COLUMNS: ColumnConfig[] = [
   { uid: "actions", name: "Action", isVisible: true, isMandatory: true },
 ];
 
+
+
 type TabsWrapperProps = {
   leads: Lead[];
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
+  onPageChange?: (page: number) => void;
 };
 
-export default function TabsWrapper({ leads }: TabsWrapperProps) {
+export default function TabsWrapper({ leads, pagination, onPageChange }: TabsWrapperProps) {
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [showOnlyFlagged, setShowOnlyFlagged] = useState(false);
@@ -302,6 +311,20 @@ export default function TabsWrapper({ leads }: TabsWrapperProps) {
                     columns={columns}
                     departmentStatuses={activeDepartmentStatuses}
                   />
+
+                  {pagination && pagination.totalPages > 1 && (
+                    <div className="flex w-full justify-center mt-4">
+                      <Pagination
+                        isCompact
+                        showControls
+                        showShadow
+                        color="primary"
+                        page={pagination.page}
+                        total={pagination.totalPages}
+                        onChange={onPageChange}
+                      />
+                    </div>
+                  )}
 
                 </div>
               </CardBody>
