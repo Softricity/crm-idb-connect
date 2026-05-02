@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import api from '@/lib/api';
 import { Button, Input, Drawer, DrawerContent, DrawerHeader, DrawerBody, DrawerFooter, useDisclosure, Card, CardBody, Spinner, Chip, Checkbox, Select, SelectItem, Textarea } from '@heroui/react';
 import useUserPermissions from '@/hooks/usePermissions';
-import { hasPermission, UniversityPermission, CoursesPermission } from '@/lib/utils';
+import { hasPermission, UniversityPermission, CoursesPermission, getFileUrl } from '@/lib/utils';
 import { Plus, Search, Trash2, Edit2 } from 'lucide-react';
 
 interface Country {
@@ -62,7 +62,7 @@ export default function Universities() {
   const { isOpen: isCourseOpen, onOpen: onCourseOpen, onClose: onCourseClose } = useDisclosure();
 
   const [countryForm, setCountryForm] = useState({ name: '', flag: '' });
-  const [universityForm, setUniversityForm] = useState({ name: '', logo: '', city: '', allowed_countries: [] as string[] });
+  const [universityForm, setUniversityForm] = useState({ name: '', logo: '', city: '', allowed_countries: [] as string[], logoFile: null as File | null });
   const [courseForm, setCourseForm] = useState({
     name: '', level: '', category: '', duration: 0,
     feeType: 'Per Year', feeCurrency: 'PLN', originalFee: 0,
@@ -172,18 +172,24 @@ export default function Universities() {
   const handleAddUniversity = async () => {
     if (!selectedCountry) return;
     try {
-      if (editingUniversity) {
-        await api.UniversitiesAPI.update(editingUniversity.id, {
-          ...universityForm,
-          countryId: selectedCountry,
-        });
-      } else {
-        await api.UniversitiesAPI.create({
-          ...universityForm,
-          countryId: selectedCountry,
-        });
+      const formData = new FormData();
+      formData.append('name', universityForm.name);
+      formData.append('city', universityForm.city || '');
+      formData.append('countryId', selectedCountry);
+      formData.append('allowed_countries', JSON.stringify(universityForm.allowed_countries));
+      
+      if (universityForm.logoFile) {
+        formData.append('logo', universityForm.logoFile);
+      } else if (universityForm.logo) {
+        formData.append('logo', universityForm.logo);
       }
-      setUniversityForm({ name: '', logo: '', city: '', allowed_countries: [] });
+
+      if (editingUniversity) {
+        await api.UniversitiesAPI.update(editingUniversity.id, formData);
+      } else {
+        await api.UniversitiesAPI.create(formData);
+      }
+      setUniversityForm({ name: '', logo: '', city: '', allowed_countries: [], logoFile: null });
       setEditingUniversity(null);
       onUniversityClose();
       fetchUniversities(selectedCountry);
@@ -407,7 +413,7 @@ export default function Universities() {
                         }}>
                           {uni.logo && (
                             <img
-                              src={uni.logo}
+                              src={getFileUrl(uni.logo)}
                               alt={uni.name}
                               className="w-12 h-12 object-contain rounded"
                             />
@@ -444,6 +450,7 @@ export default function Universities() {
                                   logo: uni.logo || '',
                                   city: uni.city || '',
                                   allowed_countries: uni.allowed_countries || [],
+                                  logoFile: null,
                                 });
                                 onUniversityOpen();
                               }}
@@ -640,7 +647,7 @@ export default function Universities() {
       <Drawer isOpen={isUniversityOpen} onClose={() => {
         onUniversityClose();
         setEditingUniversity(null);
-        setUniversityForm({ name: '', logo: '', city: '', allowed_countries: [] });
+        setUniversityForm({ name: '', logo: '', city: '', allowed_countries: [], logoFile: null });
       }} placement="right" size="md">
         <DrawerContent className="p-6">
           <DrawerHeader className="text-xl font-semibold mb-4">
@@ -659,11 +666,40 @@ export default function Universities() {
                 value={universityForm.city}
                 onChange={(e) => setUniversityForm({ ...universityForm, city: e.target.value })}
               />
-              <Input
-                label="Logo URL (Optional)"
-                value={universityForm.logo}
-                onChange={(e) => setUniversityForm({ ...universityForm, logo: e.target.value })}
-              />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">University Logo</label>
+                <div className="flex items-center gap-4">
+                  {(universityForm.logoFile || universityForm.logo) && (
+                    <img 
+                      src={universityForm.logoFile ? URL.createObjectURL(universityForm.logoFile) : getFileUrl(universityForm.logo)} 
+                      alt="Logo Preview" 
+                      className="w-16 h-16 object-contain border rounded p-1"
+                    />
+                  )}
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          setUniversityForm({ ...universityForm, logoFile: file });
+                        }
+                      }}
+                      className="hidden"
+                      id="university-logo-upload"
+                    />
+                    <Button
+                      as="label"
+                      htmlFor="university-logo-upload"
+                      variant="flat"
+                      className="cursor-pointer w-full"
+                    >
+                      {universityForm.logoFile || universityForm.logo ? 'Change Logo' : 'Upload Logo'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
               <Select
                 label="Visible For Countries (Optional)"
                 placeholder="Select countries"
@@ -685,7 +721,7 @@ export default function Universities() {
               <Button variant="light" onPress={() => {
                 onUniversityClose();
                 setEditingUniversity(null);
-                setUniversityForm({ name: '', logo: '', city: '', allowed_countries: [] });
+                setUniversityForm({ name: '', logo: '', city: '', allowed_countries: [], logoFile: null });
               }} className="flex-1">Cancel</Button>
               <Button color="primary" onPress={handleAddUniversity} className="flex-1 text-white">
                 {editingUniversity ? 'Update' : 'Add'}

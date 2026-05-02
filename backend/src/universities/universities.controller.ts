@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, Query, UseGuards, UseInterceptors, UploadedFile, Req } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UniversitiesService } from './universities.service';
 import { CreateUniversityDto } from './dto/create-university.dto';
 import { UpdateUniversityDto } from './dto/update-university.dto';
@@ -15,8 +16,13 @@ export class UniversitiesController {
 
   @Post()
   @Roles(Role.Admin)
-  create(@Body() createUniversityDto: CreateUniversityDto) {
-    return this.universitiesService.create(createUniversityDto);
+  @UseInterceptors(FileInterceptor('logo'))
+  create(
+    @Body() createUniversityDto: CreateUniversityDto,
+    @UploadedFile() logo?: Express.Multer.File,
+    @Req() req?: any,
+  ) {
+    return this.universitiesService.create(createUniversityDto, logo, req);
   }
 
   @Get()
@@ -39,8 +45,14 @@ export class UniversitiesController {
 
   @Patch(':id')
   @Roles(Role.Admin)
-  update(@Param('id') id: string, @Body() updateUniversityDto: UpdateUniversityDto) {
-    return this.universitiesService.update(id, updateUniversityDto);
+  @UseInterceptors(FileInterceptor('logo'))
+  update(
+    @Param('id') id: string,
+    @Body() updateUniversityDto: UpdateUniversityDto,
+    @UploadedFile() logo?: Express.Multer.File,
+    @Req() req?: any,
+  ) {
+    return this.universitiesService.update(id, updateUniversityDto, logo, req);
   }
 
   @Delete(':id')

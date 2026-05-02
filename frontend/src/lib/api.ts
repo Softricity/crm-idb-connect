@@ -15,10 +15,12 @@ function getAuthToken(): string | null {
   }
 }
 
-function getHeaders(includeAuth = true): HeadersInit {
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
+function getHeaders(includeAuth = true, contentType: string | null = 'application/json'): HeadersInit {
+  const headers: HeadersInit = {};
+  
+  if (contentType) {
+    headers['Content-Type'] = contentType;
+  }
 
   if (includeAuth) {
     const token = getAuthToken();
@@ -599,18 +601,20 @@ export const UniversitiesAPI = {
     return handleResponse(res);
   },
   create: async (data: any) => {
+    const isFormData = data instanceof FormData;
     const res = await fetch(`${API_BASE}/universities`, {
       method: 'POST',
-      headers: getHeaders(),
-      body: JSON.stringify(data),
+      headers: getHeaders(true, isFormData ? null : 'application/json'),
+      body: isFormData ? data : JSON.stringify(data),
     });
     return handleResponse(res);
   },
   update: async (id: string, data: any) => {
+    const isFormData = data instanceof FormData;
     const res = await fetch(`${API_BASE}/universities/${id}`, {
       method: 'PATCH',
-      headers: getHeaders(),
-      body: JSON.stringify(data),
+      headers: getHeaders(true, isFormData ? null : 'application/json'),
+      body: isFormData ? data : JSON.stringify(data),
     });
     return handleResponse(res);
   },

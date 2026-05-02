@@ -1,4 +1,5 @@
 import { IsString, IsOptional, IsUUID, IsEnum, IsNumber, IsArray } from 'class-validator';
+import { Transform } from 'class-transformer';
 import { CommissionType } from '@prisma/client';
 
 export class CreateUniversityDto {
@@ -22,6 +23,7 @@ export class CreateUniversityDto {
 
   @IsOptional()
   @IsNumber()
+  @Transform(({ value }) => value ? Number(value) : value)
   commission_value?: number;
 
   @IsOptional()
@@ -29,6 +31,16 @@ export class CreateUniversityDto {
   currency?: string;
 
   @IsOptional()
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch (e) {
+        return [value];
+      }
+    }
+    return value;
+  })
   @IsArray()
   @IsString({ each: true })
   allowed_countries?: string[];
