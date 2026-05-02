@@ -140,6 +140,7 @@ export class AgentsService {
         state: dto.state ?? undefined,
         city: dto.city ?? undefined,
         address: dto.address ?? undefined,
+        business_reg_no: dto.business_reg_no ?? undefined,
         branch_id: mergedBranchId,
         category_id: mergedCategoryId,
         ...(password ? { password } : {}),
@@ -469,7 +470,7 @@ export class AgentsService {
       await fs.writeFile(fullPath, file.buffer);
 
       const baseUrl = this.resolvePublicBaseUrl(req);
-      fileUrl = `${baseUrl}/uploads/${folder}/${safeName}`;
+      fileUrl = `/uploads/${folder}/${safeName}`;
     }
 
     return { file_url: fileUrl };
@@ -536,7 +537,7 @@ export class AgentsService {
             state: 'Unknown',
             city: updated.city || 'Unknown',
             address: updated.company_address || 'Unknown',
-            region: updated.country || 'Unknown',
+            region: updated.region || updated.country || 'Unknown',
             branch_id: branchId,
             category_id: categoryId,
             status: 'PENDING',

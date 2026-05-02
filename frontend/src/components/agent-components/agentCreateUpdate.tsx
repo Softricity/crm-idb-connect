@@ -51,7 +51,13 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
         if (open) {
             if (agent) {
                 // Edit Mode: Populate data, clear password
-                setFormData({ ...agent, password: "" });
+                setFormData({ 
+                    ...agent, 
+                    password: "",
+                    region: agent.region || "",
+                    category_id: agent.category_id || "",
+                    branch_id: agent.branch_id || selectedBranch?.id || ""
+                });
             } else {
                 // Create Mode: Reset
                 setFormData({
@@ -65,7 +71,7 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
             }
             setErrors({});
         }
-    }, [agent, open]);
+    }, [agent, open, selectedBranch]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         const { name, value } = e.target;
@@ -111,13 +117,19 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
 
         setIsSubmitting(true);
         try {
+            const submissionData = { ...formData };
+            // If editing and password is empty, don't send it
+            if (agent?.id && !submissionData.password) {
+                delete submissionData.password;
+            }
+
             if (agent?.id) {
-                await updateAgent(agent.id, formData);
+                await updateAgent(agent.id, submissionData);
                 toast.success("Agent updated successfully.");
                 onOpenChange(false);
             } else {
                 // Create Mode
-                await addAgent(formData);
+                await addAgent(submissionData);
                 toast.success("Agent application submitted successfully.");
                 onOpenChange(false);
             }
@@ -140,6 +152,7 @@ export function AgentForm({ agent, open, onOpenChange }: AgentFormProps) {
                         <DrawerBody>
                             <form onSubmit={handleSubmit} className="space-y-8 mt-4 pb-10">
                                 <AgentFormFields
+                                    key={agent?.id || "new-agent"}
                                     formData={formData}
                                     errors={errors}
                                     isSubmitting={isSubmitting}

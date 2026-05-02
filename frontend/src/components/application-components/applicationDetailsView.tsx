@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useApplicationStore, ApplicationEducation, ApplicationTests, ApplicationWorkExperience } from "@/stores/useApplicationStore";
 import { format } from "date-fns";
 import { Loader2, Pencil, FileText, Trash2 } from "lucide-react";
+import { getFileUrl } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -47,7 +48,7 @@ const DocumentLink = ({ label, url }: { label: string; url?: string | null }) =>
     <span className="text-gray-500 text-sm">{label}</span>
     {url ? (
       <a
-        href={url}
+        href={getFileUrl(url)}
         target="_blank"
         rel="noopener noreferrer"
         className="text-blue-600 hover:text-blue-800 text-sm font-medium underline"
@@ -68,7 +69,7 @@ const DocumentLinks = ({ label, urls }: { label: string; urls?: string[] | null 
         {urls.map((url, idx) => (
           <a
             key={idx}
-            href={url}
+            href={getFileUrl(url)}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-blue-600 hover:text-blue-800 text-sm font-medium underline"

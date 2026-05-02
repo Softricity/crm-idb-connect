@@ -304,7 +304,7 @@ export class ContractsService {
       const fullPath = path.join(uploadsDir, safeName);
       await fs.writeFile(fullPath, file.buffer);
       const baseUrl = process.env.API_BASE_URL || process.env.BACKEND_PUBLIC_URL || 'http://localhost:5005';
-      signatureUrl = `${baseUrl}/uploads/contracts/${contract.agent_id}/${safeName}`;
+      signatureUrl = `/uploads/contracts/${contract.agent_id}/${safeName}`;
     }
     const updated = await this.prisma.agentContract.update({
       where: { id },

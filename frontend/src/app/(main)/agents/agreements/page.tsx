@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState, useRef } from 'react';
 import { AgentsAPI, BranchesAPI, ContractsAPI } from '@/lib/api';
+import { getFileUrl } from '@/lib/utils';
 import {
   Button,
   Card,
@@ -870,7 +871,7 @@ export default function AgreementsPage() {
                           {selectedInquiry.documents.map((doc: any) => (
                             <a 
                               key={doc.id}
-                              href={doc.file_url}
+                              href={getFileUrl(doc.file_url)}
                               target="_blank" 
                               rel="noopener noreferrer"
                               className="flex items-center justify-between p-3 rounded-lg bg-default-50 hover:bg-default-100 border border-divider transition-colors group"

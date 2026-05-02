@@ -6,11 +6,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
-  SelectContent,
   SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+} from "@heroui/react";
 import PhoneInputWithCountrySelect, { Value } from "react-phone-number-input";
 import { Agent } from "@/stores/useAgentStore"; 
 import { useCategoryStore } from "@/stores/useCategoryStore";
@@ -82,37 +79,43 @@ export function AgentFormFields({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FieldWrapper label="Branch*" name="branch_id" errors={errors}>
                         <Select
-                            value={formData.branch_id || ""}
-                            onValueChange={(val) => handleSelectChange("branch_id", val)}
+                            placeholder="Select branch"
+                            selectedKeys={formData.branch_id ? new Set([formData.branch_id]) : new Set()}
+                            onSelectionChange={(keys) => {
+                                const val = Array.from(keys)[0] as string;
+                                handleSelectChange("branch_id", val);
+                            }}
+                            variant="bordered"
+                            className="bg-white"
+                            aria-label="Branch"
+                            disallowEmptySelection
                         >
-                            <SelectTrigger className="border-purple-200 bg-white">
-                                <SelectValue placeholder="Select branch" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {branches.map((branch) => (
-                                    <SelectItem key={branch.id} value={branch.id}>
-                                        {branch.name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
+                            {branches.map((branch) => (
+                                <SelectItem key={branch.id} textValue={branch.name}>
+                                    {branch.name}
+                                </SelectItem>
+                            ))}
                         </Select>
                     </FieldWrapper>
 
                     <FieldWrapper label="Category*" name="category_id" errors={errors}>
                         <Select 
-                            value={formData.category_id || ""} 
-                            onValueChange={(val) => handleSelectChange("category_id", val)}
+                            placeholder="Select category"
+                            selectedKeys={formData.category_id ? new Set([formData.category_id]) : new Set()}
+                            onSelectionChange={(keys) => {
+                                const val = Array.from(keys)[0] as string;
+                                handleSelectChange("category_id", val);
+                            }}
+                            variant="bordered"
+                            className="bg-white"
+                            aria-label="Category"
+                            disallowEmptySelection
                         >
-                            <SelectTrigger className="border-purple-200 bg-white">
-                                <SelectValue placeholder="Select category" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {categories.map((c) => (
-                                    <SelectItem key={c.id} value={c.id}>
-                                        {c.name} {c.label ? `(${c.label})` : ""}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
+                            {categories.map((c) => (
+                                <SelectItem key={c.id} textValue={c.name}>
+                                    {c.name} {c.label ? `(${c.label})` : ""}
+                                </SelectItem>
+                            ))}
                         </Select>
                         <p className="text-[10px] text-purple-600 mt-1">
                             Category controls segment-specific commission and access behavior for this agent.
@@ -198,17 +201,30 @@ export function AgentFormFields({
                     </FieldWrapper>
 
                     <FieldWrapper label="Region" name="region" errors={errors}>
-                        <Select value={formData.region} onValueChange={(val) => handleSelectChange("region", val)}>
-                            <SelectTrigger className="border-gray-300">
-                                <SelectValue placeholder="Select Region" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="APAC">APAC</SelectItem>
-                                <SelectItem value="EMEA">EMEA</SelectItem>
-                                <SelectItem value="NA">North America</SelectItem>
-                                <SelectItem value="LATAM">LATAM</SelectItem>
-                                <SelectItem value="SA">South Asia</SelectItem>
-                            </SelectContent>
+                        <Select 
+                            placeholder="Select Region"
+                            selectedKeys={formData.region ? new Set([formData.region]) : new Set()}
+                            onSelectionChange={(keys) => {
+                                const val = Array.from(keys)[0] as string;
+                                handleSelectChange("region", val);
+                            }}
+                            variant="bordered"
+                            className="bg-white"
+                            aria-label="Region"
+                            disallowEmptySelection
+                        >
+                            {[
+                                { key: "APAC", label: "APAC" },
+                                { key: "EMEA", label: "EMEA" },
+                                { key: "NA", label: "North America" },
+                                { key: "LATAM", label: "LATAM" },
+                                { key: "SA", label: "South Asia" },
+                                ...(formData.region && !["APAC", "EMEA", "NA", "LATAM", "SA"].includes(formData.region) 
+                                    ? [{ key: formData.region, label: formData.region }] 
+                                    : [])
+                            ].map((r) => (
+                                <SelectItem key={r.key} textValue={r.label}>{r.label}</SelectItem>
+                            ))}
                         </Select>
                     </FieldWrapper>
 

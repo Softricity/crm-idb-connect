@@ -53,5 +53,9 @@ export class UpdateAgentDto {
   @IsOptional()
   @IsUUID()
   category_id?: string;
+
+  @IsOptional()
+  @IsString()
+  business_reg_no?: string;
 }
 

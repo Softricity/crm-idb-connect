@@ -300,3 +300,28 @@ export const canEditLeadApplication = (
   
   return false;
 };
+
+// Helper function to resolve file URLs
+export const getFileUrl = (url?: string | null): string => {
+  if (!url) return "";
+  
+  // If it's already an absolute URL (starts with http/https), return it
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    // If it's a localhost URL and we have a configured API base, 
+    // we should replace the localhost part with our actual API base
+    // This fixes issues where URLs are saved as localhost:5005 in the database
+    if (url.includes("localhost:5005")) {
+      const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5005';
+      const normalizedBase = apiBase.replace(/\/+$/, "");
+      return url.replace("http://localhost:5005", normalizedBase);
+    }
+    return url;
+  }
+  
+  // If it's a relative path, prefix it with API_BASE
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5005';
+  const normalizedBase = apiBase.replace(/\/+$/, "");
+  const normalizedPath = url.startsWith("/") ? url : `/${url}`;
+  
+  return `${normalizedBase}${normalizedPath}`;
+};

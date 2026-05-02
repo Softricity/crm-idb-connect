@@ -20,17 +20,14 @@ export class DepartmentsService {
   private getDepartmentInclude(includeInactive: boolean) {
     if (includeInactive) {
       return {
-        department_orders: { orderBy: { order_index: 'asc' as const } },
+        department_orders: true,
         department_statuses: { orderBy: { order_index: 'asc' as const } },
         _count: { select: { partner_departments: true } },
       };
     }
 
     return {
-      department_orders: {
-        where: { is_active: true },
-        orderBy: { order_index: 'asc' as const },
-      },
+      department_orders: true,
       department_statuses: {
         where: { is_active: true },
         orderBy: { order_index: 'asc' as const },
