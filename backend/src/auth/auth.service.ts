@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PartnersService } from '../partners/partners.service';
 import { AgentsService } from '../agents/agents.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class AuthService {
@@ -10,6 +11,7 @@ export class AuthService {
     private partnersService: PartnersService,
     private agentsService: AgentsService,
     private jwtService: JwtService,
+    private prisma: PrismaService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -192,6 +194,62 @@ export class AuthService {
         parent_agent_id: teamMember.agent_id,
         contract_approved: !!teamMember.agent?.contract_approved,
       },
+    };
+  }
+
+  async exchangeStudentPanelStaffToken(staffToken: string) {
+    if (!staffToken) {
+      throw new UnauthorizedException('Missing staff token.');
+    }
+
+    let decoded: any;
+    try {
+      decoded = this.jwtService.verify(staffToken);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired staff token.');
+    }
+
+    if (decoded?.purpose !== 'student_panel_staff_access' || !decoded?.leadId) {
+      throw new ForbiddenException('Invalid access token purpose.');
+    }
+
+    const lead = await this.prisma.leads.findUnique({
+      where: { id: decoded.leadId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        mobile: true,
+        preferred_course: true,
+        preferred_country: true,
+        status: true,
+        type: true,
+        is_flagged: true,
+        created_at: true,
+        created_by: true,
+        assigned_to: true,
+        branch_id: true,
+      },
+    });
+
+    if (!lead) {
+      throw new UnauthorizedException('Lead not found.');
+    }
+
+    const studentSessionToken = this.jwtService.sign(
+      {
+        purpose: 'student_panel_session',
+        sub: lead.id,
+        leadId: lead.id,
+        email: lead.email,
+        type: 'lead',
+      },
+      { expiresIn: '7d' },
+    );
+
+    return {
+      access_token: studentSessionToken,
+      lead,
     };
   }
 }

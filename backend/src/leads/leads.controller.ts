@@ -103,6 +103,11 @@ export class LeadsController {
   bulkSendMessage(@Body() bulkMessageDto: BulkMessageDto, @GetUser() user: any) {
     return this.leadsService.bulkSendMessage(bulkMessageDto, user);
   }
+
+  @Post(':id/student-panel-access-token')
+  createStudentPanelAccessToken(@Param('id') id: string, @GetUser() user: any) {
+    return this.leadsService.createStudentPanelAccessToken(id, user);
+  }
   
   @Delete(':id')
   @Roles(Role.Admin)

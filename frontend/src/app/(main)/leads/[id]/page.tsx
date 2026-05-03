@@ -1,8 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { useCallback, useEffect, useState, useMemo } from "react";
-import { generateStudentPanelToken } from "@/utils/token";
+import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useLeadStore, Lead } from "@/stores/useLeadStore";
 import LeadFormSheet from "@/components/leads-components/createUpdateLead";
@@ -24,6 +23,7 @@ import CoursesTab from "@/components/leads-components/coursesTab";
 import { ForwardDepartmentModal } from "@/components/leads-components/forwardDepartmentModal";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { ApplicationPermission, hasPermission } from "@/lib/utils";
+import { LeadsAPI } from "@/lib/api";
 
 const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
 const EmailsTab = () => <div className="p-4 text-gray-700">📧 Emails Component</div>;
@@ -53,6 +53,8 @@ export default function LeadDetailPage() {
     const [isSheetOpen, setSheetOpen] = useState(false);
     const [selectedTab, setSelectedTab] = useState(defaultTab);
     const [studentPanelOpen, setStudentPanelOpen] = useState(false);
+    const [studentPanelUrl, setStudentPanelUrl] = useState("");
+    const [studentPanelLoading, setStudentPanelLoading] = useState(false);
     const [forwardModalOpen, setForwardModalOpen] = useState(false);
     const [timelineRefreshKey, setTimelineRefreshKey] = useState(0);
 
@@ -142,10 +144,23 @@ export default function LeadDetailPage() {
         Boolean(nextDepartmentLabel && lead.can_forward_to_next_department) &&
         hasPermission(user?.permissions || [], ApplicationPermission.LEAD_TO_APPLICATION);
 
-    // Memoize token so it only changes when lead changes
-    const studentPanelToken = () => {
-        if (!lead) return "";
-        return generateStudentPanelToken({ id: lead.id || "", email: lead.email || "", name: lead.name || "" });
+    const openStudentPanel = async () => {
+        if (!lead?.id) return;
+        setStudentPanelLoading(true);
+        try {
+            const response = await LeadsAPI.getStudentPanelAccessToken(lead.id);
+            const token = response?.token;
+            if (!token) {
+                throw new Error("Failed to get student panel access token.");
+            }
+            const studentPanelBase = process.env.NEXT_PUBLIC_STUDENT_PANEL_URL || "https://student.idbconnect.global";
+            setStudentPanelUrl(`${studentPanelBase}/login?staff_token=${encodeURIComponent(token)}`);
+            setStudentPanelOpen(true);
+        } catch (error: any) {
+            toast.error(error?.message || "Unable to open student panel.");
+        } finally {
+            setStudentPanelLoading(false);
+        }
     };
 
     return (
@@ -190,9 +205,10 @@ export default function LeadDetailPage() {
                             </Button>
                         )}
                         <Button
-                            onPress={() => setStudentPanelOpen(true)}
+                            onPress={openStudentPanel}
                             color="secondary"
                             variant="bordered"
+                            isLoading={studentPanelLoading}
                         >
                             Open Student Panel
                         </Button>
@@ -203,7 +219,7 @@ export default function LeadDetailPage() {
                                     <DialogClose className="absolute right-4 top-4" />
                                 </DialogHeader>
                                 <iframe
-                                    src={`https://student.idbconnect.global/login?token=${encodeURIComponent(studentPanelToken())}`}
+                                    src={studentPanelUrl}
                                     title="Student Panel"
                                     className="flex-1 w-full h-full border-0"
                                     allowFullScreen

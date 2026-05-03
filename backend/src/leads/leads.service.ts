@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
   BadRequestException,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { MailService } from '../mail/mail.service';
@@ -18,6 +19,7 @@ import { Prisma } from '@prisma/client';
 import { TimelineService } from '../timeline/timeline.service';
 import * as bcrypt from 'bcrypt';
 import { getScope } from '../common/utils/scope.util';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class LeadsService {
@@ -25,7 +27,13 @@ export class LeadsService {
     private prisma: PrismaService,
     private mailService: MailService,
     private timelineService: TimelineService,
+    private jwtService: JwtService,
   ) { }
+
+  private isAdminLike(user: any): boolean {
+    const role = String(user?.role || '').toLowerCase().trim();
+    return role === 'admin' || role.includes('super');
+  }
 
   private generateRandomPassword(length = 8): string {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
@@ -911,5 +919,43 @@ export class LeadsService {
         agent_team_member_id: teamMemberId,
       },
     });
+  }
+
+  async createStudentPanelAccessToken(leadId: string, requester: any) {
+    const requesterId = requester?.id || requester?.userId;
+    if (!requesterId) {
+      throw new ForbiddenException('Invalid user context.');
+    }
+
+    const lead = await this.prisma.leads.findUnique({
+      where: { id: leadId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        assigned_to: true,
+      },
+    });
+
+    if (!lead) {
+      throw new NotFoundException('Lead not found.');
+    }
+
+    const isAssignedStaff = lead.assigned_to === requesterId;
+    const isAdmin = this.isAdminLike(requester);
+    if (!isAssignedStaff && !isAdmin) {
+      throw new ForbiddenException('You are not allowed to access this student panel.');
+    }
+
+    const token = this.jwtService.sign(
+      {
+        purpose: 'student_panel_staff_access',
+        leadId: lead.id,
+        staffUserId: requesterId,
+      },
+      { expiresIn: '5m' },
+    );
+
+    return { token };
   }
 }

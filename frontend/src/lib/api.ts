@@ -241,7 +241,14 @@ export const LeadsAPI = {
   removeCourseFromLead: async (leadId: string, courseId: string) => {
     const res = await fetch(`${API_BASE}/leads/${leadId}/courses/${courseId}`, { method: 'DELETE', headers: getHeaders() });
     return handleResponse(res);
-  }
+  },
+  getStudentPanelAccessToken: async (leadId: string) => {
+    const res = await fetch(`${API_BASE}/leads/${leadId}/student-panel-access-token`, {
+      method: 'POST',
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
 };
 
 export const ReportsAPI = {

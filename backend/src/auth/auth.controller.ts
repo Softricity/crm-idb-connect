@@ -28,4 +28,10 @@ export class AuthController {
   async me(@GetUser() user: any) {
     return this.authService.getCurrentSession(user);
   }
+
+  @Public()
+  @Post('student-panel/exchange')
+  async exchangeStudentPanelToken(@Body('staff_token') staffToken: string) {
+    return this.authService.exchangeStudentPanelStaffToken(staffToken);
+  }
 }
