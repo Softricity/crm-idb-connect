@@ -8,6 +8,8 @@ import { SupabaseService } from '../storage/supabase.service';
 import { getScope } from '../common/utils/scope.util';
 import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
+import { promises as fs } from 'fs';
+import * as path from 'path';
 
 @Injectable()
 export class ApplicationsService {
@@ -18,6 +20,31 @@ export class ApplicationsService {
     private supabaseService: SupabaseService,
     private mailService: MailService
   ) {}
+
+  private async uploadWithFallback(
+    file: Express.Multer.File,
+    folder: string,
+    bucket: string,
+  ): Promise<string> {
+    try {
+      return await this.supabaseService.uploadFile(file, folder, bucket);
+    } catch (error) {
+      this.logger.error('[updateDocuments] Supabase upload failed, using local fallback', {
+        bucket,
+        folder,
+        file: file?.originalname,
+        error: error instanceof Error ? error.message : error,
+      });
+
+      const uploadsDir = path.join(process.cwd(), 'uploads', folder);
+      await fs.mkdir(uploadsDir, { recursive: true });
+      const safeName = `${Date.now()}-${(file.originalname || 'document').replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const fullPath = path.join(uploadsDir, safeName);
+      await fs.writeFile(fullPath, file.buffer);
+
+      return `/uploads/${folder}/${safeName}`;
+    }
+  }
 
   // --- Password Helpers ---
   private generateRandomPassword(length = 8): string {
@@ -326,7 +353,11 @@ export class ApplicationsService {
 
     const processSingleFile = async (fileArray: Express.Multer.File[] | undefined, fieldName: string) => {
       if (fileArray && fileArray.length > 0) {
-        const url = await this.supabaseService.uploadFile(fileArray[0], `applications/${leadId}`, 'idb-student-documents');
+        const url = await this.uploadWithFallback(
+          fileArray[0],
+          `applications/${leadId}`,
+          'idb-student-documents',
+        );
         updateData[`${fieldName}_url`] = url;
       }
     };
@@ -334,7 +365,9 @@ export class ApplicationsService {
     const processArrayFiles = async (fileArray: Express.Multer.File[] | undefined, fieldName: string, existingUrls: string[] = []) => {
       if (fileArray && fileArray.length > 0) {
         const newUrls = await Promise.all(
-          fileArray.map((file) => this.supabaseService.uploadFile(file, `applications/${leadId}`, 'idb-student-documents'))
+          fileArray.map((file) =>
+            this.uploadWithFallback(file, `applications/${leadId}`, 'idb-student-documents'),
+          )
         );
         const targetKey = fieldName === 'academic_documents' ? 'academic_documents_urls' : `${fieldName}_url`;
         updateData[targetKey] = [...existingUrls, ...newUrls];
