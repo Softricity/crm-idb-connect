@@ -456,13 +456,14 @@ export default function AgreementsPage() {
                         plugins: [
                           'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
                           'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                          'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                          'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount', 'directionality'
                         ],
                         toolbar: 'undo redo | blocks | ' +
                           'bold italic forecolor | alignleft aligncenter ' +
                           'alignright alignjustify | bullist numlist outdent indent | ' +
-                          'removeformat | help | code',
-                        content_style: 'body { font-family:Inter,Helvetica,Arial,sans-serif; font-size:14px }',
+                          'ltr rtl | removeformat | help | code',
+                        directionality: 'ltr',
+                        content_style: 'body { font-family:Inter,Helvetica,Arial,sans-serif; font-size:14px; direction:ltr; unicode-bidi:normal; }',
                         skin: 'oxide',
                       }}
                     />
@@ -769,13 +770,14 @@ export default function AgreementsPage() {
                         plugins: [
                           'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
                           'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
-                          'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount'
+                          'insertdatetime', 'media', 'table', 'code', 'help', 'wordcount', 'directionality'
                         ],
                         toolbar: 'undo redo | blocks | ' +
                           'bold italic forecolor | alignleft aligncenter ' +
                           'alignright alignjustify | bullist numlist outdent indent | ' +
-                          'removeformat | help | code',
-                        content_style: 'body { font-family:Inter,Helvetica,Arial,sans-serif; font-size:14px }',
+                          'ltr rtl | removeformat | help | code',
+                        directionality: 'ltr',
+                        content_style: 'body { font-family:Inter,Helvetica,Arial,sans-serif; font-size:14px; direction:ltr; unicode-bidi:normal; }',
                         skin: 'oxide',
                       }}
                     />
