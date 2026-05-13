@@ -29,10 +29,29 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new PrismaExceptionFilter());
 
+  const allowedOrigins = new Set([
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'http://localhost:3002',
+    'https://tw1lcrj1-3000.inc1.devtunnels.ms',
+    'https://idbconnect.global',
+    'https://student.idbconnect.global',
+    'https://inquiry.idbconnect.global',
+    'https://b2b.idbconnect.global',
+  ]);
+
   app.enableCors({
-    origin: ['http://localhost:3001', 'http://localhost:3000', "https://tw1lcrj1-3000.inc1.devtunnels.ms", "https://idbconnect.global", "https://student.idbconnect.global", "https://inquiry.idbconnect.global", "https://b2b.idbconnect.global", "http://localhost:3002"], // Your Next.js app's URL
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: (origin, callback) => {
+      // Allow non-browser tools (no Origin header) and configured frontends
+      if (!origin || allowedOrigins.has(origin)) {
+        return callback(null, true);
+      }
+      return callback(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
     credentials: true,
+    optionsSuccessStatus: 204,
   });
 
   const uploadsRoot = join(process.cwd(), 'uploads');
