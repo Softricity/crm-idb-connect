@@ -515,14 +515,15 @@ export class AgentsService {
         throw new BadRequestException('Selected category is invalid or inactive');
       }
 
-      let agent = await this.prisma.agent.findFirst({
-        where: {
-          OR: [
-            { email: updated.email },
-            { mobile: updated.mobile },
-          ],
-        },
-      });
+      const email = (updated.email || '').trim();
+      const mobile = (updated.mobile || '').trim();
+      let agent = email
+        ? await this.prisma.agent.findUnique({ where: { email } })
+        : null;
+
+      if (!agent && mobile) {
+        agent = await this.prisma.agent.findFirst({ where: { mobile } });
+      }
 
       const plainPassword = this.generateRandomPassword(12);
       const hashedPassword = await bcrypt.hash(plainPassword, 10);
