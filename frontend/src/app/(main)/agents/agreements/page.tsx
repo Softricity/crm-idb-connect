@@ -341,6 +341,9 @@ export default function AgreementsPage() {
   ) => {
     try {
       await AgentsAPI.updateInquiryStatus(id, status, extras);
+      if (status === 'CONVERTED') {
+        alert('Inquiry converted to agent. Login credentials were generated and sent to the agent email.');
+      }
       await load(); 
     } catch (e: any) {
       alert(e?.message || 'Failed to update inquiry status');
@@ -940,12 +943,12 @@ export default function AgreementsPage() {
               <ModalFooter className="border-t">
                 <Button variant="flat" onPress={close}>Close</Button>
                 {selectedInquiry?.status !== 'CONVERTED' && (
-                  <Button color="success" className="text-white font-bold" onPress={() => {
+                  <Button color="success" className="text-white font-bold" onPress={async () => {
                     if (!convertBranchId || !convertCategoryId) {
                       alert('Please assign both branch and category before converting.');
                       return;
                     }
-                    updateInquiryStatus(selectedInquiry.id, 'CONVERTED', {
+                    await updateInquiryStatus(selectedInquiry.id, 'CONVERTED', {
                       branch_id: convertBranchId,
                       category_id: convertCategoryId,
                     });

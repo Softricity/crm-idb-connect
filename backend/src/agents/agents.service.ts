@@ -24,6 +24,15 @@ export class AgentsService {
     private mailService: MailService,
   ) {}
 
+  private generateRandomPassword(length = 10): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$%';
+    let password = '';
+    for (let i = 0; i < length; i += 1) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
 
   async onboard(createAgentDto: CreateAgentDto) {
     if (!createAgentDto.branch_id) {
@@ -492,14 +501,6 @@ export class AgentsService {
       include: { documents: true },
     }) as any;
 
-    if (status === ('APPROVED' as any)) {
-      await this.mailService.sendTemplateEmail(updated.email, 'AGENT_ONBOARDING', {
-        name: updated.name,
-        company: updated.company_name,
-        login_url: 'https://b2b.idbconnect.global/login',
-      });
-    }
-
     if (status === ('CONVERTED' as any)) {
       if (!branchId || !categoryId) {
         throw new BadRequestException('Branch and category are required to convert inquiry to agent');
@@ -523,14 +524,17 @@ export class AgentsService {
         },
       });
 
+      const plainPassword = this.generateRandomPassword(12);
+      const hashedPassword = await bcrypt.hash(plainPassword, 10);
+
+      let createdNewAgent = false;
       if (!agent) {
-        const tempPassword = await bcrypt.hash(`Temp@${Date.now()}`, 10);
         const createdAgent = await this.prisma.agent.create({
           data: {
             name: updated.name,
             email: updated.email,
             mobile: updated.mobile,
-            password: tempPassword,
+            password: hashedPassword,
             agency_name: updated.company_name || updated.name,
             website: updated.website || undefined,
             country: updated.country || 'Unknown',
@@ -544,6 +548,7 @@ export class AgentsService {
           },
         });
         agent = createdAgent;
+        createdNewAgent = true;
 
         // Copy inquiry documents to agent documents if they exist
         if (updated.documents.length > 0) {
@@ -559,6 +564,13 @@ export class AgentsService {
 
       if (!agent) {
         return updated;
+      }
+
+      if (agent && !createdNewAgent) {
+        agent = await this.prisma.agent.update({
+          where: { id: agent.id },
+          data: { password: hashedPassword },
+        });
       }
 
       if (!agent.branch_id || !agent.category_id) {
@@ -596,6 +608,14 @@ export class AgentsService {
           },
         });
       }
+
+      await this.mailService.sendTemplateEmail(updated.email, 'AGENT_ONBOARDING', {
+        name: updated.name,
+        company: updated.company_name || updated.name,
+        email: updated.email,
+        password: plainPassword,
+        login_url: 'https://b2b.idbconnect.global/login',
+      });
     }
 
     return updated;
