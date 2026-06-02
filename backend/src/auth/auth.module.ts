@@ -7,11 +7,13 @@ import { PassportModule } from '@nestjs/passport';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtStrategy } from './jwt.strategy';
 import { LocalStrategy } from './local.strategy';
+import { PermissionsModule } from '../permissions/permissions.module';
 
 @Module({
   imports: [
     PartnersModule, 
     AgentsModule, // 👈 Add to imports
+    PermissionsModule,
     PassportModule,
     JwtModule.register({
       secret: process.env.JWT_SECRET,

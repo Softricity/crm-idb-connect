@@ -61,9 +61,13 @@ const FinancialsTab: React.FC<FinancialsTabProps> = ({ leadId }) => {
       setError(null);
       const response = await FinancialsAPI.get(leadId);
       setData(response);
-    } catch (err) {
-      console.error("Failed to fetch financials", err);
-      setError("Failed to load financial data.");
+    } catch (err: any) {
+      if (err.status === 404 || err.statusCode === 404) {
+        setData(null);
+      } else {
+        console.error("Failed to fetch financials", err);
+        setError("Failed to load financial data.");
+      }
     } finally {
       setLoading(false);
     }
@@ -129,7 +133,17 @@ const FinancialsTab: React.FC<FinancialsTabProps> = ({ leadId }) => {
 
   if (loading) return <div className="p-8 text-center text-gray-500 animate-pulse">Loading...</div>;
   if (error) return <div className="p-6 text-center text-red-500">{error}</div>;
-  if (!data) return <div className="p-6 text-center text-gray-500">No record found.</div>;
+  if (!data) {
+    return (
+      <div className="p-8 text-center max-w-xl mx-auto mt-8 bg-gray-50 border border-dashed border-gray-300 rounded-xl">
+        <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+        <h3 className="text-base font-semibold text-gray-800">Financials Not Available</h3>
+        <p className="text-sm text-gray-500 mt-2">
+          This lead has not been converted to an application yet. Financial status tracking becomes available once the lead is forwarded to a department/converted to an application.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-5xl mx-auto">

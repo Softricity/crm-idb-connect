@@ -23,7 +23,16 @@
     "db:reconcile:contracts": "node scripts/reconcile_contract_approved.js",
     "db:reset:departments:current-flow": "ts-node scripts/reset_departments_to_current_flow.ts",
     "db:assign:staff-departments": "ts-node scripts/assign_staff_departments_from_sheet.ts",
-    "db:enforce:departments-staff-sheet": "ts-node scripts/enforce_departments_and_staff_from_sheet.ts"
+    "db:enforce:departments-staff-sheet": "ts-node scripts/enforce_departments_and_staff_from_sheet.ts",
+    "db:backfill:department-permissions": "ts-node scripts/backfill_department_permissions.ts",
+    "db:backfill:department-permissions:apply": "ts-node scripts/backfill_department_permissions.ts --apply",
+    "db:audit:authz-rollout": "ts-node scripts/audit_department_authz_rollout.ts",
+    "db:reset-authz:clean-start": "ts-node scripts/reset_authz_clean_start.ts",
+    "db:reset-authz:clean-start:apply": "ts-node scripts/reset_authz_clean_start.ts --apply",
+    "db:rollout:department-model-v2": "ts-node scripts/rollout_department_model_v2.ts",
+    "db:rollout:department-model-v2:apply": "ts-node scripts/rollout_department_model_v2.ts --apply",
+    "db:backfill:existing-leads-department-flow": "ts-node scripts/backfill_existing_leads_department_flow.ts",
+    "db:backfill:existing-leads-department-flow:apply": "ts-node scripts/backfill_existing_leads_department_flow.ts --apply"
   },
   "dependencies": {
     "@nestjs/common": "^11.1.9",

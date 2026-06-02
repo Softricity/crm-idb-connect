@@ -140,9 +140,9 @@ export default function EmailTemplateEditorPage() {
           <ArrowLeft size={20} />
         </Button>
         <div>
-          <h1 className="text-2xl font-bold text-default-800">
+          <h2 className="text-2xl font-bold text-default-800">
             {isNew ? 'Create New Template' : `Edit Template: ${formData.name}`}
-          </h1>
+          </h2>
           <p className="text-default-500 text-sm">Design your email notifications using HTML and dynamic variables.</p>
         </div>
       </div>

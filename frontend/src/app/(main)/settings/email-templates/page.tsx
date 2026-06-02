@@ -71,9 +71,9 @@ export default function EmailTemplatesPage() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
+          <h2 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-600">
             Email Templates
-          </h1>
+          </h2>
           <p className="text-default-500 mt-1">Manage automated system communications and notifications.</p>
         </div>
         <Button 

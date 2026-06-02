@@ -23,7 +23,7 @@ import {
   AccordionItem,
 } from '@heroui/react';
 import { PlusIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
-import { PermissionGroupsAPI, PermissionsAPI, RolesAPI } from '@/lib/api';
+import { DepartmentPermissionsAPI, DepartmentsAPI, PermissionGroupsAPI, PermissionsAPI, RolesAPI } from '@/lib/api';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { hasPermission, PermissionPermission } from '@/lib/utils';
 
@@ -50,6 +50,18 @@ interface Role {
   }[];
 }
 
+interface Department {
+  id: string;
+  name: string;
+  code: string;
+  is_active: boolean;
+  department_permissions?: {
+    permission_id: string;
+    is_active: boolean;
+    permission: Permission;
+  }[];
+}
+
 export default function RolesPermissions() {
   const { user } = useAuthStore();
   const userPermissions = user?.permissions || [];
@@ -59,7 +71,11 @@ export default function RolesPermissions() {
   const [permissionGroups, setPermissionGroups] = useState<PermissionGroup[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(false);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState<string>('');
+  const [selectedDepartmentPermissionIds, setSelectedDepartmentPermissionIds] = useState<string[]>([]);
+  const [savingDepartmentPermissions, setSavingDepartmentPermissions] = useState(false);
 
   // Permission Group form
   const [groupName, setGroupName] = useState('');
@@ -84,20 +100,53 @@ export default function RolesPermissions() {
   const fetchAllData = async () => {
     setLoading(true);
     try {
-      const [groupsData, permissionsData, rolesData] = await Promise.all([
+      const [groupsData, permissionsData, rolesData, departmentsData, departmentMappingsData] = await Promise.all([
         PermissionGroupsAPI.getAll(),
         PermissionsAPI.getAll(),
         RolesAPI.getAll(),
+        DepartmentsAPI.fetchDepartments(true),
+        DepartmentPermissionsAPI.list(),
       ]);
       setPermissionGroups(groupsData);
       setPermissions(permissionsData);
       setRoles(rolesData);
+      const rawDepartments = Array.isArray(departmentsData) ? departmentsData : [];
+      const mappingsByDepartment = new Map<string, any>();
+      (Array.isArray(departmentMappingsData) ? departmentMappingsData : []).forEach((item: any) => {
+        mappingsByDepartment.set(item.id, item);
+      });
+      const normalizedDepartments = rawDepartments.map((department: any) => ({
+        id: department.id,
+        name: department.name,
+        code: department.code,
+        is_active: department.is_active,
+        department_permissions: mappingsByDepartment.get(department.id)?.department_permissions || [],
+      }));
+      setDepartments(normalizedDepartments);
+      if (!selectedDepartmentId && normalizedDepartments.length > 0) {
+        const firstDepartmentId = normalizedDepartments[0].id;
+        setSelectedDepartmentId(firstDepartmentId);
+        const defaultPermissions = (normalizedDepartments[0].department_permissions || [])
+          .filter((mapping: any) => mapping.is_active !== false)
+          .map((mapping: any) => mapping.permission_id);
+        setSelectedDepartmentPermissionIds(defaultPermissions);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!selectedDepartmentId) return;
+    const department = departments.find((item) => item.id === selectedDepartmentId);
+    if (!department) return;
+    const permissionIds = (department.department_permissions || [])
+      .filter((mapping) => mapping.is_active !== false)
+      .map((mapping) => mapping.permission_id);
+    setSelectedDepartmentPermissionIds(permissionIds);
+  }, [selectedDepartmentId, departments]);
 
   // Permission Group handlers
   const handleCreateGroup = async () => {
@@ -199,6 +248,22 @@ export default function RolesPermissions() {
       fetchAllData();
     } catch (error) {
       console.error('Error deleting role:', error);
+    }
+  };
+
+  const handleSaveDepartmentPermissions = async () => {
+    if (!selectedDepartmentId) return;
+    setSavingDepartmentPermissions(true);
+    try {
+      await DepartmentPermissionsAPI.replaceByDepartment(
+        selectedDepartmentId,
+        selectedDepartmentPermissionIds,
+      );
+      await fetchAllData();
+    } catch (error) {
+      console.error('Error saving department permissions:', error);
+    } finally {
+      setSavingDepartmentPermissions(false);
     }
   };
 
@@ -502,6 +567,103 @@ export default function RolesPermissions() {
                 </CardBody>
               </Card>
             )}
+          </div>
+        </Tab>
+
+        <Tab
+          key="department-permissions"
+          title={
+            <div className="flex items-center gap-2">
+              <span>Department Permissions</span>
+              <Chip size="sm" variant="flat">{departments.length}</Chip>
+            </div>
+          }
+        >
+          <div className="mt-6 space-y-5">
+            <div className="flex justify-between items-center">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Department Permission Mapping</h2>
+                <p className="text-sm text-gray-500 mt-1">Assign permissions by department (active users inherit union across departments)</p>
+              </div>
+              <Button
+                color="primary"
+                className="text-white"
+                onPress={handleSaveDepartmentPermissions}
+                isDisabled={!selectedDepartmentId}
+                isLoading={savingDepartmentPermissions}
+              >
+                Save Department Permissions
+              </Button>
+            </div>
+
+            <Card>
+              <CardBody className="p-5 space-y-5">
+                <Select
+                  label="Department"
+                  placeholder="Select department"
+                  selectedKeys={selectedDepartmentId ? [selectedDepartmentId] : []}
+                  onSelectionChange={(keys) =>
+                    setSelectedDepartmentId((Array.from(keys)[0] as string) || '')
+                  }
+                  variant="bordered"
+                  size="lg"
+                >
+                  {departments.map((department) => (
+                    <SelectItem key={department.id}>
+                      {department.name} ({department.code})
+                    </SelectItem>
+                  ))}
+                </Select>
+
+                <div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-bold text-gray-900 uppercase">Permissions</h3>
+                    <Chip color="primary" variant="flat">
+                      {selectedDepartmentPermissionIds.length} selected
+                    </Chip>
+                  </div>
+
+                  <CheckboxGroup
+                    value={selectedDepartmentPermissionIds}
+                    onValueChange={setSelectedDepartmentPermissionIds}
+                    className="w-full"
+                  >
+                    {groupedPermissions.length > 0 && (
+                      <Accordion variant="bordered" selectionMode="multiple">
+                        {groupedPermissions.map((group) => (
+                          <AccordionItem key={group.id} title={group.name}>
+                            <div className="grid grid-cols-2 gap-1 pb-4">
+                              {group.permissions.map((permission) => (
+                                <div key={permission.id} className="flex items-center p-2 rounded-lg hover:bg-gray-50">
+                                  <Checkbox value={permission.id} className="w-full">
+                                    <span className="text-sm font-medium">{permission.name}</span>
+                                  </Checkbox>
+                                </div>
+                              ))}
+                            </div>
+                          </AccordionItem>
+                        ))}
+                      </Accordion>
+                    )}
+
+                    {ungroupedPermissions.length > 0 && (
+                      <div className="mt-6 border rounded-lg p-4">
+                        <h4 className="font-bold text-gray-900 mb-4">Other Permissions</h4>
+                        <div className="grid grid-cols-1 gap-3">
+                          {ungroupedPermissions.map((permission) => (
+                            <div key={permission.id} className="flex items-center p-2 rounded-lg hover:bg-gray-50">
+                              <Checkbox value={permission.id} className="w-full">
+                                <span className="text-sm font-medium">{permission.name}</span>
+                              </Checkbox>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CheckboxGroup>
+                </div>
+              </CardBody>
+            </Card>
           </div>
         </Tab>
       </Tabs>

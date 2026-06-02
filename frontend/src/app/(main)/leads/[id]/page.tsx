@@ -22,12 +22,29 @@ import FinancialsTab from "@/components/FinancialsTab";
 import CoursesTab from "@/components/leads-components/coursesTab";
 import { ForwardDepartmentModal } from "@/components/leads-components/forwardDepartmentModal";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { ApplicationPermission, hasPermission } from "@/lib/utils";
-import { LeadsAPI } from "@/lib/api";
+import {
+    ApplicationPermission,
+    hasAnyPermission,
+    hasPermission,
+    LeadPermission,
+    OfflinePaymentPermission,
+} from "@/lib/utils";
+import { DepartmentsAPI, LeadsAPI } from "@/lib/api";
+import LeadDocumentsTab from "@/components/leads-components/leadDocumentsTab";
 
-const DocumentsTab = () => <div className="p-4 text-gray-700">📂 Documents Component</div>;
-const EmailsTab = () => <div className="p-4 text-gray-700">📧 Emails Component</div>;
-const WhatsAppTab = () => <div className="p-4 text-gray-700">💬 WhatsApp Component</div>;
+interface DepartmentOrderConfig {
+    order_index: number;
+    is_active: boolean;
+    is_default: boolean;
+}
+
+interface DepartmentRecord {
+    id: string;
+    name: string;
+    code: string;
+    is_active: boolean;
+    department_orders?: DepartmentOrderConfig | null;
+}
 
 const InfoRow = ({ label, value }: { label: string; value?: string | null }) => (
     <div className="flex justify-between py-2 border-b border-dotted border-gray-200">
@@ -57,6 +74,7 @@ export default function LeadDetailPage() {
     const [studentPanelLoading, setStudentPanelLoading] = useState(false);
     const [forwardModalOpen, setForwardModalOpen] = useState(false);
     const [timelineRefreshKey, setTimelineRefreshKey] = useState(0);
+    const [departments, setDepartments] = useState<DepartmentRecord[]>([]);
 
     const fetchAndSetLead = useCallback(async () => {
         setLoading(true);
@@ -71,11 +89,27 @@ export default function LeadDetailPage() {
         }
     }, [id, fetchAndSetLead]);
 
-    const handleStatusChange = async (newStatus: string, reason?: string) => {
+    useEffect(() => {
+        let isMounted = true;
+        DepartmentsAPI.fetchDepartments(false)
+            .then((data) => {
+                if (!isMounted) return;
+                setDepartments(Array.isArray(data) ? (data as DepartmentRecord[]) : []);
+            })
+            .catch((error) => {
+                console.error("Failed to fetch departments for lead detail:", error);
+                if (isMounted) setDepartments([]);
+            });
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    const handleStatusChange = async (newStatus: string) => {
         if (!lead || !lead.id) return;
 
-        const payload: { status: string; reason?: string } = { status: newStatus };
-        if (reason) payload.reason = reason;
+        const payload: { status: string } = { status: newStatus };
 
         try {
             await updateLead(lead.id, payload);
@@ -133,16 +167,42 @@ export default function LeadDetailPage() {
         return <div className="p-8 text-center text-red-500">Lead not found.</div>;
     }
 
-    const normalizedLeadType = (lead.type || "").toLowerCase();
+    const sortedActiveDepartments = departments
+        .filter(
+            (department) =>
+                department.is_active && (department.department_orders?.is_active ?? true),
+        )
+        .sort(
+            (a, b) =>
+                (a.department_orders?.order_index ?? Number.MAX_SAFE_INTEGER) -
+                (b.department_orders?.order_index ?? Number.MAX_SAFE_INTEGER),
+        );
+    const currentDepartmentIndex = sortedActiveDepartments.findIndex(
+        (department) => department.id === lead.current_department_id,
+    );
     const nextDepartmentLabel =
-        normalizedLeadType === "lead"
-            ? "Admissions"
-            : normalizedLeadType === "application"
-                ? "Visa"
-                : null;
+        currentDepartmentIndex >= 0
+            ? sortedActiveDepartments[currentDepartmentIndex + 1]?.name || null
+            : null;
     const canForwardToNextDepartment =
         Boolean(nextDepartmentLabel && lead.can_forward_to_next_department) &&
         hasPermission(user?.permissions || [], ApplicationPermission.LEAD_TO_APPLICATION);
+    const canViewDocuments = hasAnyPermission(user?.permissions || [], [
+        ApplicationPermission.APPLICATION_MANAGE,
+        LeadPermission.LEAD_UPDATE,
+        LeadPermission.LEAD_MANAGE,
+        LeadPermission.LEAD_VIEW,
+    ]);
+    const canEditDocuments = hasAnyPermission(user?.permissions || [], [
+        ApplicationPermission.APPLICATION_MANAGE,
+        LeadPermission.LEAD_UPDATE,
+        LeadPermission.LEAD_MANAGE,
+    ]);
+    const canViewPayments = hasAnyPermission(user?.permissions || [], [
+        OfflinePaymentPermission.OFFLINE_PAYMENT_CREATE,
+        OfflinePaymentPermission.OFFLINE_PAYMENT_RECEIVE,
+        OfflinePaymentPermission.OFFLINE_PAYMENT_APPROVAL,
+    ]);
 
     const openStudentPanel = async () => {
         if (!lead?.id) return;
@@ -250,9 +310,6 @@ export default function LeadDetailPage() {
                                 <InfoRow label="Mobile" value={lead.mobile} />
                                 <InfoRow label="Email" value={lead.email} />
                                 <InfoRow label="Lead Status" value={lead.status} />
-                                {(lead.status === "cold" || lead.status === "rejected") && (
-                                    <InfoRow label="Reason for Status" value={lead.reason} />
-                                )}
                                 <InfoRow label="Lead Type" value={lead.type} />
                                 <InfoRow label="Lead Prefered Course" value={lead.preferred_course} />
                                 <InfoRow label="Preferred Country" value={lead.preferred_country} />
@@ -293,28 +350,24 @@ export default function LeadDetailPage() {
                         />
                     </Tab>
 
-                    <Tab key="documents" title="Documents">
-                        <DocumentsTab />
-                    </Tab>
+                    {canViewDocuments && (
+                        <Tab key="documents" title="Documents">
+                            <LeadDocumentsTab leadId={lead?.id ?? ""} canEdit={canEditDocuments} />
+                        </Tab>
+                    )}
 
                     <Tab key="courses" title="Courses">
                         <CoursesTab leadId={lead?.id ?? ""} />
                     </Tab>
 
-                    <Tab key="payments" title="Payments">
-                        <PaymentsTab leadId={id}/>
-                    </Tab>
-
-                    <Tab key="emails" title="Emails">
-                        <EmailsTab />
-                    </Tab>
+                    {canViewPayments && (
+                        <Tab key="payments" title="Payments">
+                            <PaymentsTab leadId={id} />
+                        </Tab>
+                    )}
 
                     <Tab key="financials" title="Financials">
                         <FinancialsTab leadId={lead?.id ?? ""}/>
-                    </Tab>
-
-                    <Tab key="whatsapp" title="WhatsApp">
-                        <WhatsAppTab />
                     </Tab>
 
                     <Tab key="chat" title="Chat">

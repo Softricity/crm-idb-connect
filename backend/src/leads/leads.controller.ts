@@ -14,6 +14,7 @@ import {
   BulkAssignDto,
   BulkStatusDto,
   BulkMessageDto,
+  BulkDeleteDto,
 } from './dto/bulk-update.dto';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { Public } from '../auth/public.decorator';
@@ -21,7 +22,6 @@ import { GetUser } from '../auth/get-user.decorator';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/roles.enum';
 import { RolesGuard } from '../auth/roles.guard';
-import { BulkDeleteDto } from './dto/bulk-update.dto';
 
 @UseGuards(RolesGuard)
 @Controller('leads')
@@ -33,12 +33,12 @@ export class LeadsController {
   async create(@Body() createLeadDto: CreateLeadDto, @GetUser() user?: any) {
     return this.leadsService.create(createLeadDto, user);
   }
-  
+
   @Get('my-applications')
   findMyApplications(@Query('created_by') createdBy?: string) {
     return this.leadsService.findMyApplications(createdBy);
   }
-  
+
   @Get()
   findAll(
     @GetUser() user: any,
@@ -65,12 +65,12 @@ export class LeadsController {
       Number.isFinite(parsedLimit) ? parsedLimit : 10,
     );
   }
-  
+
   @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.leadsService.findOne(id);
+  findOne(@Param('id') id: string, @GetUser() user: any) {
+    return this.leadsService.findOne(id, user);
   }
-  
+
   @Patch(':id')
   update(
     @Param('id') id: string,
@@ -79,13 +79,13 @@ export class LeadsController {
   ) {
     return this.leadsService.update(id, updateLeadDto, user);
   }
-  
+
   @Post('bulk/assign')
   @Roles(Role.Admin)
   bulkAssign(@Body() bulkAssignDto: BulkAssignDto, @GetUser() user: any) {
     return this.leadsService.bulkAssign(bulkAssignDto, user);
   }
-  
+
   @Post('login')
   @Public()
   login(@Body('email') email: string, @Body('password') password: string) {

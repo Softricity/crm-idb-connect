@@ -51,7 +51,7 @@ describe('MailService', () => {
     await service.sendTemplateEmail('lead@example.com', 'INQUIRY_RECEIVED', { name: 'John' });
 
     expect(nodemailer.createTransport).toHaveBeenCalledWith({
-      host: 'smtp.gmail.com',
+      host: 'smtpout.secureserver.net',
       port: 587,
       secure: false,
       auth: {

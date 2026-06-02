@@ -4,6 +4,29 @@ describe('LeadsService', () => {
   const prismaMock = {
     leads: {
       create: jest.fn(),
+      findFirst: jest.fn(),
+      findUnique: jest.fn(),
+    },
+    partners: {
+      findUnique: jest.fn(),
+    },
+    branch: {
+      findFirst: jest.fn(),
+    },
+    department_order: {
+      findFirst: jest.fn(),
+    },
+    department_status: {
+      findFirst: jest.fn(),
+    },
+    department_assignment_cursor: {
+      findUnique: jest.fn(),
+    },
+    agent: {
+      findUnique: jest.fn(),
+    },
+    agentTeamMember: {
+      findUnique: jest.fn(),
     },
   } as any;
 
@@ -11,12 +34,23 @@ describe('LeadsService', () => {
     sendWelcomeEmail: jest.fn(),
   } as any;
 
-  const timelineServiceMock = {} as any;
+  const timelineServiceMock = {
+    logLeadCreated: jest.fn(),
+    logAssignmentChange: jest.fn(),
+  } as any;
 
   let service: LeadsService;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prismaMock.leads.findFirst.mockResolvedValue(null);
+    prismaMock.department_order.findFirst.mockResolvedValue(null);
+    prismaMock.department_status.findFirst.mockResolvedValue(null);
+    prismaMock.partners.findUnique.mockResolvedValue(null);
+    prismaMock.branch.findFirst.mockResolvedValue(null);
+    prismaMock.agent.findUnique.mockResolvedValue(null);
+    prismaMock.agentTeamMember.findUnique.mockResolvedValue(null);
+    prismaMock.department_assignment_cursor.findUnique.mockResolvedValue(null);
     service = new LeadsService(prismaMock, mailServiceMock, timelineServiceMock);
   });
 

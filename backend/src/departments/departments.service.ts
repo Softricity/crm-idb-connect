@@ -450,14 +450,10 @@ export class DepartmentsService {
       }
 
       const inputKeys = statuses.map((status) => status.key);
-      await tx.department_status.updateMany({
+      await tx.department_status.deleteMany({
         where: {
           department_id: departmentId,
           key: { notIn: inputKeys },
-        },
-        data: {
-          is_active: false,
-          is_default: false,
         },
       });
 

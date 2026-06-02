@@ -47,7 +47,7 @@ export const TimelineItem = ({
             <div className="flex-1">
                 <p className="text-sm text-gray-700">
                     <strong className="font-semibold text-gray-900">
-                        {event.partner?.name ?? "System"}
+                        {event.actor_name ?? event.partner?.name ?? "System"}
                     </strong>{" "}
                     {renderEventAction(event)}
                 </p>

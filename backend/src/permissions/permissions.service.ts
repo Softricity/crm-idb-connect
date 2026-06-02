@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import { Injectable, NotFoundException, ConflictException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreatePermissionDto } from './dto/create-permission.dto';
 import { UpdatePermissionDto } from './dto/update-permission.dto';
@@ -11,6 +11,18 @@ import { AssignPermissionsDto } from './dto/assign-permission.dto';
 @Injectable()
 export class PermissionsService {
   constructor(private prisma: PrismaService) {}
+
+  private resolveAuthzSource(): 'role' | 'department' | 'hybrid' {
+    const value = (process.env.AUTHZ_SOURCE || 'hybrid').toLowerCase();
+    if (value === 'role' || value === 'department' || value === 'hybrid') {
+      return value;
+    }
+    return 'hybrid';
+  }
+
+  private uniqueStrings(values: string[]): string[] {
+    return Array.from(new Set(values.filter(Boolean)));
+  }
 
   // ==================== PERMISSIONS ====================
   
@@ -402,5 +414,204 @@ export class PermissionsService {
       }
       throw error;
     }
+  }
+
+  async getDepartmentPermissions(departmentId: string) {
+    const department = await this.prisma.department.findUnique({
+      where: { id: departmentId },
+      select: { id: true, name: true, code: true, is_active: true },
+    });
+
+    if (!department) {
+      throw new NotFoundException(`Department with ID ${departmentId} not found`);
+    }
+
+    const mappings = await this.prisma.department_permission.findMany({
+      where: {
+        department_id: departmentId,
+        is_active: true,
+      },
+      include: {
+        permission: {
+          include: {
+            permission_group: true,
+          },
+        },
+      },
+      orderBy: {
+        permission: { name: 'asc' },
+      },
+    });
+
+    return {
+      department,
+      permissions: mappings.map((mapping) => mapping.permission),
+      mappings,
+    };
+  }
+
+  async listDepartmentPermissionMappings() {
+    return this.prisma.department.findMany({
+      where: { is_active: true },
+      include: {
+        department_permissions: {
+          where: { is_active: true },
+          include: {
+            permission: {
+              include: {
+                permission_group: true,
+              },
+            },
+          },
+          orderBy: {
+            permission: { name: 'asc' },
+          },
+        },
+      },
+      orderBy: { name: 'asc' },
+    });
+  }
+
+  async replaceDepartmentPermissions(departmentId: string, permissionIds: string[]) {
+    const normalizedPermissionIds = this.uniqueStrings(
+      permissionIds.map((permissionId) => (permissionId || '').trim()),
+    );
+
+    const department = await this.prisma.department.findUnique({
+      where: { id: departmentId },
+      select: { id: true },
+    });
+    if (!department) {
+      throw new NotFoundException(`Department with ID ${departmentId} not found`);
+    }
+
+    if (normalizedPermissionIds.length > 0) {
+      const permissions = await this.prisma.permission.findMany({
+        where: { id: { in: normalizedPermissionIds } },
+        select: { id: true },
+      });
+      if (permissions.length !== normalizedPermissionIds.length) {
+        throw new BadRequestException('One or more permission IDs are invalid');
+      }
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.department_permission.updateMany({
+        where: { department_id: departmentId },
+        data: { is_active: false },
+      });
+
+      for (const permissionId of normalizedPermissionIds) {
+        await tx.department_permission.upsert({
+          where: {
+            department_id_permission_id: {
+              department_id: departmentId,
+              permission_id: permissionId,
+            },
+          },
+          create: {
+            department_id: departmentId,
+            permission_id: permissionId,
+            is_active: true,
+          },
+          update: {
+            is_active: true,
+          },
+        });
+      }
+    });
+
+    return this.getDepartmentPermissions(departmentId);
+  }
+
+  async resolveEffectivePermissionsForPartner(partnerId: string): Promise<{
+    permissions: string[];
+    department_ids: string[];
+    primary_department_id: string | null;
+    role_permissions: string[];
+    department_permissions: string[];
+    source: 'role' | 'department' | 'hybrid';
+  }> {
+    const partner = await this.prisma.partners.findUnique({
+      where: { id: partnerId },
+      include: {
+        role: {
+          include: {
+            role_permissions: {
+              include: {
+                permission: true,
+              },
+            },
+          },
+        },
+        partner_departments: {
+          where: { is_active: true },
+          include: {
+            department: {
+              select: { id: true, is_active: true },
+            },
+          },
+        },
+      },
+    });
+
+    if (!partner) {
+      throw new NotFoundException(`Partner with ID ${partnerId} not found`);
+    }
+
+    const source = this.resolveAuthzSource();
+    const rolePermissions = this.uniqueStrings(
+      (partner.role?.role_permissions || []).map((rp) => rp.permission?.name).filter(Boolean) as string[],
+    );
+
+    const activeDepartmentIds = this.uniqueStrings(
+      (partner.partner_departments || [])
+        .filter((assignment) => assignment.department?.is_active)
+        .map((assignment) => assignment.department_id),
+    );
+
+    const primaryDepartmentId =
+      (partner.partner_departments || []).find(
+        (assignment) => assignment.is_primary && assignment.department?.is_active,
+      )?.department_id || null;
+
+    let departmentPermissions: string[] = [];
+    if (activeDepartmentIds.length > 0) {
+      const mappings = await this.prisma.department_permission.findMany({
+        where: {
+          department_id: { in: activeDepartmentIds },
+          is_active: true,
+        },
+        include: {
+          permission: {
+            select: { name: true },
+          },
+        },
+      });
+      departmentPermissions = this.uniqueStrings(
+        mappings.map((mapping) => mapping.permission?.name).filter(Boolean) as string[],
+      );
+    }
+
+    let effectivePermissions: string[] = [];
+    if (source === 'role') {
+      effectivePermissions = rolePermissions;
+    } else if (source === 'department') {
+      effectivePermissions = departmentPermissions;
+    } else {
+      effectivePermissions = this.uniqueStrings([
+        ...rolePermissions,
+        ...departmentPermissions,
+      ]);
+    }
+
+    return {
+      permissions: effectivePermissions,
+      department_ids: activeDepartmentIds,
+      primary_department_id: primaryDepartmentId,
+      role_permissions: rolePermissions,
+      department_permissions: departmentPermissions,
+      source,
+    };
   }
 }

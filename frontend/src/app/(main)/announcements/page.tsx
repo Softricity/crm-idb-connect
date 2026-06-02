@@ -23,7 +23,7 @@ export default function AnnouncementsPage() {
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Announcements</h1>
+            <h2 className="text-2xl font-bold tracking-tight">Announcements</h2>
             <p className="text-gray-500 text-sm">Updates, news, and important notices.</p>
           </div>
         </div>

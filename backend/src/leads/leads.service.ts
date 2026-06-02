@@ -77,20 +77,116 @@ export class LeadsService {
 
     let partnerId: string | null = null;
     let agentId: string | null = null;
+    let finalAssignedTo: string | null | undefined = createLeadDto.assigned_to;
+    let resolvedBranchId = createLeadDto.branch_id || user?.branch_id;
 
-    if (user?.id) {
-      if (user.type === 'agent') {
+    if (!resolvedBranchId) {
+      if (user?.id) {
+        const partner = await this.prisma.partners.findUnique({
+          where: { id: user.id },
+          select: { branch_id: true }
+        });
+        resolvedBranchId = partner?.branch_id || null;
+      }
+    }
+    if (!resolvedBranchId) {
+      const firstBranch = await this.prisma.branch.findFirst({
+        orderBy: { created_at: 'asc' }
+      });
+      resolvedBranchId = firstBranch?.id || null;
+    }
+
+    let initialDeptId: string | null = null;
+    let initialStatus: string | null = null;
+
+    // Check if user is a B2B agent
+    const isAgentCreation = !!(
+      user?.type === 'agent' ||
+      user?.type === 'agent_team_member' ||
+      createLeadDto.agent_id
+    );
+
+    // Check if manually created from CRM by internal staff (partner)
+    const isManualCrmCreation = !!(user?.id && user.type === 'partner');
+
+    // Check if referral link registration
+    let referralPartnerId: string | null = null;
+    if (!isManualCrmCreation && !isAgentCreation && createLeadDto.utm_source && createLeadDto.utm_source.toLowerCase() === 'referral' && createLeadDto.utm_campaign) {
+      const campaignName = decodeURIComponent(createLeadDto.utm_campaign).replace(/_/g, ' ').trim();
+      const partner = await this.prisma.partners.findFirst({
+        where: {
+          name: {
+            equals: campaignName,
+            mode: 'insensitive',
+          },
+        },
+      });
+      if (partner) {
+        referralPartnerId = partner.id;
+      }
+    }
+
+    if (isAgentCreation) {
+      // B2B Agent Flow (bypass internal rules)
+      if (user?.id) {
         agentId = user.id;
       } else {
-        partnerId = user.id;
+        agentId = createLeadDto.agent_id || null;
       }
-    } 
-    else if (createLeadDto.created_by) {
-      partnerId = createLeadDto.created_by;
-    } else if (createLeadDto.agent_id) {
-      agentId = createLeadDto.agent_id;
+      const initialDepartment = await this.resolveInitialDepartmentForNewLead();
+      initialDeptId = initialDepartment.departmentId;
+      initialStatus = initialDepartment.defaultStatus;
+
+      if (!finalAssignedTo && resolvedBranchId && initialDeptId) {
+        finalAssignedTo = await this.getNextRoundRobinAssignee(resolvedBranchId, initialDeptId) || null;
+      }
+    } else if (isManualCrmCreation) {
+      // Rule 1: Manual CRM Creation MUST be assigned to me (logged-in partner)
+      finalAssignedTo = user.id;
+      partnerId = user.id;
+
+      const initialDepartment = await this.resolveInitialDepartmentForNewLead();
+      initialDeptId = initialDepartment.departmentId;
+      initialStatus = initialDepartment.defaultStatus;
+    } else if (referralPartnerId) {
+      // Rule 2: Referral Link registration MUST be assigned to the referring partner
+      finalAssignedTo = referralPartnerId;
+      partnerId = referralPartnerId;
+
+      const initialDepartment = await this.resolveInitialDepartmentForNewLead();
+      initialDeptId = initialDepartment.departmentId;
+      initialStatus = initialDepartment.defaultStatus;
+    } else {
+      // Rule 3: Organic registration (no linking with internal staff/partner)
+      // Shall be assigned via round-robin only to the staff belonging to the very "1st" department
+      const firstDeptOrder = await this.prisma.department_order.findFirst({
+        where: { is_active: true },
+        orderBy: { order_index: 'asc' },
+        select: { department_id: true },
+      });
+      const firstDeptId = firstDeptOrder?.department_id ?? null;
+
+      if (firstDeptId) {
+        initialDeptId = firstDeptId;
+        initialStatus = await this.resolveInitialStatusForDepartment(firstDeptId);
+        if (resolvedBranchId) {
+          finalAssignedTo = await this.getNextRoundRobinAssignee(resolvedBranchId, firstDeptId) || null;
+        }
+      } else {
+        // Fallback to default initial department if no department orders are configured
+        const initialDepartment = await this.resolveInitialDepartmentForNewLead();
+        initialDeptId = initialDepartment.departmentId;
+        initialStatus = initialDepartment.defaultStatus;
+        if (!finalAssignedTo && resolvedBranchId && initialDeptId) {
+          finalAssignedTo = await this.getNextRoundRobinAssignee(resolvedBranchId, initialDeptId) || null;
+        }
+      }
+
+      if (createLeadDto.created_by) {
+        partnerId = createLeadDto.created_by;
+      }
     }
-    
+
     const finalPreferredCountry = createLeadDto.preferred_country || "India"; 
 
     const lead = await this.prisma.leads.create({
@@ -99,7 +195,7 @@ export class LeadsService {
         email: createLeadDto.email,
         mobile: createLeadDto.mobile,
         type: createLeadDto.type || 'lead',
-        status: createLeadDto.status || 'new',
+        status: createLeadDto.status || initialStatus || 'new',
         preferred_country: finalPreferredCountry,
         preferred_course: createLeadDto.preferred_course,
         exam_taken: createLeadDto.exam_taken,
@@ -109,16 +205,39 @@ export class LeadsService {
         utm_campaign: createLeadDto.utm_campaign,
         created_by: partnerId, 
         agent_id: agentId,     
-        assigned_to: createLeadDto.assigned_to,
+        assigned_to: finalAssignedTo || null,
         password: hashedPassword,
         is_flagged: false,
-        branch_id: createLeadDto.branch_id,
+        branch_id: resolvedBranchId,
+        current_department_id: initialDeptId || undefined,
       },
     });
 
     // Send Welcome Email with credentials
     if (lead.email && password) {
-      await this.mailService.sendWelcomeEmail(lead.email, password);
+      try {
+        await this.mailService.sendWelcomeEmail(lead.email, password);
+      } catch (error) {
+        console.error('Failed to send welcome email:', error);
+      }
+    }
+
+    try {
+      const { partnerId: actorId, source, actorName } = await this.resolveTimelineActorDetails(user);
+      const finalCreatedBy = actorId || lead.created_by || null;
+
+      await this.timelineService.logLeadCreated({ ...lead, created_by: finalCreatedBy }, source, actorName);
+
+      if (lead.assigned_to) {
+        const owner = await this.prisma.partners.findUnique({
+          where: { id: lead.assigned_to },
+          select: { name: true }
+        });
+        const ownerName = owner?.name || 'Unassigned';
+        await this.timelineService.logAssignmentChange(lead.id, finalCreatedBy, ownerName, source, actorName);
+      }
+    } catch (e) {
+      console.error('Failed to log lead creation or initial assignment on timeline:', e);
     }
 
     return lead;
@@ -146,6 +265,25 @@ export class LeadsService {
       },
     });
 
+    try {
+      let ownerName = 'Unassigned';
+      if (counsellorId) {
+        const owner = await this.prisma.partners.findUnique({
+          where: { id: counsellorId },
+          select: { name: true },
+        });
+        ownerName = owner?.name || 'Unassigned';
+      }
+
+      const { partnerId: actorId, source, actorName } = await this.resolveTimelineActorDetails(user);
+
+      for (const leadId of leadIds) {
+        await this.timelineService.logAssignmentChange(leadId, actorId, ownerName, source, actorName);
+      }
+    } catch (e) {
+      console.error('Failed to log bulk assignment on timeline:', e);
+    }
+
     return result;
   }
 
@@ -157,9 +295,15 @@ export class LeadsService {
       data: { status, reason: reason || null },
     });
 
-    leadIds.forEach(async (leadId) => {
-      await this.timelineService.logStatusChange(leadId, user.id, 'Previous', status);
-    });
+    try {
+      const { partnerId: actorId, source, actorName } = await this.resolveTimelineActorDetails(user);
+
+      for (const leadId of leadIds) {
+        await this.timelineService.logStatusChange(leadId, actorId, 'Previous', status, source, actorName);
+      }
+    } catch (e) {
+      console.error('Failed to log bulk status change on timeline:', e);
+    }
 
     return result;
   }
@@ -211,14 +355,21 @@ export class LeadsService {
 
     let where: any = { type: type || 'lead' };
 
+    const scope = getScope(user);
+    where = { ...where, ...scope };
+
     if (branchId) {
-      where.branch_id = branchId;
-    } else {
-      const scope = getScope(user);
-      where = { ...where, ...scope };
+      if (!scope.branch_id || scope.branch_id === branchId) {
+        where.branch_id = branchId;
+      }
     }
 
-    if (assignedTo) where.assigned_to = assignedTo;
+    if (assignedTo) {
+      if (!scope.assigned_to || scope.assigned_to === assignedTo) {
+        where.assigned_to = assignedTo;
+      }
+    }
+
     if (createdBy) where.created_by = createdBy;
     if (email) where.email = email;
     
@@ -290,14 +441,18 @@ export class LeadsService {
     }
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, user?: any) {
     if (typeof id !== 'string' || (id.length !== 36 && id.length !== 32)) {
       throw new BadRequestException('Invalid id: incorrect UUID length');
     }
 
     try {
-      const lead = await this.prisma.leads.findUnique({
-          where: { id },
+      const scope = user ? getScope(user) : {};
+      const lead = await this.prisma.leads.findFirst({
+        where: { 
+          id,
+          ...scope 
+        },
         include: {
           partners_leads_assigned_toTopartners: { select: { name: true, email: true } },
           courses: {
@@ -316,8 +471,9 @@ export class LeadsService {
         throw new NotFoundException(`Lead not found for id: ${id}`);
       }
 
-        return this.withForwardEligibilityForOne(lead);
+      return this.withForwardEligibilityForOne(lead);
     } catch (error) {
+      if (error instanceof NotFoundException) throw error;
       console.error(error);
       throw new InternalServerErrorException('Failed to retrieve lead');
     }
@@ -442,6 +598,120 @@ export class LeadsService {
     });
 
     return partner?.id || null;
+  }
+
+  private async getNextRoundRobinAssignee(branchId: string, departmentId: string): Promise<string | null> {
+    const eligiblePartners = await this.prisma.partners.findMany({
+      where: {
+        branch_id: branchId,
+        partner_departments: {
+          some: {
+            department_id: departmentId,
+            is_active: true,
+          },
+        },
+      },
+      orderBy: { id: 'asc' },
+    });
+
+    if (!eligiblePartners.length) {
+      return null;
+    }
+
+    const cursor = await this.prisma.department_assignment_cursor.findUnique({
+      where: {
+        branch_id_department_id: {
+          branch_id: branchId,
+          department_id: departmentId,
+        },
+      },
+    });
+
+    let nextIndex = 0;
+    if (cursor?.last_partner_id) {
+      const currentIdx = eligiblePartners.findIndex((p) => p.id === cursor.last_partner_id);
+      if (currentIdx !== -1) {
+        nextIndex = (currentIdx + 1) % eligiblePartners.length;
+      }
+    }
+
+    const assignedPartner = eligiblePartners[nextIndex];
+
+    await this.prisma.department_assignment_cursor.upsert({
+      where: {
+        branch_id_department_id: {
+          branch_id: branchId,
+          department_id: departmentId,
+        },
+      },
+      create: {
+        branch_id: branchId,
+        department_id: departmentId,
+        last_partner_id: assignedPartner.id,
+      },
+      update: {
+        last_partner_id: assignedPartner.id,
+      },
+    });
+
+    return assignedPartner.id;
+  }
+
+  private async resolveTimelineActorDetails(user?: any): Promise<{
+    partnerId: string | null;
+    source: string | null;
+    actorName: string | null;
+  }> {
+    if (!user) {
+      return { partnerId: null, source: null, actorName: null };
+    }
+
+    const actorId = user.id || user.userId;
+    if (!actorId) {
+      return { partnerId: null, source: null, actorName: null };
+    }
+
+    // 1. Check if user is a B2B Agent
+    if (user.type === 'agent') {
+      const agent = await this.prisma.agent.findUnique({
+        where: { id: actorId },
+        select: { name: true, agency_name: true },
+      });
+      return {
+        partnerId: null,
+        source: 'B2B',
+        actorName: agent ? `${agent.name} (${agent.agency_name})` : 'Agent',
+      };
+    }
+
+    // 2. Check if user is a B2B Agent Team Member
+    if (user.type === 'agent_team_member') {
+      const member = await this.prisma.agentTeamMember.findUnique({
+        where: { id: actorId },
+        select: { name: true, agent: { select: { agency_name: true } } },
+      });
+      return {
+        partnerId: null,
+        source: 'B2B',
+        actorName: member ? `${member.name} (${member.agent.agency_name})` : 'Agent Member',
+      };
+    }
+
+    // 3. Otherwise, check partners table
+    const partner = await this.prisma.partners.findUnique({
+      where: { id: actorId },
+      select: { id: true, name: true },
+    });
+
+    if (partner) {
+      return {
+        partnerId: partner.id,
+        source: 'Staff',
+        actorName: partner.name,
+      };
+    }
+
+    return { partnerId: null, source: null, actorName: null };
   }
 
   private extractStringUpdateValue(value: unknown): string | null | undefined {
@@ -639,7 +909,40 @@ export class LeadsService {
     return null;
   }
 
+  private async resolveInitialDepartmentForNewLead(): Promise<{
+    departmentId: string | null;
+    defaultStatus: string | null;
+  }> {
+    const defaultOrder = await this.prisma.department_order.findFirst({
+      where: { is_active: true, is_default: true },
+      orderBy: { order_index: 'asc' },
+      select: { department_id: true },
+    });
+
+    const firstOrder = defaultOrder
+      ? defaultOrder
+      : await this.prisma.department_order.findFirst({
+          where: { is_active: true },
+          orderBy: { order_index: 'asc' },
+          select: { department_id: true },
+        });
+
+    const departmentId = firstOrder?.department_id ?? null;
+    if (!departmentId) {
+      return { departmentId: null, defaultStatus: null };
+    }
+
+    const defaultStatus = await this.resolveInitialStatusForDepartment(departmentId);
+    return { departmentId, defaultStatus };
+  }
+
   async update(id: string, updateLeadDto: Prisma.leadsUpdateInput, user?: any) {
+    const {
+      forward_to_next_department,
+      can_forward_to_next_department,
+      ...safeUpdateDto
+    } = updateLeadDto as any;
+
     const existingLead = await this.prisma.leads.findUnique({
       where: { id },
       select: {
@@ -665,22 +968,13 @@ export class LeadsService {
       throw new NotFoundException(`Lead with ID ${id} not found.`);
     }
 
-    const currentType = (existingLead.type || '').toLowerCase();
-    const requestedTypeRaw = this.extractStringUpdateValue(updateLeadDto.type);
-    const requestedType = (requestedTypeRaw || '').toLowerCase();
+    // Forwarding is triggered by the explicit flag — no hardcoded type progression.
+    // The next department is resolved dynamically from department_order.order_index in the DB.
+    const isFlaggedForward = forward_to_next_department === true;
 
-    const flow = ['lead', 'application', 'visa'];
-    const currentTypeIndex = flow.indexOf(currentType);
-    const requestedTypeIndex = flow.indexOf(requestedType);
-    const isForwardTransition =
-      requestedTypeRaw !== undefined &&
-      requestedType !== currentType &&
-      currentTypeIndex !== -1 &&
-      requestedTypeIndex === currentTypeIndex + 1;
+    let updatePayload: Prisma.leadsUpdateInput = { ...safeUpdateDto };
 
-    let updatePayload: Prisma.leadsUpdateInput = { ...updateLeadDto };
-
-    if (isForwardTransition) {
+    if (isFlaggedForward) {
       const [eligibility] = await this.withForwardEligibility([{
         type: existingLead.type,
         status: existingLead.status,
@@ -691,7 +985,7 @@ export class LeadsService {
         throw new BadRequestException('Lead can only be forwarded when its current status is marked terminal for the current department.');
       }
 
-      const requestedAssignee = this.extractStringUpdateValue((updateLeadDto as any).assigned_to);
+      const requestedAssignee = this.extractStringUpdateValue((safeUpdateDto as any).assigned_to);
       const assigneeId = (requestedAssignee || '').trim();
 
       if (!assigneeId) {
@@ -711,24 +1005,24 @@ export class LeadsService {
         throw new BadRequestException('Selected assignee must be an internal team member.');
       }
 
+      // Resolve next department purely by position in department_order table — no type strings.
       const targetDepartmentId = await this.resolveForwardTargetDepartmentId(
         existingLead.current_department_id,
-        requestedTypeIndex,
+        -1, // fallback index unused when currentDepartmentId is present
       );
 
       if (!targetDepartmentId) {
         throw new BadRequestException('Cannot forward lead because no next active department is configured.');
       }
 
-      const requestedStatusRaw = this.extractStringUpdateValue((updateLeadDto as any).status);
-      const requestedStatus = this.normalizeStatusToken(requestedStatusRaw);
       const nextDepartmentInitialStatus = await this.resolveInitialStatusForDepartment(targetDepartmentId);
 
       const {
         assigned_to: _ignoredAssignedTo,
         current_department_id: _ignoredCurrentDepartmentId,
+        type: _ignoredType, // preserve existing type — do not overwrite
         ...forwardSafeUpdateFields
-      } = (updateLeadDto as Record<string, unknown>);
+      } = (safeUpdateDto as Record<string, unknown>);
 
       updatePayload = {
         ...(forwardSafeUpdateFields as Prisma.leadsUpdateInput),
@@ -742,7 +1036,7 @@ export class LeadsService {
             id: targetDepartmentId,
           },
         },
-        status: nextDepartmentInitialStatus || requestedStatus || 'new',
+        status: nextDepartmentInitialStatus || 'new',
       };
     }
 
@@ -752,27 +1046,27 @@ export class LeadsService {
     });
 
     try {
-      const actorId = await this.resolveTimelineActorId(user);
+      const { partnerId: actorId, source, actorName } = await this.resolveTimelineActorDetails(user);
 
       if (existingLead.name !== updatedLead.name) {
-        await this.timelineService.logNameChange(id, actorId, existingLead.name || '-', updatedLead.name || '-');
+        await this.timelineService.logNameChange(id, actorId, existingLead.name || '-', updatedLead.name || '-', source, actorName);
       }
 
       if (existingLead.mobile !== updatedLead.mobile) {
-        await this.timelineService.logPhoneChange(id, actorId, existingLead.mobile || '-', updatedLead.mobile || '-');
+        await this.timelineService.logPhoneChange(id, actorId, existingLead.mobile || '-', updatedLead.mobile || '-', source, actorName);
       }
 
       if (existingLead.email !== updatedLead.email) {
-        await this.timelineService.logEmailChange(id, actorId, existingLead.email || '-', updatedLead.email || '-');
+        await this.timelineService.logEmailChange(id, actorId, existingLead.email || '-', updatedLead.email || '-', source, actorName);
       }
 
       if (existingLead.status !== updatedLead.status) {
-        await this.timelineService.logStatusChange(id, actorId, existingLead.status || '-', updatedLead.status || '-');
+        await this.timelineService.logStatusChange(id, actorId, existingLead.status || '-', updatedLead.status || '-', source, actorName);
       }
 
       const typeDiff = this.buildLeadTypeDiff(existingLead, updatedLead);
       if (typeDiff) {
-        await this.timelineService.logDepartmentChange(id, actorId, typeDiff.oldState, typeDiff.newState);
+        await this.timelineService.logDepartmentChange(id, actorId, typeDiff.oldState, typeDiff.newState, source, actorName);
       }
 
       const detailsDiff = this.buildLeadDetailsDiff(existingLead, updatedLead);
@@ -782,6 +1076,8 @@ export class LeadsService {
           actorId,
           detailsDiff.oldState,
           detailsDiff.newState,
+          source,
+          actorName,
         );
       }
 
@@ -795,7 +1091,7 @@ export class LeadsService {
           newOwnerName = owner?.name || 'Unassigned';
         }
 
-        await this.timelineService.logAssignmentChange(id, actorId, newOwnerName);
+        await this.timelineService.logAssignmentChange(id, actorId, newOwnerName, source, actorName);
       }
     } catch (error) {
       console.error(`Timeline logging failed for lead update ${id}:`, error);

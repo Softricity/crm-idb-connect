@@ -63,7 +63,7 @@ export default function SupportPage() {
     <PermissionGuard requiredPermissions={SUPPORT_VIEW_PERMS} showUnauthorized>
       <div className="space-y-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Support Tickets</h1>
+          <h2 className="text-2xl font-bold text-gray-900">Support Tickets</h2>
           <p className="text-sm text-gray-600">Track and manage support tickets from B2B and CRM users.</p>
         </div>
 

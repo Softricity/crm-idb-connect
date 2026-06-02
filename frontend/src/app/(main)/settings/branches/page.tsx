@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useBranchStore, Branch } from "@/stores/useBranchStore";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { BranchPermission, hasPermission } from "@/lib/utils";
 import { Button, Spinner } from "@heroui/react";
 import { Plus, Building2, MapPin, Phone } from "lucide-react";
 import { toast } from "sonner";
@@ -16,11 +15,10 @@ export default function BranchesPage() {
   const { branches, loading, fetchBranches } = useBranchStore();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null);
+  const isSuperAdmin = (user?.role || "").toLowerCase() === "super admin";
 
-  // Permission check
-  const canManageBranches = user?.permissions 
-    ? hasPermission(user.permissions, BranchPermission.BRANCH_MANAGE)
-    : false;
+  // Super Admin only
+  const canManageBranches = isSuperAdmin;
 
   useEffect(() => {
     // Redirect if user doesn't have permission
@@ -87,7 +85,7 @@ export default function BranchesPage() {
                 Manage your organization's branch hierarchy and locations
               </p>
             </div>
-            {hasPermission(user?.permissions || [], BranchPermission.BRANCH_CREATE) && (
+            {isSuperAdmin && (
               <Button
                 color="primary"
                 startContent={<Plus size={20} />}

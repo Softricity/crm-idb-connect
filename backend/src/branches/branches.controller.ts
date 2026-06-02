@@ -13,7 +13,7 @@ export class BranchesController {
   constructor(private readonly branchesService: BranchesService) {}
 
   @Post()
-  @Roles(Role.Admin) // Only Admins can create branches
+  @Roles(Role.SuperAdmin)
   create(@Body() createBranchDto: CreateBranchDto) {
     return this.branchesService.create(createBranchDto);
   }
@@ -31,13 +31,13 @@ export class BranchesController {
   }
 
   @Patch(':id')
-  @Roles(Role.Admin)
+  @Roles(Role.SuperAdmin)
   update(@Param('id') id: string, @Body() updateBranchDto: UpdateBranchDto) {
     return this.branchesService.update(id, updateBranchDto);
   }
 
   @Delete(':id')
-  @Roles(Role.Admin)
+  @Roles(Role.SuperAdmin)
   remove(@Param('id') id: string) {
     return this.branchesService.remove(id);
   }

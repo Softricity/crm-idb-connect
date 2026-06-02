@@ -38,6 +38,7 @@ model department {
   department_assignment_cursors department_assignment_cursor[]
   department_orders             department_order?
   department_statuses           department_status[]
+  department_permissions        department_permission[]
   leads                         leads[]
   partner_departments           partner_department[]
 
@@ -662,7 +663,23 @@ model permission {
   name                String            @unique
   permission_group_id String?           @db.Uuid
   permission_group    permission_group? @relation(fields: [permission_group_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  department_permissions department_permission[]
   role_permissions    role_permission[]
+}
+
+model department_permission {
+  department_id String     @db.Uuid
+  permission_id String     @db.Uuid
+  is_active     Boolean    @default(true)
+  created_at    DateTime   @default(now()) @db.Timestamptz(6)
+  updated_at    DateTime   @default(now()) @updatedAt @db.Timestamptz(6)
+  department    department @relation(fields: [department_id], references: [id], onDelete: Cascade)
+  permission    permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@id([department_id, permission_id])
+  @@index([department_id, is_active], map: "idx_department_permission_department_active")
+  @@index([permission_id, is_active], map: "idx_department_permission_permission_active")
+  @@map("department_permissions")
 }
 
 model role {
@@ -875,6 +892,8 @@ model IntegrationConfig {
   @@map("integration_configs")
 }
 
+
+
 enum AgentStatus {
   PENDING
   IN_REVIEW
@@ -1021,3 +1040,7 @@ enum IntegrationProvider {
   SENDER
   BREVO
 }
+
+
+
+

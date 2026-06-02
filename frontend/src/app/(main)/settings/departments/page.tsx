@@ -22,7 +22,7 @@ import {
   TableHeader,
   TableRow,
 } from "@heroui/react";
-import { Plus, Save, Trash2, Workflow } from "lucide-react";
+import { GripVertical, Plus, Save, Trash2, Workflow } from "lucide-react";
 import {
   DepartmentStatusInput,
   DepartmentsAPI,
@@ -48,7 +48,7 @@ interface DepartmentRecord {
   name: string;
   code: string;
   is_active: boolean;
-  department_orders: DepartmentOrderConfig[];
+  department_orders: DepartmentOrderConfig | null;
   department_statuses: DepartmentStatusConfig[];
   _count?: {
     partner_departments: number;
@@ -62,6 +62,13 @@ const EMPTY_NEW_DEPARTMENT = {
 
 function sortStatuses(statuses: DepartmentStatusConfig[]) {
   return [...statuses].sort((a, b) => a.order_index - b.order_index);
+}
+
+function reindexStatuses(statuses: DepartmentStatusConfig[]) {
+  return sortStatuses(statuses).map((status, index) => ({
+    ...status,
+    order_index: index,
+  }));
 }
 
 function normalizeStatusKey(rawKey: string, fallbackLabel: string) {
@@ -104,7 +111,7 @@ function ensureSingleDefaultStatus(statuses: DepartmentStatusConfig[]) {
 
 function getOrderConfig(department: DepartmentRecord): DepartmentOrderConfig {
   return (
-    department.department_orders[0] || {
+    department.department_orders || {
       order_index: 0,
       is_active: department.is_active,
       is_default: false,
@@ -118,7 +125,7 @@ function normalizeDepartment(department: any): DepartmentRecord {
     name: department.name,
     code: department.code,
     is_active: department.is_active,
-    department_orders: department.department_orders || [],
+    department_orders: department.department_orders || null,
     department_statuses: sortStatuses(department.department_statuses || []),
     _count: department._count,
   };
@@ -139,9 +146,16 @@ export default function DepartmentsPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [newDepartment, setNewDepartment] = useState(EMPTY_NEW_DEPARTMENT);
   const [statusDrawerDepartmentId, setStatusDrawerDepartmentId] = useState<string | null>(null);
+  const [showInactiveStatuses, setShowInactiveStatuses] = useState(false);
+  const [draggingDepartmentId, setDraggingDepartmentId] = useState<string | null>(null);
 
   const selectedDepartment =
     departments.find((department) => department.id === statusDrawerDepartmentId) || null;
+  const selectedDepartmentVisibleStatuses = selectedDepartment
+    ? selectedDepartment.department_statuses
+        .map((status, index) => ({ status, index }))
+        .filter((item) => showInactiveStatuses || item.status.is_active !== false)
+    : [];
 
   const fetchDepartments = async () => {
     setLoading(true);
@@ -331,13 +345,41 @@ export default function DepartmentsPage() {
 
       return {
         ...department,
-        department_statuses: ensureSingleDefaultStatus(sortStatuses(nextStatuses)),
+        department_statuses: ensureSingleDefaultStatus(reindexStatuses(nextStatuses)),
       };
     });
   };
 
+  const reorderDepartments = (sourceId: string, targetId: string) => {
+    if (sourceId === targetId) {
+      return;
+    }
+
+    setDepartments((prev) => {
+      const items = [...prev];
+      const sourceIndex = items.findIndex((item) => item.id === sourceId);
+      const targetIndex = items.findIndex((item) => item.id === targetId);
+
+      if (sourceIndex < 0 || targetIndex < 0) {
+        return prev;
+      }
+
+      const [moved] = items.splice(sourceIndex, 1);
+      items.splice(targetIndex, 0, moved);
+
+      return items.map((department, index) => ({
+        ...department,
+        department_orders: {
+          ...getOrderConfig(department),
+          order_index: index,
+        },
+      }));
+    });
+  };
+
   const handleSaveStatuses = async (department: DepartmentRecord) => {
-    const filteredStatuses = department.department_statuses
+    const filteredStatuses = reindexStatuses(
+      department.department_statuses
       .map((status) => {
         const key = normalizeStatusKey(status.key, status.label);
         return {
@@ -346,7 +388,8 @@ export default function DepartmentsPage() {
           label: status.label.trim(),
         };
       })
-      .filter((status) => status.key && status.label);
+      .filter((status) => status.key && status.label),
+    );
 
     if (filteredStatuses.length === 0) {
       toast.error("Add at least one valid status before saving");
@@ -354,22 +397,15 @@ export default function DepartmentsPage() {
     }
 
     const keySet = new Set<string>();
-    const orderSet = new Set<number>();
     for (const status of filteredStatuses) {
       if (keySet.has(status.key.toLowerCase())) {
         toast.error(`Duplicate status key: ${status.key}`);
         return;
       }
       keySet.add(status.key.toLowerCase());
-
-      if (orderSet.has(status.order_index)) {
-        toast.error(`Duplicate status order: ${status.order_index}`);
-        return;
-      }
-      orderSet.add(status.order_index);
     }
 
-    const sanitizedStatuses = ensureSingleDefaultStatus(filteredStatuses).map(
+    const sanitizedStatuses = ensureSingleDefaultStatus(reindexStatuses(filteredStatuses)).map(
       (status) => ({
         key: status.key,
         label: status.label,
@@ -391,7 +427,6 @@ export default function DepartmentsPage() {
       setSavingStatusesDepartmentId(null);
     }
   };
-
   if (!user || !canManageBranches) {
     return null;
   }
@@ -408,10 +443,10 @@ export default function DepartmentsPage() {
     <div className="p-6 space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
+          <h2 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <Workflow size={28} />
             Department Management
-          </h1>
+          </h2>
           <p className="text-sm text-gray-500 mt-1">
             Configure departments, routing order, and department-specific statuses.
           </p>
@@ -455,6 +490,56 @@ export default function DepartmentsPage() {
             >
               Add Department
             </Button>
+          </div>
+        </CardBody>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Department Flow Order</h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Drag and drop departments to define lead/application forwarding flow.
+            </p>
+          </div>
+        </CardHeader>
+        <CardBody>
+          <div className="space-y-2">
+            {departments
+              .slice()
+              .sort(
+                (a, b) =>
+                  getOrderConfig(a).order_index - getOrderConfig(b).order_index,
+              )
+              .map((department) => (
+                <div
+                  key={`flow-${department.id}`}
+                  draggable
+                  onDragStart={() => setDraggingDepartmentId(department.id)}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDrop={() => {
+                    if (draggingDepartmentId) {
+                      reorderDepartments(draggingDepartmentId, department.id);
+                    }
+                    setDraggingDepartmentId(null);
+                  }}
+                  onDragEnd={() => setDraggingDepartmentId(null)}
+                  className={`flex items-center justify-between rounded-md border px-3 py-2 cursor-move ${
+                    draggingDepartmentId === department.id ? "opacity-60" : ""
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <GripVertical size={16} className="text-gray-500" />
+                    <span className="font-medium">{department.name}</span>
+                    <Chip size="sm" variant="flat">
+                      {department.code}
+                    </Chip>
+                  </div>
+                  <Chip size="sm" variant="flat" color="secondary">
+                    {getOrderConfig(department).order_index}
+                  </Chip>
+                </div>
+              ))}
           </div>
         </CardBody>
       </Card>
@@ -518,23 +603,9 @@ export default function DepartmentsPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        <Input
-                          size="sm"
-                          type="number"
-                          value={String(orderConfig.order_index)}
-                          onChange={(event) => {
-                            const value = Number(event.target.value);
-                            setDepartmentState(department.id, (current) => ({
-                              ...current,
-                              department_orders: [
-                                {
-                                  ...getOrderConfig(current),
-                                  order_index: Number.isNaN(value) ? 0 : value,
-                                },
-                              ],
-                            }));
-                          }}
-                        />
+                        <Chip size="sm" variant="flat">
+                          {orderConfig.order_index}
+                        </Chip>
                       </TableCell>
                       <TableCell>
                         <Switch
@@ -544,12 +615,10 @@ export default function DepartmentsPage() {
                             setDepartmentState(department.id, (current) => ({
                               ...current,
                               is_active: isSelected,
-                              department_orders: [
-                                {
-                                  ...getOrderConfig(current),
-                                  is_active: isSelected,
-                                },
-                              ],
+                              department_orders: {
+                                ...getOrderConfig(current),
+                                is_active: isSelected,
+                              },
                             }))
                           }
                         />
@@ -564,17 +633,15 @@ export default function DepartmentsPage() {
                                 const itemOrder = getOrderConfig(item);
                                 return {
                                   ...item,
-                                  department_orders: [
-                                    {
-                                      ...itemOrder,
-                                      is_default:
-                                        item.id === department.id
-                                          ? isSelected
-                                          : isSelected
-                                            ? false
-                                            : itemOrder.is_default,
-                                    },
-                                  ],
+                                  department_orders: {
+                                    ...itemOrder,
+                                    is_default:
+                                      item.id === department.id
+                                        ? isSelected
+                                        : isSelected
+                                          ? false
+                                          : itemOrder.is_default,
+                                  },
                                 };
                               }),
                             );
@@ -654,15 +721,30 @@ export default function DepartmentsPage() {
                       </Button>
                     </div>
 
-                    {selectedDepartment.department_statuses.length === 0 && (
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs text-gray-500">
+                        Toggle inactive rows to review old statuses.
+                      </p>
+                      <Switch
+                        size="sm"
+                        isSelected={showInactiveStatuses}
+                        onValueChange={setShowInactiveStatuses}
+                      >
+                        Show inactive
+                      </Switch>
+                    </div>
+
+                    {selectedDepartmentVisibleStatuses.length === 0 && (
                       <p className="text-sm text-gray-500">No statuses configured yet.</p>
                     )}
 
                     <div className="space-y-3">
-                      {selectedDepartment.department_statuses.map((status, statusIndex) => (
+                      {selectedDepartmentVisibleStatuses.map(({ status, index: statusIndex }) => (
                         <div
                           key={`${selectedDepartment.id}-status-${statusIndex}`}
-                          className="grid gap-3 md:grid-cols-12 border rounded-md p-3"
+                          className={`grid gap-3 md:grid-cols-12 border rounded-md p-3 ${
+                            status.is_active === false ? "opacity-70 bg-gray-50" : ""
+                          }`}
                         >
                           <Input
                             className="md:col-span-2"

@@ -12,55 +12,29 @@ import {
   SelectItem,
 } from "@heroui/react";
 import { Repeat, Users } from "lucide-react";
-import { LeadsAPI, PartnersAPI } from "@/lib/api";
+import { LeadsAPI, PartnersAPI, DepartmentsAPI } from "@/lib/api";
 import type { Lead } from "./ApplicationsTable";
-
-type PipelineType = "lead" | "application" | "visa";
 
 type PartnerCandidate = {
   id?: string;
   name?: string;
   email?: string;
   role?: string;
+  partner_departments?: Array<{ department_id: string; is_active: boolean }>;
 };
 
-const FLOW: PipelineType[] = ["lead", "application", "visa"];
-
-const DEPARTMENT_LABELS: Record<PipelineType, string> = {
-  lead: "Counselling",
-  application: "Admissions",
-  visa: "Visa",
-};
-
-const ROLE_HINTS: Record<PipelineType, string[]> = {
-  lead: ["counsellor", "counselor"],
-  application: ["admission", "application"],
-  visa: ["visa", "immigration"],
-};
-
-function normalizeType(type?: string | null): PipelineType | null {
-  const value = (type || "").toLowerCase();
-  if (!value) {
-    return "lead";
-  }
-  if (value === "lead" || value === "application" || value === "visa") {
-    return value;
-  }
-  return null;
+interface DepartmentOrderConfig {
+  order_index: number;
+  is_active: boolean;
+  is_default: boolean;
 }
 
-function getNextType(currentType?: string | null): PipelineType | null {
-  const normalized = normalizeType(currentType);
-  if (!normalized) {
-    return null;
-  }
-
-  const index = FLOW.indexOf(normalized);
-  if (index < 0 || index >= FLOW.length - 1) {
-    return null;
-  }
-
-  return FLOW[index + 1];
+interface DepartmentRecord {
+  id: string;
+  name: string;
+  code: string;
+  is_active: boolean;
+  department_orders?: DepartmentOrderConfig | null;
 }
 
 function getCurrentUserBranchId(): string | undefined {
@@ -98,31 +72,55 @@ interface ForwardDepartmentModalProps {
 
 export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded }: ForwardDepartmentModalProps) {
   const [partners, setPartners] = useState<PartnerCandidate[]>([]);
+  const [departments, setDepartments] = useState<DepartmentRecord[]>([]);
   const [selectedAssignee, setSelectedAssignee] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const currentType = useMemo(() => normalizeType(lead?.type), [lead?.type]);
-  const nextType = useMemo(() => getNextType(lead?.type), [lead?.type]);
+  // Departments sorted by DB-configured order_index — no hardcoded flow array.
+  const sortedActiveDepartments = useMemo(
+    () =>
+      departments
+        .filter((d) => d.is_active && (d.department_orders?.is_active ?? true))
+        .sort(
+          (a, b) =>
+            (a.department_orders?.order_index ?? Number.MAX_SAFE_INTEGER) -
+            (b.department_orders?.order_index ?? Number.MAX_SAFE_INTEGER),
+        ),
+    [departments],
+  );
+
+  const currentDepartmentIndex = useMemo(
+    () => sortedActiveDepartments.findIndex((d) => d.id === lead?.current_department_id),
+    [sortedActiveDepartments, lead?.current_department_id],
+  );
+
+  const currentDepartment = useMemo(
+    () => (currentDepartmentIndex >= 0 ? sortedActiveDepartments[currentDepartmentIndex] : null),
+    [sortedActiveDepartments, currentDepartmentIndex],
+  );
+
+  const nextDepartment = useMemo(
+    () =>
+      currentDepartmentIndex >= 0
+        ? sortedActiveDepartments[currentDepartmentIndex + 1] || null
+        : null,
+    [sortedActiveDepartments, currentDepartmentIndex],
+  );
 
   useEffect(() => {
-    const loadPartners = async () => {
-      if (!isOpen) {
-        return;
-      }
+    if (!isOpen) return;
 
-      setSelectedAssignee("");
+    setSelectedAssignee("");
 
-      try {
-        const branchId = getCurrentUserBranchId();
-        const data = await PartnersAPI.fetchPartners(branchId);
-        setPartners(Array.isArray(data) ? data : []);
-      } catch (error) {
-        console.error("Failed to load partners for forward flow:", error);
-        setPartners([]);
-      }
-    };
+    const branchId = getCurrentUserBranchId();
 
-    loadPartners();
+    Promise.all([
+      PartnersAPI.fetchPartners(branchId).catch(() => []),
+      DepartmentsAPI.fetchDepartments(false).catch(() => []),
+    ]).then(([partnersData, departmentsData]) => {
+      setPartners(Array.isArray(partnersData) ? partnersData : []);
+      setDepartments(Array.isArray(departmentsData) ? departmentsData : []);
+    });
   }, [isOpen]);
 
   const internalUsers = useMemo(
@@ -131,52 +129,42 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
   );
 
   const selectableUsers = useMemo(
-    () =>
-      internalUsers.filter(
-        (partner) => typeof partner.id === "string" && partner.id.trim().length > 0,
-      ),
+    () => internalUsers.filter((p) => typeof p.id === "string" && p.id.trim().length > 0),
     [internalUsers],
   );
 
+  // Filter candidate users to those assigned to the next department.
+  // Falls back to all internal users if department assignment data is unavailable.
   const candidateUsers = useMemo(() => {
-    if (!nextType) {
-      return [];
-    }
-
-    const hints = ROLE_HINTS[nextType];
-    const hinted = selectableUsers.filter((partner) => {
-      const role = (partner.role || "").toLowerCase();
-      return hints.some((hint) => role.includes(hint));
-    });
-
-    return hinted.length > 0 ? hinted : selectableUsers;
-  }, [nextType, selectableUsers]);
+    if (!nextDepartment) return [];
+    const inDept = selectableUsers.filter((p) =>
+      (p.partner_departments || []).some(
+        (a) => a.is_active && a.department_id === nextDepartment.id,
+      ),
+    );
+    return inDept.length > 0 ? inDept : selectableUsers;
+  }, [nextDepartment, selectableUsers]);
 
   const selectedAssigneeLabel = useMemo(() => {
-    if (!selectedAssignee) {
-      return "";
-    }
-
-    const selected = candidateUsers.find((partner) => partner.id === selectedAssignee);
-    if (!selected) {
-      return "";
-    }
-
+    if (!selectedAssignee) return "";
+    const selected = candidateUsers.find((p) => p.id === selectedAssignee);
+    if (!selected) return "";
     return `${selected.name || "Unnamed"} - ${selected.email || "No email"}`;
   }, [candidateUsers, selectedAssignee]);
 
-  const currentLabel = currentType ? DEPARTMENT_LABELS[currentType] : "Current";
-  const nextLabel = nextType ? DEPARTMENT_LABELS[nextType] : null;
+  const currentLabel = currentDepartment?.name || "Current";
+  const nextLabel = nextDepartment?.name || null;
 
   const handleForward = async () => {
-    if (!lead?.id || !nextType || !selectedAssignee) {
-      return;
-    }
+    if (!lead?.id || !nextDepartment || !selectedAssignee) return;
 
     setIsSubmitting(true);
     try {
+      // Trigger via forward_to_next_department flag — backend resolves next
+      // department dynamically from department_order.order_index in the DB.
+      // No hardcoded type strings (lead/application/visa) are used anywhere.
       await LeadsAPI.update(lead.id, {
-        type: nextType,
+        forward_to_next_department: true,
         assigned_to: selectedAssignee,
       });
 
@@ -204,7 +192,7 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
             </ModalHeader>
 
             <ModalBody>
-              {!nextType ? (
+              {!nextDepartment ? (
                 <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
                   This lead is already in the final department. No forward action is available.
                 </div>
@@ -250,7 +238,11 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
                       }}
                     >
                       {candidateUsers.map((partner) => (
-                        <SelectItem key={partner.id || ""} textValue={`${partner.name || "Unnamed"} - ${partner.email || "No email"}`} className="text-gray-900">
+                        <SelectItem
+                          key={partner.id || ""}
+                          textValue={`${partner.name || "Unnamed"} - ${partner.email || "No email"}`}
+                          className="text-gray-900"
+                        >
                           {partner.name || "Unnamed"} - {partner.email || "No email"}
                         </SelectItem>
                       )) as unknown as any}
@@ -278,7 +270,7 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
                 color="primary"
                 onPress={handleForward}
                 isLoading={isSubmitting}
-                isDisabled={!nextType || !selectedAssignee || candidateUsers.length === 0}
+                isDisabled={!nextDepartment || !selectedAssignee || candidateUsers.length === 0}
               >
                 Confirm Forward
               </Button>

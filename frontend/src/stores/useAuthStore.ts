@@ -10,6 +10,9 @@ export interface AuthUser {
   type: "partner" | "agent" | "agent_team_member";
   role: string; // "agent" for external agents, other custom roles for internal team
   permissions: string[]; // Array of permission names from role_permissions
+  department_ids?: string[];
+  primary_department_id?: string | null;
+  authz_source?: "role" | "department" | "hybrid";
   branch_id?: string | null; // Branch ID
   branch_name?: string | null; // Branch name
   branch_type?: string | null; // Branch type: HeadOffice, Regional, Branch
@@ -139,6 +142,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         type: "partner",
         role: payload.role,
         permissions: payload.permissions || [], // Store permissions from backend
+        department_ids: payload.department_ids || [],
+        primary_department_id: payload.primary_department_id || null,
+        authz_source: payload.authz_source || "hybrid",
         branch_id: payload.branch_id || null,
         branch_name: payload.branch_name || null,
         branch_type: payload.branch_type || null,
@@ -196,6 +202,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         type: payload.type || "partner",
         role: payload.role,
         permissions: payload.permissions || [],
+        department_ids: payload.department_ids || [],
+        primary_department_id: payload.primary_department_id || null,
+        authz_source: payload.authz_source || "hybrid",
         branch_id: payload.branch_id || null,
         branch_name: payload.branch_name || null,
         branch_type: payload.branch_type || null,

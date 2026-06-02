@@ -249,7 +249,7 @@ export const TimelineItem = ({ event, isLast, leadName }: { event: Timeline; isL
 
       <div className="flex-1">
         <p className="text-sm text-gray-700">
-          <strong className="font-semibold text-gray-900">{event.partner?.name ?? "System"}</strong>
+          <strong className="font-semibold text-gray-900">{event.actor_name ?? event.partner?.name ?? "System"}</strong>
           {' '}
           {renderEventAction(event, leadName)}
         </p>

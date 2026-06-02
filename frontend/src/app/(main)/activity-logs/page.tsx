@@ -36,7 +36,7 @@ function ActivityLogsPageContent() {
           <Activity size={24} />
         </div>
         <div>
-            <h1 className="text-2xl font-bold tracking-tight">Activity Logs</h1>
+            <h2 className="text-2xl font-bold tracking-tight">Activity Logs</h2>
             <p className="text-gray-500 text-sm">Real-time audit trail of all actions performed in the system.</p>
         </div>
       </div>

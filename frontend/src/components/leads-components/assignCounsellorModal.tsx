@@ -103,6 +103,13 @@ export function AssignCounsellorModal({ isOpen, onOpenChange, lead }: AssignCoun
                     selectedKeys={selectedCounsellor ? new Set([selectedCounsellor]) : new Set()}
                     onChange={(e) => setSelectedCounsellor(e.target.value)}
                     isDisabled={isAssigning}
+                    classNames={{
+                      trigger: "bg-white text-gray-900",
+                      value: "text-gray-900 opacity-100",
+                      selectorIcon: "text-gray-600",
+                      popoverContent: "bg-white",
+                      listbox: "text-gray-900",
+                    }}
                   >
                     <SelectItem key="">
                       Unassigned

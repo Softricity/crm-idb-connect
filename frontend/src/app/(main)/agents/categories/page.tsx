@@ -205,7 +205,7 @@ export default function CategoriesPage() {
       <div className="p-6 space-y-6">
         <div className="flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Agent Categories</h1>
+            <h2 className="text-2xl font-bold tracking-tight">Agent Categories</h2>
             <p className="text-default-500">Manage B2B agent segments and their university commission structures.</p>
           </div>
           <Button color="primary" startContent={<PlusCircle className="h-4 w-4" />} onPress={handleCreate}>

@@ -40,8 +40,16 @@ export class RolesGuard implements CanActivate {
           return true;
       }
 
+      // Allow any internal CRM staff member (partner) to access Counsellor-level routes
+      if (user?.type === 'partner' && (requiredRole === 'counsellor' || requiredRole === 'counselor')) {
+        return true;
+      }
+
       // Standard check (exact match or partial, e.g., "super admin" includes "admin")
-      return userRole === requiredRole || userRole.includes(requiredRole);
+      // Normalize spelling of counsellor/counselor
+      const normUser = userRole.replace('counsellor', 'counselor');
+      const normReq = requiredRole.replace('counsellor', 'counselor');
+      return normUser === normReq || normUser.includes(normReq);
     });
   }
 }

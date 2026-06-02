@@ -405,16 +405,184 @@ export class PartnersService {
 
   async remove(id: string) {
     try {
-      await this.prisma.partners.delete({ where: { id } });
+      await this.prisma.$transaction(async (tx) => {
+        const partner = await tx.partners.findUnique({
+          where: { id },
+          select: { id: true },
+        });
+
+        if (!partner) {
+          throw new NotFoundException(`Partner with ID ${id} not found.`);
+        }
+
+        // Nullable foreign-key references: detach partner before deletion.
+        await tx.followup_comments.updateMany({
+          where: { created_by: id },
+          data: { created_by: null },
+        });
+        await tx.followups.updateMany({
+          where: { created_by: id },
+          data: { created_by: null },
+        });
+        await tx.notes.updateMany({
+          where: { created_by: id },
+          data: { created_by: null },
+        });
+        await tx.offline_payments.updateMany({
+          where: { created_by: id },
+          data: { created_by: null },
+        });
+        await tx.offline_payments.updateMany({
+          where: { receiver: id },
+          data: { receiver: null },
+        });
+        await tx.leads.updateMany({
+          where: { created_by: id },
+          data: { created_by: null },
+        });
+        await tx.leads.updateMany({
+          where: { assigned_to: id },
+          data: { assigned_to: null },
+        });
+        await tx.announcements.updateMany({
+          where: { created_by: id },
+          data: { created_by: null },
+        });
+        await tx.timeline.updateMany({
+          where: { created_by: id },
+          data: { created_by: null },
+        });
+        await tx.chatMessage.updateMany({
+          where: { partner_id: id },
+          data: { partner_id: null },
+        });
+        await tx.supportTicket.updateMany({
+          where: { partner_id: id },
+          data: { partner_id: null },
+        });
+        await tx.supportTicket.updateMany({
+          where: { requester_partner_id: id },
+          data: { requester_partner_id: null },
+        });
+        await tx.department_assignment_cursor.updateMany({
+          where: { last_partner_id: id },
+          data: { last_partner_id: null },
+        });
+        await tx.financialNote.updateMany({
+          where: { created_by: id },
+          data: { created_by: null },
+        });
+
+        // Non-nullable relation: todos.created_by -> hard-delete todo rows.
+        await tx.todos.deleteMany({
+          where: { created_by: id },
+        });
+
+        // Join table cleanup (defensive; cascade also handles this).
+        await tx.partner_department.deleteMany({
+          where: { partner_id: id },
+        });
+        await tx.announcement_reads.deleteMany({
+          where: { partner_id: id },
+        });
+
+        await tx.partners.delete({ where: { id } });
+      }, { maxWait: 10000, timeout: 120000 });
       return { message: `Partner deleted successfully.` };
     } catch (error) {
+      if (error instanceof NotFoundException) {
+        throw error;
+      }
       throw new InternalServerErrorException('Could not delete partner.');
     }
   }
 
   async bulkRemove(dto: BulkDeletePartnerDto) {
-    await this.prisma.partners.deleteMany({ where: { id: { in: dto.partnerIds } } });
-    return { message: `Partners deleted successfully.` };
+    const uniquePartnerIds = Array.from(
+      new Set((dto.partnerIds || []).map((partnerId) => partnerId?.trim()).filter(Boolean)),
+    );
+
+    if (uniquePartnerIds.length === 0) {
+      return { message: 'No partners selected for deletion.', deletedCount: 0 };
+    }
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.followup_comments.updateMany({
+        where: { created_by: { in: uniquePartnerIds } },
+        data: { created_by: null },
+      });
+      await tx.followups.updateMany({
+        where: { created_by: { in: uniquePartnerIds } },
+        data: { created_by: null },
+      });
+      await tx.notes.updateMany({
+        where: { created_by: { in: uniquePartnerIds } },
+        data: { created_by: null },
+      });
+      await tx.offline_payments.updateMany({
+        where: { created_by: { in: uniquePartnerIds } },
+        data: { created_by: null },
+      });
+      await tx.offline_payments.updateMany({
+        where: { receiver: { in: uniquePartnerIds } },
+        data: { receiver: null },
+      });
+      await tx.leads.updateMany({
+        where: { created_by: { in: uniquePartnerIds } },
+        data: { created_by: null },
+      });
+      await tx.leads.updateMany({
+        where: { assigned_to: { in: uniquePartnerIds } },
+        data: { assigned_to: null },
+      });
+      await tx.announcements.updateMany({
+        where: { created_by: { in: uniquePartnerIds } },
+        data: { created_by: null },
+      });
+      await tx.timeline.updateMany({
+        where: { created_by: { in: uniquePartnerIds } },
+        data: { created_by: null },
+      });
+      await tx.chatMessage.updateMany({
+        where: { partner_id: { in: uniquePartnerIds } },
+        data: { partner_id: null },
+      });
+      await tx.supportTicket.updateMany({
+        where: { partner_id: { in: uniquePartnerIds } },
+        data: { partner_id: null },
+      });
+      await tx.supportTicket.updateMany({
+        where: { requester_partner_id: { in: uniquePartnerIds } },
+        data: { requester_partner_id: null },
+      });
+      await tx.department_assignment_cursor.updateMany({
+        where: { last_partner_id: { in: uniquePartnerIds } },
+        data: { last_partner_id: null },
+      });
+      await tx.financialNote.updateMany({
+        where: { created_by: { in: uniquePartnerIds } },
+        data: { created_by: null },
+      });
+
+      await tx.todos.deleteMany({
+        where: { created_by: { in: uniquePartnerIds } },
+      });
+      await tx.partner_department.deleteMany({
+        where: { partner_id: { in: uniquePartnerIds } },
+      });
+      await tx.announcement_reads.deleteMany({
+        where: { partner_id: { in: uniquePartnerIds } },
+      });
+
+      await tx.partners.deleteMany({
+        where: { id: { in: uniquePartnerIds } },
+      });
+    }, { maxWait: 10000, timeout: 120000 });
+
+    return {
+      message: 'Partners deleted successfully.',
+      deletedCount: uniquePartnerIds.length,
+    };
   }
 
   // 4. Critical: Ensure this includes 'branch' for the Auth Service

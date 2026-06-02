@@ -565,6 +565,14 @@ export const ApplicationsAPI = {
     const res = await fetch(`${API_BASE}/applications/${leadId}/preferences`, { method: 'PATCH', headers: getHeaders(), body: JSON.stringify(data) });
     return handleResponse(res);
   },
+  uploadDocuments: async (leadId: string, formData: FormData) => {
+    const res = await fetch(`${API_BASE}/applications/${leadId}/documents`, {
+      method: 'PATCH',
+      headers: getHeaders(true, null),
+      body: formData,
+    });
+    return handleResponse(res);
+  },
   deleteApplication: async (id: string) => {
     const res = await fetch(`${API_BASE}/leads/${id}`, { method: 'DELETE', headers: getHeaders() });
     return handleResponse(res);
@@ -1280,6 +1288,28 @@ export const IntegrationsAPI = {
   },
 };
 
+export const DepartmentPermissionsAPI = {
+  list: async () => {
+    const res = await fetch(`${API_BASE}/permissions/departments`, { headers: getHeaders() });
+    return handleResponse(res);
+  },
+  getByDepartment: async (departmentId: string) => {
+    const res = await fetch(`${API_BASE}/permissions/departments/${departmentId}`, {
+      headers: getHeaders(),
+    });
+    return handleResponse(res);
+  },
+  replaceByDepartment: async (departmentId: string, permissionIds: string[]) => {
+    const res = await fetch(`${API_BASE}/permissions/departments/${departmentId}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ permission_ids: permissionIds }),
+    });
+    return handleResponse(res);
+  },
+};
+
+
 export const MailAPI = {
   getTemplates: async (category?: string) => {
     const url = category ? `${API_BASE}/mail/templates?category=${category}` : `${API_BASE}/mail/templates`;
@@ -1325,8 +1355,7 @@ export default {
   TimelineAPI,
   OfflinePaymentsAPI,
   DashboardAPI,
-  IntegrationsAPI,
-  MailAPI,
+  IntegrationsAPI,MailAPI,
   ApplicationsAPI,
   CountriesAPI,
   UniversitiesAPI,
@@ -1341,6 +1370,7 @@ export default {
   BranchesAPI,
   DepartmentsAPI,
   PermissionsAPI,
+  DepartmentPermissionsAPI,
   PermissionGroupsAPI,
   RolesAPI,
   AnnouncementsAPI,

@@ -25,59 +25,59 @@ export class ApplicationsController {
 
   @Public()
   @Get(':leadId')
-  getOne(@Param('leadId') leadId: string) {
-    return this.applicationsService.getFullApplication(leadId, null);
+  getOne(@Param('leadId') leadId: string, @GetUser() user?: any) {
+    return this.applicationsService.getFullApplication(leadId, user);
   }
 
   @Public()
   @Patch(':leadId/personal')
-  updatePersonal(@Param('leadId') leadId: string, @Body() dto: UpdatePersonalDetailsDto) {
-    return this.applicationsService.updatePersonalDetails(leadId, dto, null);
+  updatePersonal(@Param('leadId') leadId: string, @Body() dto: UpdatePersonalDetailsDto, @GetUser() user?: any) {
+    return this.applicationsService.updatePersonalDetails(leadId, dto, user);
   }
 
   // New alias for family-only updates used by student panel step "family"
   @Public()
   @Patch(':leadId/family')
-  updateFamily(@Param('leadId') leadId: string, @Body() body: any) {
-    return this.applicationsService.updateFamilyDetails(leadId, body, null);
+  updateFamily(@Param('leadId') leadId: string, @Body() body: any, @GetUser() user?: any) {
+    return this.applicationsService.updateFamilyDetails(leadId, body, user);
   }
 
   @Public()
   @Patch(':leadId/education')
-  updateEducation(@Param('leadId') leadId: string, @Body() dto: UpdateEducationDto) {
-    return this.applicationsService.updateEducation(leadId, dto, null);
+  updateEducation(@Param('leadId') leadId: string, @Body() dto: UpdateEducationDto, @GetUser() user?: any) {
+    return this.applicationsService.updateEducation(leadId, dto, user);
   }
 
   @Public()
   @Patch(':leadId/preferences')
-  updatePreferences(@Param('leadId') leadId: string, @Body() dto: UpdatePreferencesDto) {
-    return this.applicationsService.updatePreferences(leadId, dto, null);
+  updatePreferences(@Param('leadId') leadId: string, @Body() dto: UpdatePreferencesDto, @GetUser() user?: any) {
+    return this.applicationsService.updatePreferences(leadId, dto, user);
   }
 
   @Public()
   @Patch(':leadId/tests')
-  updateTests(@Param('leadId') leadId: string, @Body() dto: UpdateTestsDto) {
-    return this.applicationsService.updateTests(leadId, dto, null);
+  updateTests(@Param('leadId') leadId: string, @Body() dto: UpdateTestsDto, @GetUser() user?: any) {
+    return this.applicationsService.updateTests(leadId, dto, user);
   }
 
   @Public()
   @Patch(':leadId/work-experience')
-  updateWorkExperience(@Param('leadId') leadId: string, @Body() dto: UpdateWorkExperienceDto) {
-    return this.applicationsService.updateWorkExperience(leadId, dto, null);
+  updateWorkExperience(@Param('leadId') leadId: string, @Body() dto: UpdateWorkExperienceDto, @GetUser() user?: any) {
+    return this.applicationsService.updateWorkExperience(leadId, dto, user);
   }
 
   // Alias route matching student panel section key "work"
   @Public()
   @Patch(':leadId/work')
-  updateWorkAlias(@Param('leadId') leadId: string, @Body() body: any) {
+  updateWorkAlias(@Param('leadId') leadId: string, @Body() body: any, @GetUser() user?: any) {
     const dto: UpdateWorkExperienceDto = { records: body.work_experience || body.records || [] };
-    return this.applicationsService.updateWorkExperience(leadId, dto, null);
+    return this.applicationsService.updateWorkExperience(leadId, dto, user);
   }
 
   @Public()
   @Patch(':leadId/visa')
-  updateVisa(@Param('leadId') leadId: string, @Body() dto: UpdateVisaDetailsDto) {
-    return this.applicationsService.updateVisaDetails(leadId, dto, null);
+  updateVisa(@Param('leadId') leadId: string, @Body() dto: UpdateVisaDetailsDto, @GetUser() user?: any) {
+    return this.applicationsService.updateVisaDetails(leadId, dto, user);
   }
 
   @Public()
@@ -98,7 +98,8 @@ export class ApplicationsController {
   updateDocuments(
     @Param('leadId') leadId: string,
     @UploadedFiles() files: any,
+    @GetUser() user?: any,
   ) {
-    return this.applicationsService.updateDocuments(leadId, files, null);
+    return this.applicationsService.updateDocuments(leadId, files, user);
   }
 }

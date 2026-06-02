@@ -11,8 +11,6 @@ import {
 import {
     EllipsisVertical,
     MessageSquareText,
-    MessageCircleCode,
-    AtSign,
     Repeat,
     Replace,
     NotebookPen,
@@ -136,18 +134,6 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
                         onClick={() => router.push(`${basePath}/${leadId}?tab=chat`)}
                     >
                         Text Message
-                    </DropdownItem>
-                    <DropdownItem
-                        key="whatsapp"
-                        startContent={<MessageCircleCode className="h-4 w-4 text-green-500" />}
-                        onClick={() => router.push(`${basePath}/${leadId}?tab=whatsapp`)}>
-                        WhatsApp
-                    </DropdownItem>
-                    <DropdownItem
-                        key="mail"
-                        startContent={<AtSign className="h-4 w-4 text-purple-500" />}
-                        onClick={() => router.push(`${basePath}/${leadId}?tab=emails`)}>
-                        Email
                     </DropdownItem>
                 </DropdownSection>
             </DropdownMenu>

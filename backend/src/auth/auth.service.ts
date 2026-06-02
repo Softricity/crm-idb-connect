@@ -4,6 +4,7 @@ import { AgentsService } from '../agents/agents.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { PermissionsService } from '../permissions/permissions.service';
 
 @Injectable()
 export class AuthService {
@@ -12,6 +13,7 @@ export class AuthService {
     private agentsService: AgentsService,
     private jwtService: JwtService,
     private prisma: PrismaService,
+    private permissionsService: PermissionsService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -57,7 +59,8 @@ export class AuthService {
     let responseUser: any = {};
 
     if (user.type === 'partner') {
-      const permissions = user.role?.role_permissions?.map((rp: any) => rp.permission.name) || [];
+      const authz = await this.permissionsService.resolveEffectivePermissionsForPartner(user.id);
+      const permissions = authz.permissions;
       
       payload = {
         email: user.email,
@@ -66,6 +69,9 @@ export class AuthService {
         role: user.role.name,
         type: 'partner',
         permissions: permissions,
+        department_ids: authz.department_ids,
+        primary_department_id: authz.primary_department_id,
+        authz_source: authz.source,
         branch_id: user.branch_id,
         branch_type: user.branch?.type
       };
@@ -76,6 +82,9 @@ export class AuthService {
         email: user.email,
         role: user.role.name,
         permissions: permissions,
+        department_ids: authz.department_ids,
+        primary_department_id: authz.primary_department_id,
+        authz_source: authz.source,
         branch_id: user.branch_id,
         type: 'partner'
       };
@@ -99,6 +108,9 @@ export class AuthService {
         email: user.email,
         role: 'agent',
         permissions: [],
+        department_ids: [],
+        primary_department_id: null,
+        authz_source: 'role',
         type: 'agent',
         branch_id: user.branch_id,
         contract_approved: !!user.contract_approved,
@@ -122,6 +134,9 @@ export class AuthService {
         email: user.email,
         role: 'agent_team_member',
         permissions: [],
+        department_ids: [],
+        primary_department_id: null,
+        authz_source: 'role',
         type: 'agent_team_member',
         parent_agent_id: user.agent_id,
         contract_approved: !!user.agent?.contract_approved,
@@ -146,8 +161,7 @@ export class AuthService {
       const user = await this.partnersService.findOneForAuthById(userId);
       if (!user) return { partner: null };
 
-      const permissions =
-        user.role?.role_permissions?.map((rp: any) => rp.permission.name) || [];
+      const authz = await this.permissionsService.resolveEffectivePermissionsForPartner(user.id);
 
       return {
         partner: {
@@ -155,7 +169,10 @@ export class AuthService {
           name: user.name,
           email: user.email,
           role: user.role?.name,
-          permissions,
+          permissions: authz.permissions,
+          department_ids: authz.department_ids,
+          primary_department_id: authz.primary_department_id,
+          authz_source: authz.source,
           branch_id: user.branch_id,
           branch_name: user.branch?.name || null,
           branch_type: user.branch?.type || null,
@@ -174,6 +191,9 @@ export class AuthService {
           email: agent.email,
           role: 'agent',
           permissions: [],
+          department_ids: [],
+          primary_department_id: null,
+          authz_source: 'role',
           type: 'agent',
           branch_id: agent.branch_id || null,
           contract_approved: !!agent.contract_approved,
@@ -190,6 +210,9 @@ export class AuthService {
         email: teamMember.email,
         role: 'agent_team_member',
         permissions: [],
+        department_ids: [],
+        primary_department_id: null,
+        authz_source: 'role',
         type: 'agent_team_member',
         parent_agent_id: teamMember.agent_id,
         contract_approved: !!teamMember.agent?.contract_approved,
@@ -243,6 +266,12 @@ export class AuthService {
         leadId: lead.id,
         email: lead.email,
         type: 'lead',
+        staff_context: {
+          staff_user_id: decoded?.staffUserId || null,
+          permissions: Array.isArray(decoded?.permissions) ? decoded.permissions : [],
+          department_ids: Array.isArray(decoded?.department_ids) ? decoded.department_ids : [],
+          primary_department_id: decoded?.primary_department_id || null,
+        },
       },
       { expiresIn: '7d' },
     );
@@ -250,6 +279,12 @@ export class AuthService {
     return {
       access_token: studentSessionToken,
       lead,
+      staff_context: {
+        staff_user_id: decoded?.staffUserId || null,
+        permissions: Array.isArray(decoded?.permissions) ? decoded.permissions : [],
+        department_ids: Array.isArray(decoded?.department_ids) ? decoded.department_ids : [],
+        primary_department_id: decoded?.primary_department_id || null,
+      },
     };
   }
 }

@@ -69,6 +69,19 @@ export class ApplicationsService {
       if (!lead) throw new ForbiddenException('Lead not found or inaccessible.');
       return;
     }
+
+    // Student-panel session tokens are issued with type "lead" and should only
+    // be able to access the lead they were minted for.
+    if (user.type === 'lead') {
+      const sessionLeadId = user.leadId || user.userId || user.id;
+      if (sessionLeadId !== leadId) {
+        throw new ForbiddenException('You do not have access to this Lead.');
+      }
+      const lead = await this.prisma.leads.findUnique({ where: { id: leadId } });
+      if (!lead) throw new ForbiddenException('Lead not found or inaccessible.');
+      return;
+    }
+
     const scope = getScope(user);
     const lead = await this.prisma.leads.findFirst({
       where: {

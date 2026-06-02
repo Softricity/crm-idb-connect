@@ -2,11 +2,13 @@ import {
   Controller,
   Get,
   Post,
+  Put,
   Body,
   Patch,
   Param,
   Delete,
   UseGuards,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { PermissionsService } from './permissions.service';
 import { CreatePermissionDto } from './dto/create-permission.dto';
@@ -16,6 +18,7 @@ import { UpdatePermissionGroupDto } from './dto/update-permission-group.dto';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { AssignPermissionsDto } from './dto/assign-permission.dto';
+import { ReplaceDepartmentPermissionsDto } from './dto/replace-department-permissions.dto';
 import { Roles } from '../auth/roles.decorator';
 import { Role } from '../auth/roles.enum';
 import { RolesGuard } from '../auth/roles.guard';
@@ -219,5 +222,33 @@ export class PermissionsController {
     @Param('permissionId') permissionId: string,
   ) {
     return this.permissionsService.removePermissionFromRole(roleId, permissionId);
+  }
+
+  // ==================== DEPARTMENT PERMISSIONS ====================
+
+  @Get('permissions/departments')
+  @Roles(Role.Admin, Role.Counsellor)
+  listDepartmentPermissions() {
+    return this.permissionsService.listDepartmentPermissionMappings();
+  }
+
+  @Get('permissions/departments/:departmentId')
+  @Roles(Role.Admin, Role.Counsellor)
+  getDepartmentPermissions(
+    @Param('departmentId', ParseUUIDPipe) departmentId: string,
+  ) {
+    return this.permissionsService.getDepartmentPermissions(departmentId);
+  }
+
+  @Put('permissions/departments/:departmentId')
+  @Roles(Role.Admin)
+  replaceDepartmentPermissions(
+    @Param('departmentId', ParseUUIDPipe) departmentId: string,
+    @Body() dto: ReplaceDepartmentPermissionsDto,
+  ) {
+    return this.permissionsService.replaceDepartmentPermissions(
+      departmentId,
+      dto.permission_ids || [],
+    );
   }
 }

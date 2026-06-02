@@ -132,7 +132,7 @@ const data = {
     },
     {
       title: "Settings",
-      url: "/settings",
+      url: "/settings/integrations",
       icon: Settings,
     },
   ],

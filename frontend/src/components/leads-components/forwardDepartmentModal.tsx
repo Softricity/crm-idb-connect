@@ -16,47 +16,21 @@ import { usePartnerStore } from "@/stores/usePartnerStore";
 import { useBranchStore } from "@/stores/useBranchStore";
 import { useLeadStore, Lead } from "@/stores/useLeadStore";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { DepartmentsAPI } from "@/lib/api";
 import { toast } from "sonner";
 
-type PipelineType = "lead" | "application" | "visa";
-
-const FLOW: PipelineType[] = ["lead", "application", "visa"];
-
-const DEPARTMENT_LABELS: Record<PipelineType, string> = {
-  lead: "Counselling",
-  application: "Admissions",
-  visa: "Visa",
-};
-
-const ROLE_HINTS: Record<PipelineType, string[]> = {
-  lead: ["counsellor", "counselor"],
-  application: ["admission", "application"],
-  visa: ["visa", "immigration"],
-};
-
-function normalizeType(type?: string | null): PipelineType | null {
-  const value = (type || "").toLowerCase();
-  if (!value) {
-    return "lead";
-  }
-  if (value === "lead" || value === "application" || value === "visa") {
-    return value;
-  }
-  return null;
+interface DepartmentOrderConfig {
+  order_index: number;
+  is_active: boolean;
+  is_default: boolean;
 }
 
-function getNextType(currentType?: string | null): PipelineType | null {
-  const normalized = normalizeType(currentType);
-  if (!normalized) {
-    return null;
-  }
-
-  const index = FLOW.indexOf(normalized);
-  if (index < 0 || index >= FLOW.length - 1) {
-    return null;
-  }
-
-  return FLOW[index + 1];
+interface DepartmentRecord {
+  id: string;
+  name: string;
+  code: string;
+  is_active: boolean;
+  department_orders?: DepartmentOrderConfig | null;
 }
 
 interface ForwardDepartmentModalProps {
@@ -66,20 +40,78 @@ interface ForwardDepartmentModalProps {
   onForwarded?: () => void | Promise<void>;
 }
 
-export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded }: ForwardDepartmentModalProps) {
+export function ForwardDepartmentModal({
+  isOpen,
+  onOpenChange,
+  lead,
+  onForwarded,
+}: ForwardDepartmentModalProps) {
   const { partners, fetchPartners } = usePartnerStore();
   const { selectedBranch } = useBranchStore();
   const { updateLead, fetchLeadsBasedOnPermission } = useLeadStore();
   const { user } = useAuthStore();
   const [selectedAssignee, setSelectedAssignee] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [departments, setDepartments] = useState<DepartmentRecord[]>([]);
 
-  const currentType = useMemo(() => normalizeType(lead?.type), [lead?.type]);
-  const nextType = useMemo(() => getNextType(lead?.type), [lead?.type]);
+  // Departments sorted by their DB-configured order_index — no hardcoded type progression.
+  const sortedActiveDepartments = useMemo(
+    () =>
+      departments
+        .filter(
+          (department) =>
+            department.is_active &&
+            (department.department_orders?.is_active ?? true),
+        )
+        .sort(
+          (a, b) =>
+            (a.department_orders?.order_index ?? Number.MAX_SAFE_INTEGER) -
+            (b.department_orders?.order_index ?? Number.MAX_SAFE_INTEGER),
+        ),
+    [departments],
+  );
+
+  const currentDepartmentIndex = useMemo(
+    () =>
+      sortedActiveDepartments.findIndex(
+        (department) => department.id === lead?.current_department_id,
+      ),
+    [sortedActiveDepartments, lead?.current_department_id],
+  );
+
+  const currentDepartment = useMemo(
+    () =>
+      currentDepartmentIndex >= 0
+        ? sortedActiveDepartments[currentDepartmentIndex]
+        : null,
+    [sortedActiveDepartments, currentDepartmentIndex],
+  );
+
+  const nextDepartment = useMemo(
+    () =>
+      currentDepartmentIndex >= 0
+        ? sortedActiveDepartments[currentDepartmentIndex + 1] || null
+        : null,
+    [sortedActiveDepartments, currentDepartmentIndex],
+  );
 
   useEffect(() => {
     if (isOpen) {
-      fetchPartners(selectedBranch?.id);
+      Promise.all([
+        fetchPartners(selectedBranch?.id),
+        DepartmentsAPI.fetchDepartments(false),
+      ])
+        .then(([, departmentsResponse]) => {
+          setDepartments(
+            Array.isArray(departmentsResponse)
+              ? (departmentsResponse as DepartmentRecord[])
+              : [],
+          );
+        })
+        .catch((error) => {
+          console.error("Failed to fetch departments for forwarding:", error);
+          setDepartments([]);
+        });
       setSelectedAssignee("");
     }
   }, [isOpen, fetchPartners, selectedBranch?.id]);
@@ -98,18 +130,18 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
   );
 
   const candidateUsers = useMemo(() => {
-    if (!nextType) {
+    if (!nextDepartment) {
       return [];
     }
 
-    const hints = ROLE_HINTS[nextType];
-    const hinted = selectableUsers.filter((partner) => {
-      const role = (partner.role || "").toLowerCase();
-      return hints.some((hint) => role.includes(hint));
-    });
-
-    return hinted.length > 0 ? hinted : selectableUsers;
-  }, [nextType, selectableUsers]);
+    return selectableUsers.filter((partner) =>
+      (partner.partner_departments || []).some(
+        (assignment) =>
+          assignment.is_active &&
+          assignment.department_id === nextDepartment.id,
+      ),
+    );
+  }, [nextDepartment, selectableUsers]);
 
   const selectedAssigneeLabel = useMemo(() => {
     if (!selectedAssignee) {
@@ -124,22 +156,27 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
     return `${selected.name || "Unnamed"} - ${selected.email || "No email"}`;
   }, [candidateUsers, selectedAssignee]);
 
-  const currentLabel = currentType ? DEPARTMENT_LABELS[currentType] : "Current";
-  const nextLabel = nextType ? DEPARTMENT_LABELS[nextType] : null;
+  const currentLabel = currentDepartment?.name || "Current";
+  const nextLabel = nextDepartment?.name || null;
 
   const handleForward = async () => {
-    if (!lead?.id || !nextType || !selectedAssignee) {
+    if (!lead?.id || !nextDepartment || !selectedAssignee) {
       return;
     }
 
     setIsSubmitting(true);
     try {
+      // Send forward_to_next_department: true — the backend resolves the next
+      // department dynamically from department_order.order_index in the DB.
+      // No hardcoded type strings (lead/application/visa) are used anywhere.
       await updateLead(lead.id, {
-        type: nextType,
+        forward_to_next_department: true as any,
         assigned_to: selectedAssignee,
       });
 
-      const assigneeName = candidateUsers.find((partner) => partner.id === selectedAssignee)?.name || "selected user";
+      const assigneeName =
+        candidateUsers.find((partner) => partner.id === selectedAssignee)?.name ||
+        "selected user";
       toast.success(`Forwarded to ${nextLabel} and assigned to ${assigneeName}.`);
 
       if (user?.id && user.permissions) {
@@ -170,7 +207,7 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
             </ModalHeader>
 
             <ModalBody>
-              {!nextType ? (
+              {!nextDepartment ? (
                 <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-sm text-yellow-800">
                   This lead is already in the final department. No forward action is available.
                 </div>
@@ -184,9 +221,13 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
 
                   <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                     <p>
-                      Forwarding from <span className="font-semibold">{currentLabel}</span> to <span className="font-semibold">{nextLabel}</span>.
+                      Forwarding from{" "}
+                      <span className="font-semibold">{currentLabel}</span> to{" "}
+                      <span className="font-semibold">{nextLabel}</span>.
                     </p>
-                    <p className="mt-1">Select a user from the next department to complete this action.</p>
+                    <p className="mt-1">
+                      Select a user from the next department to complete this action.
+                    </p>
                   </div>
 
                   <div className="space-y-2">
@@ -215,7 +256,11 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
                       }}
                     >
                       {candidateUsers.map((partner) => (
-                        <SelectItem key={partner.id!} textValue={`${partner.name || "Unnamed"} - ${partner.email || "No email"}`} className="text-gray-900">
+                        <SelectItem
+                          key={partner.id!}
+                          textValue={`${partner.name || "Unnamed"} - ${partner.email || "No email"}`}
+                          className="text-gray-900"
+                        >
                           {partner.name} - {partner.email}
                         </SelectItem>
                       )) as unknown as any}
@@ -228,7 +273,10 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
                         <Users className="h-4 w-4" />
                         <span className="font-semibold">No users available</span>
                       </div>
-                      <p>No eligible users were found for the next department in this branch.</p>
+                      <p>
+                        No active staff found in the next department. Assign team members to
+                        that department first.
+                      </p>
                     </div>
                   )}
                 </div>
@@ -243,7 +291,7 @@ export function ForwardDepartmentModal({ isOpen, onOpenChange, lead, onForwarded
                 color="primary"
                 onPress={handleForward}
                 isLoading={isSubmitting}
-                isDisabled={!nextType || !selectedAssignee || candidateUsers.length === 0}
+                isDisabled={!nextDepartment || !selectedAssignee || candidateUsers.length === 0}
               >
                 Confirm Forward
               </Button>

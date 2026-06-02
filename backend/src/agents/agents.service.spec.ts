@@ -4,6 +4,7 @@ describe('AgentsService', () => {
   const prismaMock = {
     agentInquiry: {
       create: jest.fn(),
+      findFirst: jest.fn(),
     },
   } as any;
 
@@ -16,6 +17,7 @@ describe('AgentsService', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    prismaMock.agentInquiry.findFirst.mockResolvedValue(null);
     service = new AgentsService(prismaMock, supabaseMock, mailServiceMock);
   });
 

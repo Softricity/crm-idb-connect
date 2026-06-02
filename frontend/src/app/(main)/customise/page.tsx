@@ -85,7 +85,7 @@ export default function CustomisePage() {
     <div className="p-6 max-w-7xl mx-auto">
       <div className="mb-8 flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Customise Dropdowns</h1>
+          <h2 className="text-2xl font-bold text-gray-900">Customise Dropdowns</h2>
           <p className="text-gray-500">Manage dropdown categories and options throughout the CRM.</p>
         </div>
         

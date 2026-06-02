@@ -30,6 +30,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       parent_agent_id: payload.parent_agent_id,
       contract_approved: payload.contract_approved,
       permissions: payload.permissions || [],
+      department_ids: payload.department_ids || [],
+      primary_department_id: payload.primary_department_id || null,
+      authz_source: payload.authz_source || 'hybrid',
       branch_id: payload.branch_id,     // <--- Make available to Controllers
       branch_type: payload.branch_type, // <--- Make available to Controllers
     };
