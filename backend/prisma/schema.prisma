@@ -363,6 +363,7 @@ model leads {
   current_department                   department?        @relation(fields: [current_department_id], references: [id])
   notes                                notes[]
   offline_payments                     offline_payments[]
+  payment_transactions                 PaymentTransaction[]
   timeline                             timeline[]
   courses                              Course[]           @relation("LeadCourses")
 
@@ -892,7 +893,28 @@ model IntegrationConfig {
   @@map("integration_configs")
 }
 
+model PaymentTransaction {
+  id                       String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  lead_id                  String           @db.Uuid
+  gateway                  PaymentGateway
+  status                   PaymentTxStatus  @default(INITIATED)
+  amount                   BigInt
+  currency                 String           @default("INR")
+  order_ref                String?
+  gateway_payment_id       String?
+  gateway_transaction_id   String?
+  pidx                     String?
+  callback_payload         Json?
+  verify_payload           Json?
+  meta                     Json?            @default("{}")
+  created_at               DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at               DateTime         @default(now()) @updatedAt @db.Timestamptz(6)
+  leads                    leads            @relation(fields: [lead_id], references: [id], onDelete: Cascade)
 
+  @@index([lead_id], map: "idx_payment_tx_lead")
+  @@index([gateway, status], map: "idx_payment_tx_gateway_status")
+  @@map("payment_transactions")
+}
 
 enum AgentStatus {
   PENDING
@@ -1000,6 +1022,10 @@ enum timeline_event {
   LEAD_FOLLOWUP_COMMENT_UPDATED
   OFFLINE_PAYMENT_ADDED
   OFFLINE_PAYMENT_DELETED
+  ONLINE_PAYMENT_INITIATED
+  ONLINE_PAYMENT_VERIFIED
+  ONLINE_PAYMENT_FAILED
+  ONLINE_PAYMENT_CANCELED
   LEAD_DEPARTMENT_CHANGED
 }
 
@@ -1034,6 +1060,7 @@ enum TicketRequesterType {
 
 enum IntegrationProvider {
   RAZORPAY
+  KHALTI
   GOOGLE_ADS
   META_PIXEL
   MAILSUITE
@@ -1041,6 +1068,17 @@ enum IntegrationProvider {
   BREVO
 }
 
+enum PaymentGateway {
+  RAZORPAY
+  KHALTI
+}
 
-
-
+enum PaymentTxStatus {
+  INITIATED
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELED
+  EXPIRED
+  REFUNDED
+}

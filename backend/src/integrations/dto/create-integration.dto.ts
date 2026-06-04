@@ -2,6 +2,7 @@ import { IsBoolean, IsEnum, IsObject, IsOptional, IsString } from 'class-validat
 
 export enum IntegrationProviderInput {
   RAZORPAY = 'RAZORPAY',
+  KHALTI = 'KHALTI',
   GOOGLE_ADS = 'GOOGLE_ADS',
   META_PIXEL = 'META_PIXEL',
   MAILSUITE = 'MAILSUITE',

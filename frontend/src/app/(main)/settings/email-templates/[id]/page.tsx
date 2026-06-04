@@ -200,7 +200,8 @@ export default function EmailTemplateEditorPage() {
                   <Editor
                     apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
                     onInit={(evt, editor) => editorRef.current = editor}
-                    initialValue={formData.body}
+                    value={formData.body}
+                    onEditorChange={(content) => setFormData((prev) => ({ ...prev, body: content }))}
                     init={{
                       height: 500,
                       menubar: false,

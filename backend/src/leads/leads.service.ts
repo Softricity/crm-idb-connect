@@ -1230,6 +1230,7 @@ export class LeadsService {
         email: true,
         name: true,
         assigned_to: true,
+        agent_id: true,
       },
     });
 
@@ -1239,7 +1240,16 @@ export class LeadsService {
 
     const isAssignedStaff = lead.assigned_to === requesterId;
     const isAdmin = this.isAdminLike(requester);
-    if (!isAssignedStaff && !isAdmin) {
+
+    let isAgentOwner = false;
+    if (requester?.type === 'agent' || requester?.role === 'agent') {
+      isAgentOwner = lead.agent_id === requesterId;
+    } else if (requester?.type === 'agent_team_member' || requester?.role === 'agent_team_member') {
+      const parentAgentId = requester.parent_agent_id || requester.parent_id;
+      isAgentOwner = lead.agent_id === parentAgentId;
+    }
+
+    if (!isAssignedStaff && !isAdmin && !isAgentOwner) {
       throw new ForbiddenException('You are not allowed to access this student panel.');
     }
 

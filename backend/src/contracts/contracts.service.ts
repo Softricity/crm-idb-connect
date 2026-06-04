@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AgentContractStatus, Prisma } from '@prisma/client';
+import { AgentContractStatus, AgentStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { SupabaseService } from '../storage/supabase.service';
 import { promises as fs } from 'fs';
@@ -345,7 +345,7 @@ export class ContractsService {
       updates.push(
         this.prisma.agent.update({
           where: { id: contract.agent_id },
-          data: { contract_approved: true },
+          data: { contract_approved: true, status: AgentStatus.APPROVED },
         }),
       );
     }
@@ -374,7 +374,7 @@ export class ContractsService {
       updates.push(
         this.prisma.agent.update({
           where: { id: contract.agent_id },
-          data: { contract_approved: false },
+          data: { contract_approved: false, status: AgentStatus.PENDING },
         }),
       );
     }

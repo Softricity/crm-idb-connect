@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { MenuItem } from "@/config/menus";
 import useUserPermissions from '@/hooks/usePermissions';
 import { hasAnyPermission } from '@/lib/utils';
+import { useAuthStore } from "@/stores/useAuthStore";
 
 export default function SidebarMenus({
   menus,
@@ -17,6 +18,7 @@ export default function SidebarMenus({
   const currentMenu = usePathname();
 
   const userPermissions = useUserPermissions();
+  const { user } = useAuthStore();
 
   return (
     <div className="flex flex-col gap-2">
@@ -24,6 +26,14 @@ export default function SidebarMenus({
         // If menu has requiredPermissions, hide it when user lacks them
         if (menu.requiredPermissions && menu.requiredPermissions.length > 0) {
           if (!hasAnyPermission(userPermissions, menu.requiredPermissions)) {
+            return null;
+          }
+        }
+
+        // If menu has requiredRoles, hide it when user lacks them
+        if (menu.requiredRoles && menu.requiredRoles.length > 0) {
+          const userRole = user?.role?.toLowerCase() || "";
+          if (!menu.requiredRoles.some((r) => r.toLowerCase() === userRole)) {
             return null;
           }
         }

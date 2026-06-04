@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "@/components/sidebar"; // desktop sidebar
 import Navbar from "@/components/navbar";   // mobile navbar
 import BranchSelector from "@/components/BranchSelector";
-import { menus, b2bMenus, counsellorMenus } from "@/config/menus";    // unified menus
+import { menus, b2bMenus, counsellorMenus, settingsMenus } from "@/config/menus";    // unified menus
 import { Toaster } from "@/components/ui/sonner";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePartnerStore } from "@/stores/usePartnerStore";
@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     // Current page title mapping
     const getPageTitle = () => {
       if (pathname === "/dashboard") return "";
-      const allMenus = [...menus, ...b2bMenus, ...counsellorMenus];
+      const allMenus = [...menus, ...b2bMenus, ...counsellorMenus, ...settingsMenus];
       const menuItem = allMenus.find(m => m.link === pathname);
       return menuItem?.title || "";
     };

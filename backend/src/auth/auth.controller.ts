@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { Public } from './public.decorator';
 import { GetUser } from './get-user.decorator';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -33,5 +34,17 @@ export class AuthController {
   @Post('student-panel/exchange')
   async exchangeStudentPanelToken(@Body('staff_token') staffToken: string) {
     return this.authService.exchangeStudentPanelStaffToken(staffToken);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('reset-password')
+  async resetPassword(@GetUser() user: any, @Body('newPassword') newPassword: string) {
+    return this.authService.resetPassword(user, newPassword);
+  }
+
+  @Public()
+  @Post('forgot-password')
+  async forgotPassword(@Body('email') email: string) {
+    return this.authService.forgotPassword(email);
   }
 }

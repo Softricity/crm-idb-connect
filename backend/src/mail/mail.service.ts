@@ -157,21 +157,62 @@ export class MailService {
       where: { name: templateName },
     });
 
+    let html = '';
+    let subject = '';
+
     if (!template) {
-      this.logger.warn(`[MAIL_SEND_SKIPPED] template_not_found=${templateName} recipient=${email}`);
-      return;
-    }
-
-    const category = String(template.category || '').trim().toLowerCase();
-    if (category === 'campaign') {
       this.logger.warn(
-        `[MAIL_SEND_SKIPPED] template=${templateName} category=campaign recipient=${email} reason=campaign_deferred`,
+        `[MAIL_TEMPLATE_NOT_FOUND] template_not_found=${templateName} recipient=${email}. Using fallback layout.`,
       );
-      return;
-    }
 
-    let html = template.body;
-    let subject = template.subject;
+      if (templateName === 'AGENT_ONBOARDING') {
+        subject = 'Welcome to IDB Connect B2B Portal!';
+        html = `
+          <h1>Welcome, {{name}}!</h1>
+          <p>Your agent account for the B2B portal has been successfully created/activated.</p>
+          <p>Below are your onboarding details and temporary login credentials:</p>
+          <ul>
+            <li><strong>Agency / Company:</strong> {{company}}</li>
+            <li><strong>Login Email:</strong> {{email}}</li>
+            <li><strong>Temporary Password:</strong> {{password}}</li>
+          </ul>
+          <p>You can access the portal and sign your agreement here: <a href="{{login_url}}">{{login_url}}</a></p>
+          <p>Best regards,<br/>The IDB Connect Team</p>
+        `;
+      } else if (templateName === 'INQUIRY_RECEIVED') {
+        subject = 'We have received your agency partnership inquiry!';
+        html = `
+          <h1>Hello, {{name}}!</h1>
+          <p>Thank you for submitting your partnership inquiry for <strong>{{company}}</strong>.</p>
+          <p>Our team will review your application details and get in touch with you shortly.</p>
+          <p>Best regards,<br/>The IDB Connect Team</p>
+        `;
+      } else {
+        subject = `Notification from IDB Connect: ${templateName}`;
+        const detailsList = Object.entries(data)
+          .map(([key, value]) => `<li><strong>${key}:</strong> ${value}</li>`)
+          .join('');
+        html = `
+          <h1>Hello!</h1>
+          <p>This is an automated notification from IDB Connect.</p>
+          <h3>Details:</h3>
+          <ul>
+            ${detailsList}
+          </ul>
+          <p>Best regards,<br/>The IDB Connect Team</p>
+        `;
+      }
+    } else {
+      const category = String(template.category || '').trim().toLowerCase();
+      if (category === 'campaign') {
+        this.logger.warn(
+          `[MAIL_SEND_SKIPPED] template=${templateName} category=campaign recipient=${email} reason=campaign_deferred`,
+        );
+        return;
+      }
+      html = template.body;
+      subject = template.subject;
+    }
 
     Object.entries(data).forEach(([key, value]) => {
       const placeholder = new RegExp(`{{${key}}}`, 'g');

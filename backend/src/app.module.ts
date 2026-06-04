@@ -32,6 +32,7 @@ import { ContractsModule } from './contracts/contracts.module';
 import { ReportsModule } from './reports/reports.module';
 import { DepartmentsModule } from './departments/departments.module';
 import { IntegrationsModule } from './integrations/integrations.module';
+import { PaymentsModule } from './payments/payments.module';
 
 @Module({
   imports: [
@@ -65,6 +66,7 @@ import { IntegrationsModule } from './integrations/integrations.module';
     ReportsModule,
     DepartmentsModule,
     IntegrationsModule,
+    PaymentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

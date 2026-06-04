@@ -89,11 +89,31 @@ export class UniversitiesService {
     if (isAgentContext) {
       const agentId = user?.type === 'agent_team_member' ? user?.parent_agent_id : user?.id || user?.userId;
       if (agentId) {
-        const accessRows = await this.prisma.agentUniversityAccess.findMany({
-          where: { agent_id: agentId },
-          select: { university_id: true },
+        const agent = await this.prisma.agent.findUnique({
+          where: { id: agentId },
+          select: { category_id: true },
         });
-        const accessibleIds = accessRows.map((r) => r.university_id);
+
+        const [individualAccess, categoryAccess] = await Promise.all([
+          this.prisma.agentUniversityAccess.findMany({
+            where: { agent_id: agentId },
+            select: { university_id: true },
+          }),
+          agent?.category_id
+            ? this.prisma.categoryUniversityAccess.findMany({
+                where: { category_id: agent.category_id, is_active: true },
+                select: { university_id: true },
+              })
+            : Promise.resolve([]),
+        ]);
+
+        const accessibleIds = Array.from(
+          new Set([
+            ...individualAccess.map((r) => r.university_id),
+            ...categoryAccess.map((r) => r.university_id),
+          ])
+        );
+
         if (accessibleIds.length === 0) {
           return [];
         }
@@ -113,17 +133,38 @@ export class UniversitiesService {
 
   async findAllWithAccess(user: any) {
     const agentId = user?.type === 'agent_team_member' ? user?.parent_agent_id : user?.id || user?.userId;
-    const [universities, rows] = await Promise.all([
+    
+    const agent = agentId
+      ? await this.prisma.agent.findUnique({
+          where: { id: agentId },
+          select: { category_id: true },
+        })
+      : null;
+
+    const [universities, rows, categoryRows] = await Promise.all([
       this.prisma.university.findMany({
         include: { country: true, _count: { select: { courses: true } } },
         orderBy: { name: 'asc' },
       }),
-      this.prisma.agentUniversityAccess.findMany({
-        where: { agent_id: agentId },
-        select: { university_id: true },
-      }),
+      agentId
+        ? this.prisma.agentUniversityAccess.findMany({
+            where: { agent_id: agentId },
+            select: { university_id: true },
+          })
+        : Promise.resolve([]),
+      agent?.category_id
+        ? this.prisma.categoryUniversityAccess.findMany({
+            where: { category_id: agent.category_id, is_active: true },
+            select: { university_id: true },
+          })
+        : Promise.resolve([]),
     ]);
-    const allowed = new Set(rows.map((r) => r.university_id));
+
+    const allowed = new Set([
+      ...rows.map((r) => r.university_id),
+      ...categoryRows.map((r) => r.university_id),
+    ]);
+
     return universities.map((u) => ({
       ...u,
       is_accessible: allowed.has(u.id),

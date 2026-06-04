@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { 
   CreditCard,
+  Wallet,
   TrendingUp,
   Target,
   Mail, 
@@ -26,6 +27,13 @@ const PROVIDERS: Omit<IntegrationProvider, "id" | "isConnected" | "lastConnected
     description: "Accept payments via UPI, Credit/Debit cards, and Netbanking. Automate refunds and reconciliations.",
     icon: <CreditCard className="text-blue-600" size={24} />,
     color: "bg-blue-600",
+  },
+  {
+    name: "Khalti",
+    provider: "KHALTI",
+    description: "Accept payments via Khalti web checkout with server-side verification and callback support.",
+    icon: <Wallet className="text-fuchsia-600" size={24} />,
+    color: "bg-fuchsia-600",
   },
   {
     name: "Google Ads",
@@ -122,6 +130,8 @@ export default function IntegrationsPage() {
       id: existing?.id || "",
       isConnected: !!existing?.is_active,
       lastConnected: existing?.connected_at,
+      isDisabled: false,
+      disabledReason: undefined,
     } as IntegrationProvider;
   });
 

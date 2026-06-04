@@ -98,13 +98,38 @@ export class AgentsService {
   }
 
   async updateStatus(id: string, status: 'APPROVED' | 'REJECTED', reason?: string) {
-    return this.prisma.agent.update({
+    const updated = await this.prisma.agent.update({
       where: { id },
       data: {
         status,
         rejection_reason: reason,
       },
     });
+
+    if (status === 'APPROVED') {
+      const existingContract = await this.prisma.agentContract.findFirst({
+        where: { agent_id: id },
+        orderBy: { created_at: 'desc' },
+      });
+
+      if (!existingContract) {
+        const latestGeneralTemplate = await this.prisma.agentContract.findFirst({
+          where: { agent_id: null },
+          orderBy: { created_at: 'desc' },
+        });
+
+        await this.prisma.agentContract.create({
+          data: {
+            agent_id: id,
+            title: latestGeneralTemplate?.title || 'Agent Agreement',
+            content: latestGeneralTemplate?.content || '<p>Agreement for the approved agent.</p>',
+            status: AgentContractStatus.PENDING,
+          },
+        });
+      }
+    }
+
+    return updated;
   }
 
   async updateAgent(id: string, dto: UpdateAgentDto) {
@@ -495,12 +520,6 @@ export class AgentsService {
   }
 
   async updateInquiryStatus(id: string, status: InquiryStatus, branchId?: string, categoryId?: string) {
-    const updated = await this.prisma.agentInquiry.update({
-      where: { id },
-      data: { status },
-      include: { documents: true },
-    }) as any;
-
     if (status === ('CONVERTED' as any)) {
       if (!branchId || !categoryId) {
         throw new BadRequestException('Branch and category are required to convert inquiry to agent');
@@ -515,110 +534,174 @@ export class AgentsService {
         throw new BadRequestException('Selected category is invalid or inactive');
       }
 
-      const email = (updated.email || '').trim();
-      const mobile = (updated.mobile || '').trim();
-      let agent = email
-        ? await this.prisma.agent.findUnique({ where: { email } })
-        : null;
-
-      if (!agent && mobile) {
-        agent = await this.prisma.agent.findFirst({ where: { mobile } });
-      }
-
-      const plainPassword = this.generateRandomPassword(12);
-      const hashedPassword = await bcrypt.hash(plainPassword, 10);
-
-      let createdNewAgent = false;
-      if (!agent) {
-        const createdAgent = await this.prisma.agent.create({
-          data: {
-            name: updated.name,
-            email: updated.email,
-            mobile: updated.mobile,
-            password: hashedPassword,
-            agency_name: updated.company_name || updated.name,
-            website: updated.website || undefined,
-            country: updated.country || 'Unknown',
-            state: 'Unknown',
-            city: updated.city || 'Unknown',
-            address: updated.company_address || 'Unknown',
-            region: updated.region || updated.country || 'Unknown',
-            branch_id: branchId,
-            category_id: categoryId,
-            status: 'PENDING',
-          },
-        });
-        agent = createdAgent;
-        createdNewAgent = true;
-
-        // Copy inquiry documents to agent documents if they exist
-        if (updated.documents.length > 0) {
-          await this.prisma.agentDocument.createMany({
-            data: updated.documents.map(doc => ({
-              agent_id: createdAgent.id,
-              title: doc.label,
-              file_url: doc.file_url,
-            })),
-          });
-        }
-      }
-
-      if (!agent) {
-        return updated;
-      }
-
-      if (agent && !createdNewAgent) {
-        agent = await this.prisma.agent.update({
-          where: { id: agent.id },
-          data: { password: hashedPassword },
-        });
-      }
-
-      if (!agent.branch_id || !agent.category_id) {
-        agent = await this.prisma.agent.update({
-          where: { id: agent.id },
-          data: {
-            branch_id: agent.branch_id || branchId,
-            category_id: agent.category_id || categoryId,
-          },
-        });
-      }
-
-      // Ensure converted inquiry always enters the agreement stage.
-      const existingContract = await this.prisma.agentContract.findFirst({
-        where: { agent_id: agent.id },
-        orderBy: { created_at: 'desc' },
+      const inquiry = await this.prisma.agentInquiry.findUnique({
+        where: { id },
+        include: { documents: true },
       });
 
-      if (!existingContract) {
-        const latestGeneralTemplate = await this.prisma.agentContract.findFirst({
+      if (!inquiry) {
+        throw new NotFoundException('Inquiry not found');
+      }
+
+      const email = (inquiry.email || '').trim();
+      const mobile = (inquiry.mobile || '').trim();
+      let onboardingPassword: string | null = null;
+      let shouldSendOnboardingEmail = false;
+      let createdNewAgent = false;
+      let reopenedRejectedAgent = false;
+
+      // Always generate new password and send onboarding email upon conversion
+      onboardingPassword = this.generateRandomPassword(12);
+      shouldSendOnboardingEmail = true;
+      const hashedPassword = await bcrypt.hash(onboardingPassword, 10);
+
+      await this.prisma.$transaction(async (tx) => {
+        let existingAgent = email
+          ? await tx.agent.findUnique({ where: { email } })
+          : null;
+
+        if (!existingAgent && mobile) {
+          existingAgent = await tx.agent.findFirst({ where: { mobile } });
+        }
+
+        const isReopeningRejectedAgent = existingAgent?.status === 'REJECTED';
+        reopenedRejectedAgent = isReopeningRejectedAgent;
+        let agentRecord = existingAgent;
+
+        const agentData = {
+          name: inquiry.name,
+          email: inquiry.email,
+          mobile: inquiry.mobile,
+          agency_name: inquiry.company_name || inquiry.name,
+          website: inquiry.website || undefined,
+          country: inquiry.country || 'Unknown',
+          state: inquiry.country || existingAgent?.state || 'Unknown',
+          city: inquiry.city || existingAgent?.city || 'Unknown',
+          address: inquiry.company_address || existingAgent?.address || 'Unknown',
+          region: inquiry.source_country || inquiry.country || existingAgent?.region || 'Unknown',
+          branch_id: branchId,
+          category_id: categoryId,
+        };
+
+        if (!agentRecord) {
+          agentRecord = await tx.agent.create({
+            data: {
+              ...agentData,
+              password: hashedPassword,
+              status: 'PENDING',
+              contract_approved: false,
+            },
+          });
+          createdNewAgent = true;
+        } else {
+          agentRecord = await tx.agent.update({
+            where: { id: agentRecord.id },
+            data: {
+              ...agentData,
+              password: hashedPassword, // Reset password to new hashed password
+              branch_id: branchId,      // Force update to the newly assigned branch
+              category_id: categoryId,  // Force update to the newly assigned category
+              status: isReopeningRejectedAgent ? 'PENDING' : agentRecord.status,
+              contract_approved: false, // Reset approval state so signing is always mandatory
+            },
+          });
+        }
+
+        if (inquiry.documents.length > 0) {
+          const existingDocs = await tx.agentDocument.findMany({
+            where: { agent_id: agentRecord.id },
+            select: { file_url: true },
+          });
+          const knownUrls = new Set(existingDocs.map((doc) => doc.file_url));
+          const docsToCreate = inquiry.documents
+            .filter((doc) => !knownUrls.has(doc.file_url))
+            .map((doc) => ({
+              agent_id: agentRecord.id,
+              title: doc.label,
+              file_url: doc.file_url,
+            }));
+
+          if (docsToCreate.length > 0) {
+            await tx.agentDocument.createMany({
+              data: docsToCreate,
+            });
+          }
+        }
+
+        const latestGeneralTemplate = await tx.agentContract.findFirst({
           where: { agent_id: null },
           orderBy: { created_at: 'desc' },
         });
 
-        await this.prisma.agentContract.create({
-          data: {
-            agent_id: agent.id,
-            title:
-              latestGeneralTemplate?.title ||
-              `${updated.company_name || updated.name} Agreement`,
-            content:
-              latestGeneralTemplate?.content ||
-              `<p>Agreement for ${updated.company_name || updated.name}.</p>`,
-            status: AgentContractStatus.PENDING,
-          },
+        const existingContract = await tx.agentContract.findFirst({
+          where: { agent_id: agentRecord.id },
+          orderBy: { created_at: 'desc' },
         });
+
+        if (existingContract) {
+          // Reset the existing contract to pending to force signing
+          await tx.agentContract.update({
+            where: { id: existingContract.id },
+            data: {
+              status: AgentContractStatus.PENDING,
+              content: latestGeneralTemplate?.content || existingContract.content,
+              title: latestGeneralTemplate?.title || existingContract.title,
+            },
+          });
+        } else {
+          await tx.agentContract.create({
+            data: {
+              agent_id: agentRecord.id,
+              title:
+                latestGeneralTemplate?.title ||
+                `${inquiry.company_name || inquiry.name} Agreement`,
+              content:
+                latestGeneralTemplate?.content ||
+                `<p>Agreement for ${inquiry.company_name || inquiry.name}.</p>`,
+              status: AgentContractStatus.PENDING,
+            },
+          });
+        }
+
+        await tx.agentInquiry.update({
+          where: { id },
+          data: { status },
+        });
+
+      });
+
+      if (shouldSendOnboardingEmail && onboardingPassword) {
+        try {
+          await this.mailService.sendTemplateEmail(inquiry.email, 'AGENT_ONBOARDING', {
+            name: inquiry.name,
+            company: inquiry.company_name || inquiry.name,
+            email: inquiry.email,
+            password: onboardingPassword,
+            login_url: 'https://b2b.idbconnect.global/login',
+          });
+        } catch (mailError) {
+          // Conversion is complete once the database transaction succeeds.
+          // Email delivery is best-effort so onboarding does not fail on SMTP issues.
+          // eslint-disable-next-line no-console
+          console.error('[AgentsService] Failed to send onboarding email after conversion', mailError);
+        }
       }
 
-      await this.mailService.sendTemplateEmail(updated.email, 'AGENT_ONBOARDING', {
-        name: updated.name,
-        company: updated.company_name || updated.name,
-        email: updated.email,
-        password: plainPassword,
-        login_url: 'https://b2b.idbconnect.global/login',
-      });
+      return this.prisma.agentInquiry.findUnique({
+        where: { id },
+        include: { documents: true },
+      }).then((refreshedInquiry) => ({
+        ...(refreshedInquiry as any),
+        onboarding_email_sent: shouldSendOnboardingEmail,
+        agent_created: createdNewAgent,
+        agent_reopened_from_rejected: reopenedRejectedAgent,
+      }));
     }
 
-    return updated;
+    return this.prisma.agentInquiry.update({
+      where: { id },
+      data: { status },
+      include: { documents: true },
+    }) as any;
   }
 }

@@ -22,6 +22,17 @@ export default function ContractHub({ contract, token }: ContractHubProps) {
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const getSignatureUrl = (url?: string | null) => {
+    if (!url) return '';
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+      return url;
+    }
+    const apiBase = process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:5005';
+    const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    return `${cleanBase}${cleanUrl}`;
+  };
+
   const stateLabel = useMemo(() => {
     if (!contract) return 'No contract assigned';
     if (contract.status === 'APPROVED') return 'Approved';
@@ -92,7 +103,7 @@ export default function ContractHub({ contract, token }: ContractHubProps) {
               {contract.signature_url ? (
                 <div>
                   <div className="text-sm text-gray-500 mb-2">Current Signature</div>
-                  <img src={contract.signature_url} alt="signature" className="max-h-28" />
+                  <img src={getSignatureUrl(contract.signature_url)} alt="signature" className="max-h-28" />
                 </div>
               ) : null}
 

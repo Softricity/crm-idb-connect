@@ -1,18 +1,60 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter } from "next/router";
 import { motion, LayoutGroup } from "framer-motion";
-import { Bell, Search, UserCircle, LogOut } from "lucide-react";
+import { Bell, Search, UserCircle, LogOut, Key } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Badge } from "@heroui/react";
+import { Dropdown, DropdownTrigger, DropdownMenu, DropdownItem, Badge, Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, Button, Input } from "@heroui/react";
+import { useState } from "react";
+import { AuthAPI } from "@/lib/api";
 
 export default function Header() {
   const { partner, logout } = useAuth();
-  const enforce = process.env.NEXT_PUBLIC_ENFORCE_CONTRACT_GATE === 'true';
+  const enforce = true;
   const contractApproved = partner?.contract_approved === true;
   const restrictByContract = enforce && !contractApproved;
   const isTeamMember = partner?.type === 'agent_team_member';
+
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setSuccess(null);
+
+    if (newPassword.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setIsResetting(true);
+    try {
+      await AuthAPI.resetPassword(newPassword);
+      setSuccess("Password reset successfully!");
+      setNewPassword("");
+      setConfirmPassword("");
+      setTimeout(() => {
+        setIsResetModalOpen(false);
+        setSuccess(null);
+      }, 2000);
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.message || "Failed to reset password. Please try again.");
+    } finally {
+      setIsResetting(false);
+    }
+  };
   
   const urls = [
     { name: "Home", path: "/" },
@@ -20,11 +62,11 @@ export default function Header() {
     { name: "My Applications", path: "/my-applications" },
     { name: "Commission Hub", path: "/commission-hub" },
     { name: "Team", path: "/team" },
-    { name: "Analytics", path: "/analytics" },
-    { name: "Support", path: "/support" },
+    { name: "Get Support", path: "/support" },
   ].filter((u) => !(isTeamMember && (u.path === '/commission-hub' || u.path === '/team')));
 
-  const current = usePathname();
+  const router = useRouter();
+  const current = router.pathname;
 
   return (
     <div className="w-full">
@@ -61,6 +103,19 @@ export default function Header() {
                         <p className="text-xs text-gray-500">Branch: {partner.branch_name}</p>
                       </DropdownItem>
                     ) : null}
+                    <DropdownItem 
+                      key="reset-password"
+                      onPress={() => {
+                        setError(null);
+                        setSuccess(null);
+                        setNewPassword("");
+                        setConfirmPassword("");
+                        setIsResetModalOpen(true);
+                      }}
+                      startContent={<Key className="w-4 h-4" />}
+                    >
+                      Reset Password
+                    </DropdownItem>
                     <DropdownItem 
                       key="logout" 
                       color="danger" 
@@ -118,6 +173,57 @@ export default function Header() {
           </LayoutGroup>
         </div>
       </div>
+
+      {/* Reset Password Modal */}
+      <Modal isOpen={isResetModalOpen} onClose={() => setIsResetModalOpen(false)} placement="center">
+        <ModalContent>
+          <form onSubmit={handleResetPassword}>
+            <ModalHeader className="flex flex-col gap-1">Reset Password</ModalHeader>
+            <ModalBody className="space-y-4">
+              {error && (
+                <div className="p-3 text-sm text-red-600 bg-red-50 rounded-lg border border-red-200">
+                  {error}
+                </div>
+              )}
+              {success && (
+                <div className="p-3 text-sm text-green-600 bg-green-50 rounded-lg border border-green-200">
+                  {success}
+                </div>
+              )}
+              <div className="space-y-2">
+                <Input
+                  label="New Password"
+                  placeholder="Enter new password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  isRequired
+                  variant="bordered"
+                />
+              </div>
+              <div className="space-y-2">
+                <Input
+                  label="Confirm New Password"
+                  placeholder="Confirm new password"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  isRequired
+                  variant="bordered"
+                />
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button color="danger" variant="flat" onPress={() => setIsResetModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button color="primary" type="submit" isLoading={isResetting}>
+                Reset Password
+              </Button>
+            </ModalFooter>
+          </form>
+        </ModalContent>
+      </Modal>
     </div>
   );
 }

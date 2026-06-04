@@ -6,12 +6,14 @@ import { motion } from "framer-motion";
 export interface IntegrationProvider {
   id: string;
   name: string;
-  provider: "RAZORPAY" | "GOOGLE_ADS" | "META_PIXEL" | "MAILSUITE" | "SENDER" | "BREVO";
+  provider: "RAZORPAY" | "KHALTI" | "GOOGLE_ADS" | "META_PIXEL" | "MAILSUITE" | "SENDER" | "BREVO";
   description: string;
   icon: React.ReactNode;
   color: string;
   isConnected: boolean;
   lastConnected?: string;
+  isDisabled?: boolean;
+  disabledReason?: string;
 }
 
 interface IntegrationCardProps {
@@ -96,12 +98,16 @@ export const IntegrationCard: React.FC<IntegrationCardProps> = ({
                   color="primary"
                   onPress={() => onConnect(integration)}
                   endContent={<ChevronRight size={18} />}
+                  isDisabled={integration.isDisabled}
                   className="w-full font-bold h-12 shadow-lg shadow-primary/20 hover:shadow-primary/40 transition-all hover:-translate-y-0.5"
                 >
-                  Connect Service
+                  {integration.isDisabled ? "Unavailable" : "Connect Service"}
                 </Button>
               )}
             </div>
+            {integration.isDisabled && integration.disabledReason && (
+              <p className="text-xs text-amber-600 mt-2">{integration.disabledReason}</p>
+            )}
           </div>
         </CardBody>
       </Card>

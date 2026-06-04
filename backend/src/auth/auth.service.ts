@@ -1,5 +1,6 @@
-import { ForbiddenException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, UnauthorizedException, InternalServerErrorException } from '@nestjs/common';
 import { PartnersService } from '../partners/partners.service';
+import { MailService } from '../mail/mail.service';
 import { AgentsService } from '../agents/agents.service';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -14,6 +15,7 @@ export class AuthService {
     private jwtService: JwtService,
     private prisma: PrismaService,
     private permissionsService: PermissionsService,
+    private mailService: MailService,
   ) {}
 
   async validateUser(email: string, pass: string): Promise<any> {
@@ -30,7 +32,7 @@ export class AuthService {
     // 2. If not found, Try to find as Agent
     const agent = await this.agentsService.findByEmail(email);
     if (agent) {
-      if (agent.status !== 'APPROVED' || !agent.is_active) {
+      if (agent.status === 'REJECTED' || !agent.is_active) {
          return null; 
       }
 
@@ -46,6 +48,9 @@ export class AuthService {
     if (teamMember) {
       const isMatch = await bcrypt.compare(pass, teamMember.password);
       if (isMatch && teamMember.is_active) {
+        if (!teamMember.agent || !teamMember.agent.is_active || teamMember.agent.status === 'REJECTED') {
+          return null;
+        }
         const { password, ...result } = teamMember;
         return { ...result, type: 'agent_team_member' };
       }
@@ -183,7 +188,7 @@ export class AuthService {
 
     if (type === 'agent') {
       const agent = await this.agentsService.findOne(userId);
-      if (!agent) return { partner: null };
+      if (!agent || agent.status === 'REJECTED' || !agent.is_active) return { partner: null };
       return {
         partner: {
           id: agent.id,
@@ -202,7 +207,9 @@ export class AuthService {
     }
 
     const teamMember = await this.agentsService.findTeamMemberById(userId);
-    if (!teamMember) return { partner: null };
+    if (!teamMember || !teamMember.is_active || !teamMember.agent || teamMember.agent.status === 'REJECTED' || !teamMember.agent.is_active) {
+      return { partner: null };
+    }
     return {
       partner: {
         id: teamMember.id,
@@ -286,5 +293,124 @@ export class AuthService {
         primary_department_id: decoded?.primary_department_id || null,
       },
     };
+  }
+
+  async resetPassword(user: any, newPassword: string) {
+    if (!newPassword || newPassword.length < 6) {
+      throw new BadRequestException('Password must be at least 6 characters long');
+    }
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    const userId = user.id || user.userId;
+
+    if (user.type === 'partner') {
+      await this.prisma.partners.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+    } else if (user.type === 'agent') {
+      await this.prisma.agent.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+    } else if (user.type === 'agent_team_member') {
+      await this.prisma.agentTeamMember.update({
+        where: { id: userId },
+        data: { password: hashedPassword },
+      });
+    } else {
+      throw new BadRequestException('Invalid user type');
+    }
+
+    return { message: 'Password reset successfully' };
+  }
+
+  private generateRandomPassword(length = 10): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789@#$%';
+    let password = '';
+    for (let i = 0; i < length; i += 1) {
+      password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+  }
+
+  async forgotPassword(email: string) {
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
+
+    let user: any = null;
+    let userType: 'partner' | 'agent' | 'agent_team_member' | null = null;
+
+    // 1. Search Agent
+    const agent = await this.prisma.agent.findUnique({ where: { email } });
+    if (agent) {
+      user = agent;
+      userType = 'agent';
+    } else {
+      // 2. Search Team Member
+      const teamMember = await this.prisma.agentTeamMember.findUnique({ where: { email } });
+      if (teamMember) {
+        user = teamMember;
+        userType = 'agent_team_member';
+      } else {
+        // 3. Search Partner
+        const partner = await this.prisma.partners.findUnique({ where: { email } });
+        if (partner) {
+          user = partner;
+          userType = 'partner';
+        }
+      }
+    }
+
+    if (!user) {
+      // Prevent email enumeration
+      return { message: 'If this email exists in our records, a temporary password has been sent.' };
+    }
+
+    const tempPassword = this.generateRandomPassword(12);
+    const hashedPassword = await bcrypt.hash(tempPassword, 10);
+
+    try {
+      if (userType === 'agent') {
+        // Send email first
+        await this.mailService.sendTemplateEmail(user.email, 'AGENT_ONBOARDING', {
+          name: user.name,
+          company: user.agency_name,
+          email: user.email,
+          password: tempPassword,
+          login_url: 'https://b2b.idbconnect.global/login',
+        });
+        // Update database only if email succeeded
+        await this.prisma.agent.update({
+          where: { id: user.id },
+          data: { password: hashedPassword },
+        });
+      } else if (userType === 'agent_team_member') {
+        await this.mailService.sendTemplateEmail(user.email, 'AGENT_ONBOARDING', {
+          name: user.name,
+          company: 'Agent Portal Team',
+          email: user.email,
+          password: tempPassword,
+          login_url: 'https://b2b.idbconnect.global/login',
+        });
+        await this.prisma.agentTeamMember.update({
+          where: { id: user.id },
+          data: { password: hashedPassword },
+        });
+      } else if (userType === 'partner') {
+        await this.mailService.sendWelcomeEmail(user.email, tempPassword);
+        await this.prisma.partners.update({
+          where: { id: user.id },
+          data: { password: hashedPassword },
+        });
+      }
+    } catch (err) {
+      console.error('Forgot password action error:', err);
+      throw new InternalServerErrorException(
+        'Failed to send password recovery email. Please check your SMTP settings or try again later.'
+      );
+    }
+
+    return { message: 'If this email exists in our records, a temporary password has been sent.' };
   }
 }

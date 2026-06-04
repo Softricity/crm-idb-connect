@@ -19,7 +19,7 @@ interface AuthContextType {
   partner: Partner | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
 }
 
@@ -57,26 +57,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Load user from cookie on mount
   useEffect(() => {
-    const token = getCookie('b2b-auth-token') || getCookie('auth-token');
-    const userData = getCookie('b2b-auth-user') || getCookie('auth-user');
-    
-    if (token && userData) {
+    const initialize = async () => {
+      const token = getCookie('b2b-auth-token') || getCookie('auth-token');
+      const userData = getCookie('b2b-auth-user') || getCookie('auth-user');
+
+      if (!token || !userData) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const user = JSON.parse(userData);
-        setPartner(user);
+        JSON.parse(userData);
+        const response = await fetch(`${API_BASE}/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Session expired');
+        }
+
+        const data = await response.json();
+        if (!data?.partner) {
+          throw new Error('No active session');
+        }
+
+        setPartner(data.partner);
+        setCookie('b2b-auth-user', JSON.stringify(data.partner), 7);
       } catch (error) {
-        console.error('Failed to parse user data:', error);
+        console.error('Failed to restore session:', error);
         deleteCookie('b2b-auth-token');
         deleteCookie('b2b-auth-user');
         deleteCookie('auth-token');
         deleteCookie('auth-user');
+        setPartner(null);
+      } finally {
+        setIsLoading(false);
       }
-    }
-    
-    setIsLoading(false);
+    };
+
+    initialize();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
@@ -88,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Login failed');
+        return { success: false, error: error.message || 'Login failed' };
       }
 
       const data = await response.json();
@@ -99,15 +123,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       setPartner(data.partner);
       
-      const enforce = process.env.NEXT_PUBLIC_ENFORCE_CONTRACT_GATE === 'true';
+      const enforce = true;
       if (enforce && data.partner?.contract_approved !== true) {
         router.push('/contract-hub');
       } else {
         router.push('/');
       }
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('Login error:', error);
-      throw error;
+      return { success: false, error: error?.message || 'Network error' };
     }
   };
 

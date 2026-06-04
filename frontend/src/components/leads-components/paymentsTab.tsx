@@ -10,6 +10,7 @@ import { useBranchStore } from "@/stores/useBranchStore";
 import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Input, Button as HeroButton } from "@heroui/react";
 import { Copy, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
+import { IntegrationsAPI } from "@/lib/api";
 
 export default function PaymentsTab({ leadId }: { leadId?: string }) {
   const { payments, fetchPaymentsByLeadId } = useOfflinePaymentStore() as any;
@@ -19,6 +20,7 @@ export default function PaymentsTab({ leadId }: { leadId?: string }) {
   const [mode, setMode] = useState<"record" | "schedule">("record");
   const [editing, setEditing] = useState<any | null>(null);
   const { isOpen: isLinkModalOpen, onOpen: onLinkModalOpen, onOpenChange: onLinkModalOpenChange } = useDisclosure();
+  const [activeGateway, setActiveGateway] = useState<string>("None");
 
   useEffect(() => {
     fetchPaymentsByLeadId?.(leadId || "");
@@ -28,6 +30,19 @@ export default function PaymentsTab({ leadId }: { leadId?: string }) {
     fetchPartners(selectedBranch?.id);
   }, [fetchPartners, selectedBranch?.id]);
 
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const list = await IntegrationsAPI.getAll();
+        const active = (list || []).find((i: any) => (i.provider === "RAZORPAY" || i.provider === "KHALTI") && i.is_active);
+        setActiveGateway(active?.provider || "None");
+      } catch {
+        setActiveGateway("None");
+      }
+    };
+    run();
+  }, []);
+
   const receivers = useMemo(
     () =>
       (partners || [])
@@ -36,7 +51,8 @@ export default function PaymentsTab({ leadId }: { leadId?: string }) {
     [partners]
   );
 
-  const paymentLink = `https://idbconnect.global/pay/${leadId}`;
+  const appOrigin = typeof window !== "undefined" ? window.location.origin : "https://idbconnect.global";
+  const paymentLink = `${appOrigin}/pay/${leadId}`;
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(paymentLink);
@@ -76,6 +92,9 @@ export default function PaymentsTab({ leadId }: { leadId?: string }) {
               <ModalBody>
                 <p className="text-sm text-gray-500 mb-4">
                   Share this link with the lead to receive online payments.
+                </p>
+                <p className="text-xs text-gray-600 mb-3">
+                  Active Gateway: <span className="font-semibold">{activeGateway}</span>
                 </p>
                 <div className="flex gap-2">
                   <Input 

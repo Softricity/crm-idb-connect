@@ -340,9 +340,13 @@ export default function AgreementsPage() {
     extras?: { branch_id?: string; category_id?: string }
   ) => {
     try {
-      await AgentsAPI.updateInquiryStatus(id, status, extras);
+      const result = await AgentsAPI.updateInquiryStatus(id, status, extras);
       if (status === 'CONVERTED') {
-        alert('Inquiry converted to agent. Login credentials were generated and sent to the agent email.');
+        alert(
+          result?.onboarding_email_sent
+            ? 'Inquiry converted to agent. Login credentials were generated and sent to the agent email.'
+            : 'Inquiry converted to agent. No new credentials were sent because an existing agent account was reused.'
+        );
       }
       await load(); 
     } catch (e: any) {
@@ -451,7 +455,7 @@ export default function AgreementsPage() {
                     <Editor
                       apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
                       onInit={(evt, editor) => editorRef.current = editor}
-                      initialValue={form.content}
+                      value={form.content}
                       onEditorChange={(content) => setForm({ ...form, content })}
                       init={{
                         height: 400,
@@ -765,7 +769,7 @@ export default function AgreementsPage() {
                     <Editor
                       apiKey={process.env.NEXT_PUBLIC_TINYMCE_API_KEY}
                       onInit={(evt, editor) => editEditorRef.current = editor}
-                      initialValue={editingContract?.content || ''}
+                      value={editingContract?.content || ''}
                       onEditorChange={(content) => setEditingContract((prev: any) => (prev ? { ...prev, content } : prev))}
                       init={{
                         height: 500,

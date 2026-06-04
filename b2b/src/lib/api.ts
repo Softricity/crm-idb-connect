@@ -176,6 +176,22 @@ export const AuthAPI = {
     });
     return handleResponse(res);
   },
+  resetPassword: async (newPassword: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/auth/reset-password`, {
+      method: 'POST',
+      headers: getHeaders(true, token),
+      body: JSON.stringify({ newPassword })
+    });
+    return handleResponse(res);
+  },
+  forgotPassword: async (email: string) => {
+    const res = await fetch(`${API_BASE}/auth/forgot-password`, {
+      method: 'POST',
+      headers: getHeaders(false),
+      body: JSON.stringify({ email })
+    });
+    return handleResponse(res);
+  },
 };
 
 // --- Leads (Public Lead Creation) ---
@@ -228,6 +244,13 @@ export const LeadsAPI = {
       method: 'PATCH',
       headers: getHeaders(true, token),
       body: JSON.stringify({ agentId })
+    });
+    return handleResponse(res);
+  },
+  getStudentPanelAccessToken: async (leadId: string, token?: string) => {
+    const res = await fetch(`${API_BASE}/leads/${leadId}/student-panel-access-token`, {
+      method: 'POST',
+      headers: getHeaders(true, token),
     });
     return handleResponse(res);
   },

@@ -1,4 +1,4 @@
-import 'dotenv/config'; 
+import 'dotenv/config';
 
 import { NestFactory, Reflector } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
@@ -33,6 +33,7 @@ async function bootstrap() {
     'http://localhost:3000',
     'http://localhost:3001',
     'http://localhost:3002',
+    'http://localhost:3003',
     'https://tw1lcrj1-3000.inc1.devtunnels.ms',
     'https://idbconnect.global',
     'https://student.idbconnect.global',
@@ -83,7 +84,7 @@ async function bootstrap() {
       '[MAIL_STARTUP] Transactional email service INACTIVE: SMTP_USER/SMTP_PASS missing. Email sends will be skipped.',
     );
   }
-  
+
   await app.listen(process.env.PORT ?? 5005);
 }
 bootstrap();

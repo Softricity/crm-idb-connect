@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Repeat } from "lucide-react";
 import { generateStudentPanelToken } from "@/utils/token";
 import { ForwardDepartmentModal } from "./ForwardDepartmentModal";
+import { LeadsAPI } from "@/lib/api";
 
 type ChipColor = "primary" | "secondary" | "success" | "warning" | "danger" | "default";
 
@@ -139,24 +140,34 @@ export default function ApplicationsTable({
   const [assigningLeadId, setAssigningLeadId] = useState<string | null>(null);
   const [forwardModalOpen, setForwardModalOpen] = useState(false);
   const [forwardLead, setForwardLead] = useState<Lead | null>(null);
+  const [studentPanelUrl, setStudentPanelUrl] = useState("");
+  const [studentPanelLoading, setStudentPanelLoading] = useState(false);
+  const [loadingStudentPanelLeadId, setLoadingStudentPanelLeadId] = useState<string | null>(null);
 
-  const handleOpenStudentPanel = (lead: Lead) => {
+  const handleOpenStudentPanel = async (lead: Lead) => {
     setSelectedLead(lead);
-    setStudentPanelOpen(true);
+    setLoadingStudentPanelLeadId(lead.id);
+    setStudentPanelLoading(true);
+    try {
+      const response = await LeadsAPI.getStudentPanelAccessToken(lead.id);
+      const token = response?.token;
+      if (!token) {
+        throw new Error("Failed to get student panel access token.");
+      }
+      const studentPanelBase = process.env.NEXT_PUBLIC_STUDENT_PANEL_URL || "https://student.idbconnect.global";
+      setStudentPanelUrl(`${studentPanelBase}/login?staff_token=${encodeURIComponent(token)}`);
+      setStudentPanelOpen(true);
+    } catch (error: any) {
+      alert(error?.message || "Unable to open student panel.");
+    } finally {
+      setStudentPanelLoading(false);
+      setLoadingStudentPanelLeadId(null);
+    }
   };
 
   const handleOpenForwardModal = (lead: Lead) => {
     setForwardLead(lead);
     setForwardModalOpen(true);
-  };
-
-  const studentPanelToken = () => {
-    if (!selectedLead) return "";
-    return generateStudentPanelToken({ 
-      id: selectedLead.id, 
-      email: selectedLead.email, 
-      name: selectedLead.name 
-    });
   };
 
   const renderSortIcon = (columnKey: string) => {
@@ -255,6 +266,7 @@ export default function ApplicationsTable({
                 variant="light"
                 color="secondary"
                 onPress={() => handleOpenStudentPanel(lead)}
+                isLoading={studentPanelLoading && loadingStudentPanelLeadId === lead.id}
               >
                 <ExternalLink className="w-4 h-4" />
               </Button>
@@ -380,7 +392,7 @@ export default function ApplicationsTable({
               </ModalHeader>
               <ModalBody>
                 <iframe
-                  src={`https://student.idbconnect.global/login?token=${encodeURIComponent(studentPanelToken())}`}
+                  src={studentPanelUrl}
                   title="Student Panel"
                   className="w-full h-full border-0"
                   allowFullScreen

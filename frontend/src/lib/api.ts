@@ -1309,6 +1309,28 @@ export const DepartmentPermissionsAPI = {
   },
 };
 
+export const PaymentsPublicAPI = {
+  getConfig: async (leadId: string) => {
+    const res = await fetch(`${API_BASE}/payments/public/${leadId}/config`);
+    return handleResponse(res);
+  },
+  initiate: async (leadId: string, data: { amount: number; currency?: string; description?: string }) => {
+    const res = await fetch(`${API_BASE}/payments/public/${leadId}/initiate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    });
+    return handleResponse(res);
+  },
+  verify: async (leadId: string, data: any) => {
+    const res = await fetch(`${API_BASE}/payments/public/verify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ leadId, ...data }),
+    });
+    return handleResponse(res);
+  },
+};
 
 export const MailAPI = {
   getTemplates: async (category?: string) => {
@@ -1355,7 +1377,9 @@ export default {
   TimelineAPI,
   OfflinePaymentsAPI,
   DashboardAPI,
-  IntegrationsAPI,MailAPI,
+  IntegrationsAPI,
+  PaymentsPublicAPI,
+  MailAPI,
   ApplicationsAPI,
   CountriesAPI,
   UniversitiesAPI,

@@ -39,6 +39,11 @@ describe('LeadsService', () => {
     logAssignmentChange: jest.fn(),
   } as any;
 
+  const jwtServiceMock = {
+    sign: jest.fn(),
+    verify: jest.fn(),
+  } as any;
+
   let service: LeadsService;
 
   beforeEach(() => {
@@ -51,7 +56,7 @@ describe('LeadsService', () => {
     prismaMock.agent.findUnique.mockResolvedValue(null);
     prismaMock.agentTeamMember.findUnique.mockResolvedValue(null);
     prismaMock.department_assignment_cursor.findUnique.mockResolvedValue(null);
-    service = new LeadsService(prismaMock, mailServiceMock, timelineServiceMock);
+    service = new LeadsService(prismaMock, mailServiceMock, timelineServiceMock, jwtServiceMock);
   });
 
   it('sends welcome email on lead creation', async () => {

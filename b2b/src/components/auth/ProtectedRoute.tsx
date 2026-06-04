@@ -17,7 +17,7 @@ export default function ProtectedRoute({ children }: ProtectedRouteProps) {
       return;
     }
 
-    const enforce = process.env.NEXT_PUBLIC_ENFORCE_CONTRACT_GATE === 'true';
+    const enforce = true;
     if (!isLoading && isAuthenticated && enforce) {
       const approved = partner?.contract_approved === true;
       const onContractHub = router.pathname === '/contract-hub';

@@ -3,6 +3,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button, Input, Card, CardBody, CardHeader } from '@heroui/react';
 import { useRouter } from 'next/router';
 import { Eye, EyeOff, LogIn } from 'lucide-react';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const { login, isAuthenticated } = useAuth();
@@ -25,8 +26,10 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      await login(email, password);
-      // Router push is handled in the login function
+      const result = await login(email, password);
+      if (!result.success) {
+        setError(result.error || 'Login failed. Please check your credentials.');
+      }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please check your credentials.');
     } finally {
@@ -88,6 +91,12 @@ export default function LoginPage() {
               />
             </div>
 
+            <div className="flex justify-end">
+              <Link href="/reset-password" className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                Forgot password?
+              </Link>
+            </div>
+
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                 {error}
@@ -106,14 +115,14 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-2">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <a href="/agents" className="text-blue-600 hover:text-blue-700 font-semibold">
+              <a href="/become-an-agent" className="text-blue-600 hover:text-blue-700 font-semibold">
                 Register as Agent
               </a>
             </p>
-            <p className="text-sm text-gray-600 mt-2">
+            <p className="text-sm text-gray-600">
               Want to partner with us?{' '}
               <a href="/become-an-agent" className="text-blue-600 hover:text-blue-700 font-semibold">
                 Become an Agent

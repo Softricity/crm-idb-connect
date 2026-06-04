@@ -50,6 +50,34 @@ export class PermissionsController {
     return this.permissionsService.findAllPermissions();
   }
 
+  // ==================== DEPARTMENT PERMISSIONS ====================
+
+  @Get('permissions/departments')
+  @Roles(Role.Admin, Role.Counsellor)
+  listDepartmentPermissions() {
+    return this.permissionsService.listDepartmentPermissionMappings();
+  }
+
+  @Get('permissions/departments/:departmentId')
+  @Roles(Role.Admin, Role.Counsellor)
+  getDepartmentPermissions(
+    @Param('departmentId', ParseUUIDPipe) departmentId: string,
+  ) {
+    return this.permissionsService.getDepartmentPermissions(departmentId);
+  }
+
+  @Put('permissions/departments/:departmentId')
+  @Roles(Role.Admin)
+  replaceDepartmentPermissions(
+    @Param('departmentId', ParseUUIDPipe) departmentId: string,
+    @Body() dto: ReplaceDepartmentPermissionsDto,
+  ) {
+    return this.permissionsService.replaceDepartmentPermissions(
+      departmentId,
+      dto.permission_ids || [],
+    );
+  }
+
   /**
    * Get a single permission
    * GET /permissions/:id
@@ -224,31 +252,5 @@ export class PermissionsController {
     return this.permissionsService.removePermissionFromRole(roleId, permissionId);
   }
 
-  // ==================== DEPARTMENT PERMISSIONS ====================
 
-  @Get('permissions/departments')
-  @Roles(Role.Admin, Role.Counsellor)
-  listDepartmentPermissions() {
-    return this.permissionsService.listDepartmentPermissionMappings();
-  }
-
-  @Get('permissions/departments/:departmentId')
-  @Roles(Role.Admin, Role.Counsellor)
-  getDepartmentPermissions(
-    @Param('departmentId', ParseUUIDPipe) departmentId: string,
-  ) {
-    return this.permissionsService.getDepartmentPermissions(departmentId);
-  }
-
-  @Put('permissions/departments/:departmentId')
-  @Roles(Role.Admin)
-  replaceDepartmentPermissions(
-    @Param('departmentId', ParseUUIDPipe) departmentId: string,
-    @Body() dto: ReplaceDepartmentPermissionsDto,
-  ) {
-    return this.permissionsService.replaceDepartmentPermissions(
-      departmentId,
-      dto.permission_ids || [],
-    );
-  }
 }
