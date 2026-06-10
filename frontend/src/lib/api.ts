@@ -33,6 +33,20 @@ function getHeaders(includeAuth = true, contentType: string | null = 'applicatio
 }
 
 async function handleResponse(res: Response) {
+  if (res.status === 401) {
+    // Token expired or unauthorized — clear session and redirect to login
+    const cookies = document.cookie.split(';');
+    for (const cookie of cookies) {
+      const name = cookie.trim().split('=')[0];
+      if (name === 'crm-auth-token' || name === 'auth-token' ||
+          name === 'crm-partner-session' || name === 'partner-session') {
+        document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:01 GMT; secure; samesite=strict`;
+      }
+    }
+    window.location.href = '/login';
+    return null;
+  }
+
   const text = await res.text();
   let data: any = null;
   try { data = text ? JSON.parse(text) : null; } catch { data = text; }
@@ -364,8 +378,8 @@ export const AuthAPI = {
     return handleResponse(res);
   },
   logout: async () => {
-    const res = await fetch(`${API_BASE}/auth/logout`, { method: 'POST', headers: getHeaders() });
-    return handleResponse(res);
+    // JWT-based auth — no server-side session; token is cleared client-side
+    return { success: true };
   }
 };
 

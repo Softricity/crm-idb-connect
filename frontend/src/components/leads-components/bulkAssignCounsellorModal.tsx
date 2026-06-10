@@ -68,8 +68,10 @@ export function BulkAssignCounsellorModal({
         if (lead.id) {
           try {
             await updateLead(lead.id, { 
-              assigned_to: selectedCounsellor || null 
-            });
+              assigned_to: selectedCounsellor || null,
+              assign_to_counselling: true,
+              status: 'assigned',
+            } as any);
             successCount++;
           } catch (error) {
             failCount++;

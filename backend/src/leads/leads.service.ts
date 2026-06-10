@@ -961,6 +961,7 @@ export class LeadsService {
     const {
       forward_to_next_department,
       can_forward_to_next_department,
+      assign_to_counselling,
       ...safeUpdateDto
     } = updateLeadDto as any;
 
@@ -1054,6 +1055,53 @@ export class LeadsService {
           connect: { id: targetDepartmentId },
         },
         status: nextDepartmentInitialStatus || 'new',
+      };
+    } else if (assign_to_counselling === true) {
+      // Explicit assign/reassign: forward to Counselling department with status "Assigned"
+      const counsellingDept = await this.prisma.department.findFirst({
+        where: { code: { equals: 'counselling', mode: 'insensitive' }, is_active: true },
+      });
+
+      if (!counsellingDept) {
+        throw new BadRequestException('Counselling department is not configured or inactive.');
+      }
+
+      const requestedAssignee = this.extractStringUpdateValue((safeUpdateDto as any).assigned_to);
+      const assigneeId = (requestedAssignee || '').trim();
+
+      if (!assigneeId) {
+        throw new BadRequestException('Assigning a counsellor requires selecting a user.');
+      }
+
+      const assignee = await this.prisma.partners.findUnique({
+        where: { id: assigneeId },
+        include: { role: true },
+      });
+
+      if (!assignee) {
+        throw new NotFoundException(`User with ID ${assigneeId} not found.`);
+      }
+
+      if ((assignee.role?.name || '').toLowerCase() === 'agent') {
+        throw new BadRequestException('Selected assignee must be an internal team member.');
+      }
+
+      const {
+        assigned_to: _ignoredAssignedTo,
+        current_department_id: _ignoredCurrentDept,
+        type: _ignoredType,
+        ...forwardSafeUpdateFields
+      } = (safeUpdateDto as Record<string, unknown>);
+
+      updatePayload = {
+        ...(forwardSafeUpdateFields as Prisma.leadsUpdateInput),
+        status: 'assigned',
+        partners_leads_assigned_toTopartners: {
+          connect: { id: assigneeId },
+        },
+        current_department: {
+          connect: { id: counsellingDept.id },
+        },
       };
     }
 

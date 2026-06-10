@@ -197,51 +197,14 @@ export default function LeadDetailPage() {
         Boolean(nextDepartmentLabel && lead.can_forward_to_next_department) &&
         hasPermission(user?.permissions || [], ApplicationPermission.LEAD_TO_APPLICATION);
 
-    // --- Department-based tab access control ---
-    // All tabs are visible but some are disabled based on the user's department(s).
+    // All tabs and panels are accessible to all departments — no restrictions.
+    const disabledTabs = new Set<string>();
+    const isStudentPanelDisabled = false;
+
     const userDeptIds = user?.department_ids || [];
     const userDeptCodes = departments
         .filter(d => userDeptIds.includes(d.id))
         .map(d => d.code.toUpperCase());
-    const isFrontDesk = userDeptCodes.includes('FRONTDESK');
-    const isCounselling = userDeptCodes.includes('COUNSELLING');
-    const isDocuments = userDeptCodes.includes('DOCUMENTS');
-    const isAccounts = userDeptCodes.includes('ACCOUNTS');
-
-    const disabledTabs = new Set<string>();
-    if (isFrontDesk) {
-        // Front Desk: only the Details tab (with StatusTimeline) is accessible
-        disabledTabs.add('notes');
-        disabledTabs.add('followups');
-        disabledTabs.add('documents');
-        disabledTabs.add('courses');
-        disabledTabs.add('payments');
-        disabledTabs.add('financials');
-        disabledTabs.add('chat');
-        disabledTabs.add('timeline');
-    }
-    if (isCounselling) {
-        disabledTabs.add('documents');
-        disabledTabs.add('payments');
-        disabledTabs.add('financials');
-    }
-    if (isDocuments) {
-        disabledTabs.add('payments');
-        disabledTabs.add('financials');
-    }
-    if (isAccounts) {
-        // Accounts: only Payments tab is accessible
-        disabledTabs.add('details');
-        disabledTabs.add('notes');
-        disabledTabs.add('followups');
-        disabledTabs.add('documents');
-        disabledTabs.add('courses');
-        disabledTabs.add('financials');
-        disabledTabs.add('chat');
-        disabledTabs.add('timeline');
-    }
-
-    const isStudentPanelDisabled = isFrontDesk || isCounselling;
 
     // Resolve Compliance department ID dynamically for send-back-to-Documents button
     const complianceDepartment = departments.find(

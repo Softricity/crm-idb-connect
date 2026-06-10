@@ -56,8 +56,10 @@ export function AssignCounsellorModal({ isOpen, onOpenChange, lead }: AssignCoun
     setIsAssigning(true);
     try {
       await updateLead(lead.id, { 
-        assigned_to: selectedCounsellor || null 
-      });
+        assigned_to: selectedCounsellor || null,
+        assign_to_counselling: true,
+        status: 'assigned',
+      } as any);
       
       const counsellorName = counsellors.find(c => c.id === selectedCounsellor)?.name || "Unassigned";
       toast.success(`Lead ${selectedCounsellor ? 'assigned to' : 'unassigned from'} ${counsellorName}`);
