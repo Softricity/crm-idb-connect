@@ -249,6 +249,14 @@ export const LeadsAPI = {
     });
     return handleResponse(res);
   },
+  sendBackToDocuments: async (leadId: string, assigneeId: string) => {
+    const res = await fetch(`${API_BASE}/leads/${leadId}/send-back-to-documents`, {
+      method: 'PATCH',
+      headers: getHeaders(),
+      body: JSON.stringify({ assigneeId }),
+    });
+    return handleResponse(res);
+  },
 };
 
 export const ReportsAPI = {

@@ -33,10 +33,13 @@ import { format } from "date-fns";
 
 function StatusChip({ value }: { value?: string }) {
   const v = value || "Received";
-  const color =
+  const color:
+    | "success"
+    | "warning"
+    | "danger" =
     v === "Received" ? "success" : v === "Pending" ? "warning" : "danger";
   return (
-    <Chip color={color as any} variant="flat" className="font-medium">
+    <Chip color={color} variant="flat" className="font-medium">
       {v}
     </Chip>
   );

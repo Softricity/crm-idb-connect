@@ -9,7 +9,7 @@ import { CreateNoteDto } from './dto/create-note.dto';
 import { UpdateNoteDto } from './dto/update-note.dto';
 import { Role } from '../auth/roles.enum';
 import { TimelineService } from '../timeline/timeline.service';
-import { getScope } from '../common/utils/scope.util'; // <--- Import Scope
+import { getScope, resolveUserDepartmentCodes } from '../common/utils/scope.util';
 
 @Injectable()
 export class NotesService {
@@ -22,11 +22,12 @@ export class NotesService {
     const { lead_id, text } = createNoteDto;
 
     // 1. Security Check: Can this user access this lead?
-    const scope = getScope(user);
+    const deptCodes = await resolveUserDepartmentCodes(user, this.prisma);
+    const scope = getScope(user, deptCodes);
     const lead = await this.prisma.leads.findFirst({ 
       where: { 
         id: lead_id,
-        ...scope // <--- Apply Branch Filter
+        ...scope
       } 
     });
 
@@ -50,7 +51,8 @@ export class NotesService {
 
   async findAllForLead(leadId: string, user: any) {
     // 1. Security Check
-    const scope = getScope(user);
+    const deptCodes = await resolveUserDepartmentCodes(user, this.prisma);
+    const scope = getScope(user, deptCodes);
     const lead = await this.prisma.leads.findFirst({ 
       where: { 
         id: leadId,

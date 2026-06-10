@@ -173,6 +173,18 @@ body {
   }
 }
 
+/* HeroUI Select — force selected value text to be dark and visible */
+div[data-slot="trigger"] span[data-slot="value"]:not([class*="sr-only"]) {
+  color: #111827 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+div[data-slot="base"][data-has-value="true"] span[data-slot="value"] * {
+  color: #111827 !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
 /* Custom Hover Scrollbar Utility */
 .hover-scrollbar {
   scrollbar-width: none;

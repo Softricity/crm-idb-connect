@@ -8,11 +8,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Physical or virtual office location. Branches can have a parent-child hierarchy.
 model Branch {
   id                            String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                          String
   code                          String                         @unique
-  type                          String
+  type                          String                         // e.g. "head_office", "branch"
   address                       String?
   phone                         String?
   parent_id                     String?                        @db.Uuid
@@ -28,10 +29,12 @@ model Branch {
   @@map("branches")
 }
 
+/// Processing stage a lead flows through (Frontdesk → Counselling → Documents → Compliance → Accounts).
+/// Order is defined by department_order table.
 model department {
   id                            String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                          String                         @unique
-  code                          String                         @unique
+  code                          String                         @unique                           // e.g. "FRONTDESK", "COUNSELLING"
   is_active                     Boolean                        @default(true)
   created_at                    DateTime                       @default(now()) @db.Timestamptz(6)
   updated_at                    DateTime                       @default(now()) @updatedAt @db.Timestamptz(6)
@@ -323,6 +326,7 @@ model followups {
   leads             leads?              @relation(fields: [lead_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
+/// A student prospect or application record. Flows through departments via configurable pipeline.
 model leads {
   id                                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   name                                 String
@@ -400,6 +404,7 @@ model offline_payments {
   partners     partners? @relation("offline_payments_receiver", fields: [receiver], references: [id], onDelete: NoAction, onUpdate: NoAction)
 }
 
+/// Internal CRM staff member. Has a role, belongs to one+ departments, and can own/process leads.
 model partners {
   id                                String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   role_id                           String                         @db.Uuid
@@ -437,6 +442,7 @@ model partners {
   todos                             todos[]
 }
 
+/// External recruitment partner (agent/agency) who submits leads. Has a parent-child hierarchy.
 model Agent {
   id                         String                  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   email                      String                  @unique

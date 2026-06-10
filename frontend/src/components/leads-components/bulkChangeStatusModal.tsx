@@ -242,9 +242,14 @@ export default function BulkChangeStatusModal({
       await fetchLeads();
       onComplete(); // e.g., clear selection
       onOpenChange(false);
-    } catch (err) {
-      toast.error("Bulk status update failed.");
-      console.error(err);
+    } catch (err: any) {
+      const message =
+        err?.body?.message ||
+        err?.body?.error ||
+        err?.message ||
+        "Bulk status update failed.";
+      toast.error(message);
+      console.error("Bulk status update error:", message, err);
     } finally {
       setIsProcessing(false);
       setCurrentIndex(0);
@@ -302,7 +307,7 @@ export default function BulkChangeStatusModal({
                       selectedKeys={
                         selectedStatus ? new Set([selectedStatus]) : new Set()
                       }
-                      onChange={(e) => setSelectedStatus(e.target.value)}
+                      onSelectionChange={(keys) => setSelectedStatus(Array.from(keys).join(""))}
                       isDisabled={isProcessing}
                     >
                       {statusOptions.map((opt) => (

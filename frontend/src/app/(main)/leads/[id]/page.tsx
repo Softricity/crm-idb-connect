@@ -21,13 +21,13 @@ import ChatComponent from "@/components/chat/ChatComponent";
 import FinancialsTab from "@/components/FinancialsTab";
 import CoursesTab from "@/components/leads-components/coursesTab";
 import { ForwardDepartmentModal } from "@/components/leads-components/forwardDepartmentModal";
+import { SendBackToDocumentsModal } from "@/components/leads-components/sendBackToDocumentsModal";
 import { useAuthStore } from "@/stores/useAuthStore";
 import {
     ApplicationPermission,
     hasAnyPermission,
     hasPermission,
     LeadPermission,
-    OfflinePaymentPermission,
 } from "@/lib/utils";
 import { DepartmentsAPI, LeadsAPI } from "@/lib/api";
 import LeadDocumentsTab from "@/components/leads-components/leadDocumentsTab";
@@ -73,14 +73,23 @@ export default function LeadDetailPage() {
     const [studentPanelUrl, setStudentPanelUrl] = useState("");
     const [studentPanelLoading, setStudentPanelLoading] = useState(false);
     const [forwardModalOpen, setForwardModalOpen] = useState(false);
+    const [sendBackModalOpen, setSendBackModalOpen] = useState(false);
     const [timelineRefreshKey, setTimelineRefreshKey] = useState(0);
     const [departments, setDepartments] = useState<DepartmentRecord[]>([]);
 
     const fetchAndSetLead = useCallback(async () => {
         setLoading(true);
-        const fetchedLead = await fetchLeadById(id);
-        setLead(fetchedLead);
-        setLoading(false);
+        try {
+            const fetchedLead = await fetchLeadById(id);
+            setLead(fetchedLead);
+        } catch (error: any) {
+            const message =
+                error?.body?.message || error?.body?.error || error?.message || "Failed to fetch lead.";
+            toast.error(message);
+            setLead(null);
+        } finally {
+            setLoading(false);
+        }
     }, [id, fetchLeadById]);
 
     useEffect(() => {
@@ -187,21 +196,66 @@ export default function LeadDetailPage() {
     const canForwardToNextDepartment =
         Boolean(nextDepartmentLabel && lead.can_forward_to_next_department) &&
         hasPermission(user?.permissions || [], ApplicationPermission.LEAD_TO_APPLICATION);
-    const canViewDocuments = hasAnyPermission(user?.permissions || [], [
-        ApplicationPermission.APPLICATION_MANAGE,
-        LeadPermission.LEAD_UPDATE,
-        LeadPermission.LEAD_MANAGE,
-        LeadPermission.LEAD_VIEW,
-    ]);
+
+    // --- Department-based tab access control ---
+    // All tabs are visible but some are disabled based on the user's department(s).
+    const userDeptIds = user?.department_ids || [];
+    const userDeptCodes = departments
+        .filter(d => userDeptIds.includes(d.id))
+        .map(d => d.code.toUpperCase());
+    const isFrontDesk = userDeptCodes.includes('FRONTDESK');
+    const isCounselling = userDeptCodes.includes('COUNSELLING');
+    const isDocuments = userDeptCodes.includes('DOCUMENTS');
+    const isAccounts = userDeptCodes.includes('ACCOUNTS');
+
+    const disabledTabs = new Set<string>();
+    if (isFrontDesk) {
+        // Front Desk: only the Details tab (with StatusTimeline) is accessible
+        disabledTabs.add('notes');
+        disabledTabs.add('followups');
+        disabledTabs.add('documents');
+        disabledTabs.add('courses');
+        disabledTabs.add('payments');
+        disabledTabs.add('financials');
+        disabledTabs.add('chat');
+        disabledTabs.add('timeline');
+    }
+    if (isCounselling) {
+        disabledTabs.add('documents');
+        disabledTabs.add('payments');
+        disabledTabs.add('financials');
+    }
+    if (isDocuments) {
+        disabledTabs.add('payments');
+        disabledTabs.add('financials');
+    }
+    if (isAccounts) {
+        // Accounts: only Payments tab is accessible
+        disabledTabs.add('details');
+        disabledTabs.add('notes');
+        disabledTabs.add('followups');
+        disabledTabs.add('documents');
+        disabledTabs.add('courses');
+        disabledTabs.add('financials');
+        disabledTabs.add('chat');
+        disabledTabs.add('timeline');
+    }
+
+    const isStudentPanelDisabled = isFrontDesk || isCounselling;
+
+    // Resolve Compliance department ID dynamically for send-back-to-Documents button
+    const complianceDepartment = departments.find(
+        (dept) => dept.code.toUpperCase() === "COMPLIANCE" && dept.is_active,
+    );
+    const isUserCompliance = userDeptCodes.includes("COMPLIANCE");
+    const isLeadInCompliance =
+        isUserCompliance &&
+        complianceDepartment != null &&
+        lead.current_department_id === complianceDepartment.id;
+
     const canEditDocuments = hasAnyPermission(user?.permissions || [], [
-        ApplicationPermission.APPLICATION_MANAGE,
         LeadPermission.LEAD_UPDATE,
         LeadPermission.LEAD_MANAGE,
-    ]);
-    const canViewPayments = hasAnyPermission(user?.permissions || [], [
-        OfflinePaymentPermission.OFFLINE_PAYMENT_CREATE,
-        OfflinePaymentPermission.OFFLINE_PAYMENT_RECEIVE,
-        OfflinePaymentPermission.OFFLINE_PAYMENT_APPROVAL,
     ]);
 
     const openStudentPanel = async () => {
@@ -264,11 +318,21 @@ export default function LeadDetailPage() {
                                 {`Forward to ${nextDepartmentLabel}`}
                             </Button>
                         )}
+                        {isLeadInCompliance && (
+                            <Button
+                                onPress={() => setSendBackModalOpen(true)}
+                                color="warning"
+                                variant="flat"
+                            >
+                                Send Back to Documents
+                            </Button>
+                        )}
                         <Button
                             onPress={openStudentPanel}
                             color="secondary"
                             variant="bordered"
                             isLoading={studentPanelLoading}
+                            isDisabled={isStudentPanelDisabled}
                         >
                             Open Student Panel
                         </Button>
@@ -299,8 +363,9 @@ export default function LeadDetailPage() {
                     className="mt-6" 
                     selectedKey={selectedTab}
                     onSelectionChange={(key) => setSelectedTab(key as string)}
+                    isDisabled={false}
                 >
-                    <Tab key="details" title="Details">
+                    <Tab key="details" title="Details" isDisabled={disabledTabs.has('details')}>
                         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="bg-white p-6 rounded-lg shadow">
                                 <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -338,11 +403,11 @@ export default function LeadDetailPage() {
                         <ApplicationDetailsView leadId={lead?.id ?? ""} />
                     </Tab>
 
-                    <Tab key="notes" title="Notes">
+                    <Tab key="notes" title="Notes" isDisabled={disabledTabs.has('notes')}>
                         <NotesTab leadId={lead?.id ?? ""} />
                     </Tab>
 
-                    <Tab key="followups" title="Follow Ups">
+                    <Tab key="followups" title="Follow Ups" isDisabled={disabledTabs.has('followups')}>
                         <FollowUpComponent
                             leadId={lead?.id ?? ""}
                             leadName={lead?.name ?? ""}
@@ -350,27 +415,23 @@ export default function LeadDetailPage() {
                         />
                     </Tab>
 
-                    {canViewDocuments && (
-                        <Tab key="documents" title="Documents">
-                            <LeadDocumentsTab leadId={lead?.id ?? ""} canEdit={canEditDocuments} />
-                        </Tab>
-                    )}
+                    <Tab key="documents" title="Documents" isDisabled={disabledTabs.has('documents')}>
+                        <LeadDocumentsTab leadId={lead?.id ?? ""} canEdit={canEditDocuments} />
+                    </Tab>
 
-                    <Tab key="courses" title="Courses">
+                    <Tab key="courses" title="Courses" isDisabled={disabledTabs.has('courses')}>
                         <CoursesTab leadId={lead?.id ?? ""} />
                     </Tab>
 
-                    {canViewPayments && (
-                        <Tab key="payments" title="Payments">
-                            <PaymentsTab leadId={id} />
-                        </Tab>
-                    )}
+                    <Tab key="payments" title="Payments" isDisabled={disabledTabs.has('payments')}>
+                        <PaymentsTab leadId={id} />
+                    </Tab>
 
-                    <Tab key="financials" title="Financials">
+                    <Tab key="financials" title="Financials" isDisabled={disabledTabs.has('financials')}>
                         <FinancialsTab leadId={lead?.id ?? ""}/>
                     </Tab>
 
-                    <Tab key="chat" title="Chat">
+                    <Tab key="chat" title="Chat" isDisabled={disabledTabs.has('chat')}>
                         <ChatComponent 
                             leadId={lead?.id ?? ""} 
                             leadName={lead?.name ?? ""} 
@@ -378,7 +439,7 @@ export default function LeadDetailPage() {
                         />
                     </Tab>
 
-                    <Tab key="timeline" title="Timeline">
+                    <Tab key="timeline" title="Timeline" isDisabled={disabledTabs.has('timeline')}>
                         <TimeLineTab
                             leadName={lead?.name ?? ""}
                             leadId={lead?.id ?? ""}
@@ -397,6 +458,13 @@ export default function LeadDetailPage() {
             <ForwardDepartmentModal
                 isOpen={forwardModalOpen}
                 onOpenChange={setForwardModalOpen}
+                lead={lead}
+                onForwarded={fetchAndSetLead}
+            />
+
+            <SendBackToDocumentsModal
+                isOpen={sendBackModalOpen}
+                onOpenChange={setSendBackModalOpen}
                 lead={lead}
                 onForwarded={fetchAndSetLead}
             />

@@ -86,7 +86,7 @@ export default function BulkCommunicationModal({
                                     label="Message Type"
                                     placeholder="Choose Message Method"
                                     selectedKeys={actionType ? new Set([actionType]) : new Set()}
-                                    onChange={(e) => setActionType(e.target.value)}
+                                    onSelectionChange={(keys) => setActionType(Array.from(keys).join(""))}
                                     isDisabled={isProcessing}
                                 >
                                     <SelectItem key="sms">Text Message (SMS)</SelectItem>

@@ -42,8 +42,13 @@ export function AssignCounsellorModal({ isOpen, onOpenChange, lead }: AssignCoun
     }
   }, [lead]);
 
-  // Get all internal team members (not external agents)
-  const counsellors = partners.filter((p) => p.role?.toLowerCase() !== "agent");
+  // Get counsellors in the counselling department only
+  const counsellors = partners.filter((p) => {
+    if (p.role?.toLowerCase() === "agent") return false;
+    return p.partner_departments?.some(
+      (pd) => pd.department?.code?.toLowerCase() === "counselling"
+    );
+  });
 
   const handleAssign = async () => {
     if (!lead?.id) return;
@@ -101,21 +106,17 @@ export function AssignCounsellorModal({ isOpen, onOpenChange, lead }: AssignCoun
                   <Select
                     placeholder="Select a counsellor"
                     selectedKeys={selectedCounsellor ? new Set([selectedCounsellor]) : new Set()}
-                    onChange={(e) => setSelectedCounsellor(e.target.value)}
+                    onSelectionChange={(keys) => setSelectedCounsellor(Array.from(keys).join(""))}
                     isDisabled={isAssigning}
-                    classNames={{
-                      trigger: "bg-white text-gray-900",
-                      value: "text-gray-900 opacity-100",
-                      selectorIcon: "text-gray-600",
-                      popoverContent: "bg-white",
-                      listbox: "text-gray-900",
-                    }}
                   >
                     <SelectItem key="">
                       Unassigned
                     </SelectItem>
                     {counsellors.map((counsellor) => (
-                      <SelectItem key={counsellor.id!} >
+                      <SelectItem
+                        key={String(counsellor.id!)}
+                        textValue={`${counsellor.name} - ${counsellor.email}`}
+                      >
                         {counsellor.name} - {counsellor.email}
                       </SelectItem>
                     )) as unknown as any}

@@ -71,8 +71,13 @@ export default function StatusTimeline({
                     : [];
 
                 setDepartmentStatuses(normalizedStatuses);
-            } catch (error) {
-                console.error("Failed to fetch department statuses for lead timeline:", error);
+            } catch (error: any) {
+                const message =
+                    error?.body?.message ||
+                    error?.body?.error ||
+                    error?.message ||
+                    "Failed to load department statuses.";
+                console.error("Failed to fetch department statuses for lead timeline:", message, error);
                 if (isMounted) {
                     setDepartmentStatuses([]);
                 }

@@ -4,7 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateOfflinePaymentDto } from './dto/create-offline-payment.dto';
 import { UpdateOfflinePaymentDto } from './dto/update-offline-payment.dto';
 import { SupabaseService } from '../storage/supabase.service';
-import { getScope } from '../common/utils/scope.util'; // <--- IMPORT
+import { getScope, resolveUserDepartmentCodes } from '../common/utils/scope.util'; // <--- IMPORT
 
 @Injectable()
 export class OfflinePaymentsService {
@@ -26,7 +26,8 @@ export class OfflinePaymentsService {
 
     // B. SECURITY: Check if User can access this Lead
     if (createDto.lead_id) {
-      const scope = getScope(user);
+      const deptCodes = await resolveUserDepartmentCodes(user, this.prisma);
+      const scope = getScope(user, deptCodes);
       const lead = await this.prisma.leads.findFirst({
         where: { id: createDto.lead_id, ...scope }
       });
@@ -80,7 +81,8 @@ export class OfflinePaymentsService {
 
   // 2. Find By Lead ID (Secured)
   async findByLeadId(leadId: string, user: any) {
-    const scope = getScope(user);
+    const deptCodes = await resolveUserDepartmentCodes(user, this.prisma);
+    const scope = getScope(user, deptCodes);
     
     // Verify Lead Access First
     const lead = await this.prisma.leads.findFirst({

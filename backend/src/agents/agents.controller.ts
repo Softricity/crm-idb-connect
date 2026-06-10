@@ -103,7 +103,7 @@ export class AgentsController {
 
   @Public()
   @Post('inquiry/upload')
-  @UseInterceptors(FileInterceptor('file', { limits: { fileSize: 10 * 1024 * 1024 } })) // 10MB limit
+  @UseInterceptors(FileInterceptor('file'))
   async uploadInquiryFile(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
     return this.agentsService.uploadInquiryDocument(file, req);
   }

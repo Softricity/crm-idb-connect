@@ -5,7 +5,7 @@ import {
   UpdateTestsDto, UpdateWorkExperienceDto, UpdateVisaDetailsDto,
 } from './dto/update-sections.dto';
 import { SupabaseService } from '../storage/supabase.service';
-import { getScope } from '../common/utils/scope.util';
+import { getScope, resolveUserDepartmentCodes } from '../common/utils/scope.util';
 import { MailService } from '../mail/mail.service';
 import * as bcrypt from 'bcrypt';
 import { promises as fs } from 'fs';
@@ -82,7 +82,8 @@ export class ApplicationsService {
       return;
     }
 
-    const scope = getScope(user);
+    const departmentCodes = await resolveUserDepartmentCodes(user, this.prisma);
+    const scope = getScope(user, departmentCodes);
     const lead = await this.prisma.leads.findFirst({
       where: {
         id: leadId,
@@ -93,8 +94,10 @@ export class ApplicationsService {
   }
 
   // Helper: Find or Create Application & Handle Conversion Logic
+  // Returns { app, wasConverted }
   private async getOrCreateApplication(leadId: string, user?: any) {
     let app = await this.prisma.applications.findFirst({ where: { lead_id: leadId } });
+    let wasConverted = false;
     
     if (!app) {
       // 1. Create Application Record
@@ -102,6 +105,7 @@ export class ApplicationsService {
       app = await this.prisma.applications.create({
         data: { lead_id: leadId, student_id: studentId },
       });
+      wasConverted = true;
 
       // 2. Fetch Lead to check type and email
       const lead = await this.prisma.leads.findUnique({ where: { id: leadId } });
@@ -134,7 +138,7 @@ export class ApplicationsService {
         }
       }
     }
-    return app;
+    return { app, wasConverted };
   }
 
   // --- Explicit Conversion (Manual Trigger) ---
@@ -149,7 +153,7 @@ export class ApplicationsService {
   // 1. Personal Details
   async updatePersonalDetails(leadId: string, dto: UpdatePersonalDetailsDto, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId, user);
+    const { app, wasConverted } = await this.getOrCreateApplication(leadId, user);
 
     const { 
       father_name, mother_name, emergency_contact_name, emergency_contact_number, 
@@ -194,13 +198,13 @@ export class ApplicationsService {
       });
     }
 
-    return this.getFullApplication(leadId, user);
+    return this.getFullApplicationWithConversionFlag(leadId, user, wasConverted);
   }
 
   // Family-only update
   async updateFamilyDetails(leadId: string, body: any, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId, user);
+    const { app, wasConverted } = await this.getOrCreateApplication(leadId, user);
     const source = body?.family_details?.[0] ? body.family_details[0] : body;
     const { father_name, mother_name, emergency_contact_name, emergency_contact_number } = source;
     const familyData = { father_name, mother_name, emergency_contact_name, emergency_contact_number };
@@ -215,13 +219,13 @@ export class ApplicationsService {
         data: { application_id: app.id, ...familyData },
       });
     }
-    return this.getFullApplication(leadId, user);
+    return this.getFullApplicationWithConversionFlag(leadId, user, wasConverted);
   }
 
   // 2. Education
   async updateEducation(leadId: string, dto: UpdateEducationDto, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId, user);
+    const { app, wasConverted } = await this.getOrCreateApplication(leadId, user);
     
     for (const record of dto.records) {
       if (record.id) {
@@ -235,13 +239,13 @@ export class ApplicationsService {
         });
       }
     }
-    return this.getFullApplication(leadId, user);
+    return this.getFullApplicationWithConversionFlag(leadId, user, wasConverted);
   }
 
   // 3. Preferences
   async updatePreferences(leadId: string, dto: UpdatePreferencesDto, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId, user);
+    const { app, wasConverted } = await this.getOrCreateApplication(leadId, user);
 
     const records = Array.isArray((dto as any)?.records)
       ? (dto as any).records
@@ -263,13 +267,13 @@ export class ApplicationsService {
         });
       }
     }
-    return this.getFullApplication(leadId, user);
+    return this.getFullApplicationWithConversionFlag(leadId, user, wasConverted);
   }
 
   // 4. Tests
   async updateTests(leadId: string, dto: UpdateTestsDto, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId, user);
+    const { app, wasConverted } = await this.getOrCreateApplication(leadId, user);
     for (const record of dto.records) {
       const payload: any = { ...record };
       if (typeof payload.test_date === 'string') {
@@ -287,13 +291,13 @@ export class ApplicationsService {
         });
       }
     }
-    return this.getFullApplication(leadId, user);
+    return this.getFullApplicationWithConversionFlag(leadId, user, wasConverted);
   }
 
   // 5. Work Experience
   async updateWorkExperience(leadId: string, dto: UpdateWorkExperienceDto, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId, user);
+    const { app, wasConverted } = await this.getOrCreateApplication(leadId, user);
     for (const record of dto.records) {
       const payload: any = { ...record };
       ['start_date','end_date'].forEach((field) => {
@@ -313,13 +317,13 @@ export class ApplicationsService {
         });
       }
     }
-    return this.getFullApplication(leadId, user);
+    return this.getFullApplicationWithConversionFlag(leadId, user, wasConverted);
   }
 
   // 6. Visa Details
   async updateVisaDetails(leadId: string, dto: UpdateVisaDetailsDto, user: any) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId, user);
+    const { app, wasConverted } = await this.getOrCreateApplication(leadId, user);
     const existing = await this.prisma.application_visa_details.findFirst({ where: { application_id: app.id } });
 
     const payload: any = { ...dto };
@@ -335,7 +339,7 @@ export class ApplicationsService {
     } else {
       await this.prisma.application_visa_details.create({ data: { application_id: app.id, ...payload } });
     }
-    return this.getFullApplication(leadId, user);
+    return this.getFullApplicationWithConversionFlag(leadId, user, wasConverted);
   }
 
   // 7. Documents
@@ -345,7 +349,7 @@ export class ApplicationsService {
     user: any
   ) {
     await this.validateLeadAccess(leadId, user);
-    const app = await this.getOrCreateApplication(leadId, user);
+    const { app, wasConverted } = await this.getOrCreateApplication(leadId, user);
     
     try {
       const summary: Record<string, any> = {};
@@ -409,7 +413,13 @@ export class ApplicationsService {
       });
     }
  
-    return this.getFullApplication(leadId, user);
+    return this.getFullApplicationWithConversionFlag(leadId, user, wasConverted);
+  }
+
+  private async getFullApplicationWithConversionFlag(leadId: string, user: any, wasConverted: boolean) {
+    const fullApp = await this.getFullApplication(leadId, user);
+    if (wasConverted) return { ...fullApp, _converted: true } as any;
+    return fullApp;
   }
 
   async getFullApplication(leadId: string, user: any) {

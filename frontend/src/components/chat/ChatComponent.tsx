@@ -104,9 +104,6 @@ export default function ChatComponent({ leadId, leadName, currentUserType }: Cha
       return;
     }
 
-    console.log("🔌 Connecting to Socket.io...", `${SOCKET_URL}/chat`);
-    console.log("🔑 Using token:", token ? "Token exists" : "No token");
-
     const socketInstance = io(`${SOCKET_URL}/chat`, {
       auth: {
         token: `Bearer ${token}`,
@@ -118,12 +115,10 @@ export default function ChatComponent({ leadId, leadName, currentUserType }: Cha
     });
 
     socketInstance.on("connect", () => {
-      console.log("✅ Socket connected successfully!", socketInstance.id);
       setIsConnected(true);
       
       // If staff (Partner/Agent), join the room
       if (currentUserType === "PARTNER" || currentUserType === "AGENT") {
-        console.log("👤 Staff user - joining room:", leadId);
         socketInstance.emit("join_room", { lead_id: leadId });
       }
     });
@@ -136,13 +131,11 @@ export default function ChatComponent({ leadId, leadName, currentUserType }: Cha
     });
 
     socketInstance.on("disconnect", (reason) => {
-      console.log("🔌 Socket disconnected. Reason:", reason);
       setIsConnected(false);
     });
 
     // Listen for new messages
     socketInstance.on("receive_message", (data: Message) => {
-      console.log("Received message:", data);
       setMessages((prev) => {
         // Remove temp message if this is the confirmed version
         const filteredMessages = prev.filter(msg => {
@@ -174,7 +167,6 @@ export default function ChatComponent({ leadId, leadName, currentUserType }: Cha
 
     // Listen for typing indicator
     socketInstance.on("user_typing", (data: { user: string; isTyping: boolean }) => {
-      console.log("Typing status:", data);
       if (data.isTyping) {
         setTypingUser(data.user);
       } else {

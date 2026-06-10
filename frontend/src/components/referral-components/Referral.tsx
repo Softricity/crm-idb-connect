@@ -161,11 +161,9 @@ export default function Referral() {
           <div className="mt-4 p-3 bg-gray-100 rounded-lg text-sm break-all">
             <strong>Generated URL:</strong> <br />
             {generatedUrl}
-            {canManageReferrals && (
-              <div className="mt-4 flex flex-col items-center">
-                <QRCode id="referral-qr" value={generatedUrl} size={160} />
-              </div>
-            )}
+            <div className="mt-4 flex flex-col items-center">
+              <QRCode id="referral-qr" value={generatedUrl} size={160} />
+            </div>
           </div>
         )}
       </Card>

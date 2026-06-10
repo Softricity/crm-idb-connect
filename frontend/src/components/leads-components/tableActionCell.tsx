@@ -56,14 +56,10 @@ export default function LeadActionsMenu({ leadId, lead, onAssignClick, showAssig
     const canCreateCommission = hasPermission(userPermissions, CommissionPermission.COMMISSION_CREATE);
 
     const normalizedLeadType = (lead?.type || "lead").toLowerCase();
-    const nextDepartmentLabel =
-        normalizedLeadType === "lead"
-            ? "Admissions"
-            : normalizedLeadType === "application"
-                ? "Visa"
-                : null;
+    const canForwardLeadType = normalizedLeadType === "lead" || normalizedLeadType === "application";
+    const nextDepartmentLabel = lead?.next_department_name || null;
     const canForwardToNextDepartment =
-        Boolean(lead && nextDepartmentLabel && lead.can_forward_to_next_department) && canConvertToApp;
+        Boolean(lead && canForwardLeadType && lead.can_forward_to_next_department) && canConvertToApp;
     
     return (
         <>

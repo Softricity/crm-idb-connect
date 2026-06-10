@@ -9,7 +9,20 @@ export async function middleware(request: NextRequest) {
     const response = NextResponse.next();
     // Add CORS headers to the response
     response.headers.append("Access-Control-Allow-Credentials", "true");
-    response.headers.append("Access-Control-Allow-Origin", "*"); // Replace with your actual origin in production
+    const allowedOrigins = [
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "http://localhost:3002",
+      "http://localhost:3003",
+      "https://idbconnect.global",
+      "https://student.idbconnect.global",
+      "https://inquiry.idbconnect.global",
+      "https://b2b.idbconnect.global",
+    ];
+    const origin = request.headers.get("origin") || "";
+    if (allowedOrigins.includes(origin) || origin === "") {
+      response.headers.append("Access-Control-Allow-Origin", origin || "*");
+    }
     response.headers.append("Access-Control-Allow-Methods", "GET,DELETE,PATCH,POST,PUT");
     response.headers.append(
       "Access-Control-Allow-Headers",

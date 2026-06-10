@@ -84,15 +84,15 @@ export class ApplicationsController {
   @Patch(':leadId/documents')
   @UseInterceptors(
     FileFieldsInterceptor([
-      { name: 'profile_photo', maxCount: 1 },
-      { name: 'passport_copy', maxCount: 1 },
-      { name: 'academic_documents', maxCount: 10 },
-      { name: 'english_test_cert', maxCount: 1 },
-      { name: 'sop', maxCount: 1 },
-      { name: 'cv_resume', maxCount: 1 },
-      { name: 'recommendation_letters', maxCount: 5 },
-      { name: 'financial_documents', maxCount: 1 },
-      { name: 'other_documents', maxCount: 1 },
+      { name: 'profile_photo' },
+      { name: 'passport_copy' },
+      { name: 'academic_documents' },
+      { name: 'english_test_cert' },
+      { name: 'sop' },
+      { name: 'cv_resume' },
+      { name: 'recommendation_letters' },
+      { name: 'financial_documents' },
+      { name: 'other_documents' },
     ]),
   )
   updateDocuments(

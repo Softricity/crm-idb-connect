@@ -42,8 +42,14 @@ export function BulkAssignCounsellorModal({
     fetchPartners(selectedBranch?.id);
   }, [fetchPartners, selectedBranch?.id]);
 
-  // Get all internal team members (not external agents)
-  const counsellors = partners.filter((p) => p.role?.toLowerCase() !== "agent");
+  // Get counsellors in the counselling department only
+  const counsellors = partners.filter((p) => {
+    if (p.role?.toLowerCase() === "agent") return false;
+    // Must belong to counselling department
+    return p.partner_departments?.some(
+      (pd) => pd.department?.code?.toLowerCase() === "counselling"
+    );
+  });
   const selectedLeads = allLeads.filter(lead => selectedLeadIds.includes(lead.id || ""));
 
   const handleBulkAssign = async () => {
@@ -85,9 +91,14 @@ export function BulkAssignCounsellorModal({
       await fetchLeads();
       onComplete();
       onOpenChange(false);
-    } catch (error) {
-      toast.error("Failed to assign counsellors");
-      console.error("Error in bulk assignment:", error);
+    } catch (error: any) {
+      const message =
+        error?.body?.message ||
+        error?.body?.error ||
+        error?.message ||
+        "Failed to assign counsellors";
+      toast.error(message);
+      console.error("Error in bulk assignment:", message, error);
     } finally {
       setIsAssigning(false);
     }
@@ -116,19 +127,20 @@ export function BulkAssignCounsellorModal({
                   <Select
                     placeholder="Select a counsellor"
                     selectedKeys={selectedCounsellor ? new Set([selectedCounsellor]) : new Set()}
-                    onChange={(e) => setSelectedCounsellor(e.target.value)}
+                    onSelectionChange={(keys) => setSelectedCounsellor(Array.from(keys).join(""))}
                     isDisabled={isAssigning}
                   >
-                    <>
-                      <SelectItem key="">
-                        Unassign All
+                    <SelectItem key="">
+                      Unassign All
+                    </SelectItem>
+                    {counsellors.map((counsellor) => (
+                      <SelectItem
+                        key={String(counsellor.id!)}
+                        textValue={`${counsellor.name} - ${counsellor.email}`}
+                      >
+                        {counsellor.name} - {counsellor.email}
                       </SelectItem>
-                      {counsellors.map((counsellor) => (
-                        <SelectItem key={counsellor.id!}>
-                          {counsellor.name} - {counsellor.email}
-                        </SelectItem>
-                      ))}
-                    </>
+                    )) as unknown as any}
                   </Select>
                 </div>
 

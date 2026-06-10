@@ -95,7 +95,7 @@ type TabsWrapperProps = {
   onPageChange?: (page: number) => void;
 };
 
-export default function TabsWrapper({ leads, pagination, onPageChange }: TabsWrapperProps) {
+export default function TabsWrapper({ leads = [], pagination, onPageChange }: TabsWrapperProps) {
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
   const [columns, setColumns] = useState<ColumnConfig[]>(DEFAULT_COLUMNS);
   const [showOnlyFlagged, setShowOnlyFlagged] = useState(false);
@@ -159,7 +159,7 @@ export default function TabsWrapper({ leads, pagination, onPageChange }: TabsWra
     }
 
     const departmentLeadCounts = new Map<string, number>();
-    for (const lead of leads) {
+    for (const lead of Array.isArray(leads) ? leads : []) {
       if (!lead.current_department_id) {
         continue;
       }

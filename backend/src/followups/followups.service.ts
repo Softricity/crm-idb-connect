@@ -11,14 +11,15 @@ import { CreateFollowupCommentDto } from './dto/create-comment.dto';
 import { UpdateFollowupCommentDto } from './dto/update-comment.dto';
 import { TimelineService } from '../timeline/timeline.service';
 import { Role } from '../auth/roles.enum';
-import { getScope } from '../common/utils/scope.util'; // <--- IMPORT
+import { getScope, resolveUserDepartmentCodes } from '../common/utils/scope.util';
 
 @Injectable()
 export class FollowupsService {
   constructor(private prisma: PrismaService, private timelineService: TimelineService) {}
 
   async findAll(user: any, userId?: string, date?: string) {
-    const scope = getScope(user);
+    const deptCodes = await resolveUserDepartmentCodes(user, this.prisma);
+    const scope = getScope(user, deptCodes);
     const where: any = {
       leads: {
         ...scope,
@@ -62,7 +63,8 @@ export class FollowupsService {
     const { lead_id, title, due_date } = createFollowupDto;
 
     // 🔒 SECURITY: Check Lead Access
-    const scope = getScope(user);
+    const deptCodes = await resolveUserDepartmentCodes(user, this.prisma);
+    const scope = getScope(user, deptCodes);
     const lead = await this.prisma.leads.findFirst({
       where: { id: lead_id, ...scope }
     });
@@ -85,7 +87,8 @@ export class FollowupsService {
 
   async findAllForLead(leadId: string, user: any) {
     // 🔒 SECURITY: Check Lead Access
-    const scope = getScope(user);
+    const deptCodes = await resolveUserDepartmentCodes(user, this.prisma);
+    const scope = getScope(user, deptCodes);
     const lead = await this.prisma.leads.findFirst({
       where: { id: leadId, ...scope }
     });

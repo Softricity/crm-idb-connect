@@ -115,14 +115,15 @@ export default function ApplicationPreferences({
                 setFormData((prev) => ({ ...prev, assigned_to: e.target.value ? String(e.target.value) : null }))
               }
             >
-              <SelectItem key="">Unassigned</SelectItem>
-              <>
-                {counsellors.map((counsellor) => (
-                  <SelectItem key={String(counsellor.id!)}>
-                    {counsellor.name} ({counsellor.email})
-                  </SelectItem>
-                ))}
-              </>
+                    <SelectItem key="">Unassigned</SelectItem>
+                    {counsellors.map((counsellor) => (
+                      <SelectItem
+                        key={String(counsellor.id!)}
+                        textValue={`${counsellor.name} (${counsellor.email})`}
+                      >
+                        {counsellor.name} ({counsellor.email})
+                      </SelectItem>
+                    )) as unknown as any}
             </Select>
           </div>
         )}

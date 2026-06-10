@@ -346,7 +346,7 @@ export default function LeadsTable({
           className="w-full overflow-auto"
           selectedKeys={selectedLeadIds}
           onSelectionChange={(keys) => handleSelectionChange(keys as "all" | Set<React.Key>)}
-          onRowAction={(key) => console.log("Row clicked:", key)}
+          onRowAction={undefined}
         >
           <TableHeader columns={visibleColumns}>
             {(column) => (

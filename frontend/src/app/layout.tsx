@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit as Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import {HeroUIProvider} from "@heroui/react";
+import { HeroUIProvider } from "@heroui/react";
 import { Toaster } from "sonner";
 
 const geistSans = Geist({
@@ -32,7 +32,7 @@ export default function RootLayout({
     <html lang="en">
       <body
         className={`${geistSans.className} antialiased`}
-        suppressHydrationWarning={true}
+        suppressHydrationWarning={false}
       >
         <HeroUIProvider>
           {children}

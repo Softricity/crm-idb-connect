@@ -2,14 +2,15 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { startOfDay, endOfDay, subDays, format, startOfMonth, subMonths } from 'date-fns';
-import { getScope } from '../common/utils/scope.util'; // <--- 1. IMPORT THIS
+import { getScope, resolveUserDepartmentCodes } from '../common/utils/scope.util'; // <--- 1. IMPORT THIS
 
 @Injectable()
 export class DashboardService {
   constructor(private prisma: PrismaService) {}
 
   async getApplicationStats(user: any) {
-    const scope = getScope(user);
+    const deptCodes = await resolveUserDepartmentCodes(user, this.prisma);
+    const scope = getScope(user, deptCodes);
     const whereBase = { 
         type: { in: ['application', 'Application'] }, 
         ...scope 
@@ -110,7 +111,8 @@ export class DashboardService {
 
   async getStats(user: any) {
     // 2. Generate the scope filter (e.g., { branch_id: '...' })
-    const scope = getScope(user); 
+    const deptCodes = await resolveUserDepartmentCodes(user, this.prisma);
+    const scope = getScope(user, deptCodes);
     
     // 3. Create a base filter merging "Lead Type" + "Scope"
     // Use an IN filter to be safe against casing or different lead type strings

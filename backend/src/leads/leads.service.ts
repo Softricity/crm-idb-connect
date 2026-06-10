@@ -18,7 +18,7 @@ import {
 import { Prisma } from '@prisma/client';
 import { TimelineService } from '../timeline/timeline.service';
 import * as bcrypt from 'bcrypt';
-import { getScope } from '../common/utils/scope.util';
+import { getScope, resolveUserDepartmentCodes } from '../common/utils/scope.util';
 import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
@@ -61,15 +61,9 @@ export class LeadsService {
     });
 
     if (existingLead) {
-      // If found, update the existing lead instead of creating a duplicate
-      // We exclude fields that shouldn't be overridden by a public re-inquiry
-      const { type, status, branch_id, created_by, agent_id, ...updateData } = createLeadDto;
-      
-      return this.update(existingLead.id, {
-        ...updateData,
-        // Optional: you might want to preserve the original utm if they exist, 
-        // or update them to the latest. Here we let updateData override them.
-      }, user);
+      throw new ConflictException(
+        `A lead with this email (${createLeadDto.email}) or phone (${createLeadDto.mobile}) already exists.`,
+      );
     }
 
     const password = this.generateRandomPassword();
@@ -141,8 +135,13 @@ export class LeadsService {
         finalAssignedTo = await this.getNextRoundRobinAssignee(resolvedBranchId, initialDeptId) || null;
       }
     } else if (isManualCrmCreation) {
-      // Rule 1: Manual CRM Creation MUST be assigned to me (logged-in partner)
-      finalAssignedTo = user.id;
+      // Rule 1a: If DTO explicitly specifies assigned_to, respect it (Front Desk creating on behalf)
+      if (createLeadDto.assigned_to) {
+        finalAssignedTo = createLeadDto.assigned_to;
+      } else {
+        // Rule 1b: Manual CRM Creation defaults to logged-in partner
+        finalAssignedTo = user.id;
+      }
       partnerId = user.id;
 
       const initialDepartment = await this.resolveInitialDepartmentForNewLead();
@@ -355,7 +354,8 @@ export class LeadsService {
 
     let where: any = { type: type || 'lead' };
 
-    const scope = getScope(user);
+    const departmentCodes = await resolveUserDepartmentCodes(user, this.prisma);
+    const scope = getScope(user, departmentCodes);
     where = { ...where, ...scope };
 
     if (branchId) {
@@ -447,7 +447,8 @@ export class LeadsService {
     }
 
     try {
-      const scope = user ? getScope(user) : {};
+      const departmentCodes = user ? await resolveUserDepartmentCodes(user, this.prisma) : [];
+      const scope = user ? getScope(user, departmentCodes) : {};
       const lead = await this.prisma.leads.findFirst({
         where: { 
           id,
@@ -799,10 +800,18 @@ export class LeadsService {
       status?: string | null;
       current_department_id?: string | null;
     },
-  >(leads: T[]): Promise<Array<T & { can_forward_to_next_department: boolean }>> {
+  >(leads: T[]): Promise<Array<T & { can_forward_to_next_department: boolean; next_department_name?: string | null }>> {
     const { lookupByDepartment, fallbackTerminalTokens } = await this.buildTerminalStatusLookup(
       leads.map((lead) => lead.current_department_id),
     );
+
+    // Preload department order for next-department name lookup
+    const deptOrders = await this.prisma.department_order.findMany({
+      where: { is_active: true },
+      orderBy: { order_index: 'asc' },
+      select: { department_id: true, department: { select: { name: true } } },
+    });
+    const deptOrderMap = new Map(deptOrders.map((d, i) => [d.department_id, { index: i, name: d.department.name }]));
 
     return leads.map((lead) => {
       const normalizedType = (lead.type || 'lead').toLowerCase();
@@ -820,9 +829,21 @@ export class LeadsService {
 
       const isTerminalStatus = Boolean(statusToken && resolvedTerminalTokens.has(statusToken));
 
+      // Resolve next department name
+      let nextDeptName: string | null = null;
+      if (lead.current_department_id && deptOrderMap.has(lead.current_department_id)) {
+        const currentInfo = deptOrderMap.get(lead.current_department_id)!;
+        const nextDept = deptOrders[currentInfo.index + 1];
+        nextDeptName = nextDept?.department?.name ?? null;
+      } else if (deptOrders.length > 0) {
+        // Fallback to first department
+        nextDeptName = deptOrders[0]?.department?.name ?? null;
+      }
+
       return {
         ...lead,
         can_forward_to_next_department: hasNextDepartment && isTerminalStatus,
+        next_department_name: nextDeptName,
       };
     });
   }
@@ -833,7 +854,7 @@ export class LeadsService {
       status?: string | null;
       current_department_id?: string | null;
     },
-  >(lead: T): Promise<T & { can_forward_to_next_department: boolean }> {
+  >(lead: T): Promise<T & { can_forward_to_next_department: boolean; next_department_name?: string | null }> {
     const [decoratedLead] = await this.withForwardEligibility([lead]);
     return decoratedLead;
   }
@@ -985,6 +1006,18 @@ export class LeadsService {
         throw new BadRequestException('Lead can only be forwarded when its current status is marked terminal for the current department.');
       }
 
+      // Resolve next department purely by position in department_order table — no type strings.
+      const targetDepartmentId = await this.resolveForwardTargetDepartmentId(
+        existingLead.current_department_id,
+        -1, // fallback index unused when currentDepartmentId is present
+      );
+
+      if (!targetDepartmentId) {
+        throw new BadRequestException('Cannot forward lead because no next active department is configured.');
+      }
+
+      const nextDepartmentInitialStatus = await this.resolveInitialStatusForDepartment(targetDepartmentId);
+
       const requestedAssignee = this.extractStringUpdateValue((safeUpdateDto as any).assigned_to);
       const assigneeId = (requestedAssignee || '').trim();
 
@@ -1005,36 +1038,20 @@ export class LeadsService {
         throw new BadRequestException('Selected assignee must be an internal team member.');
       }
 
-      // Resolve next department purely by position in department_order table — no type strings.
-      const targetDepartmentId = await this.resolveForwardTargetDepartmentId(
-        existingLead.current_department_id,
-        -1, // fallback index unused when currentDepartmentId is present
-      );
-
-      if (!targetDepartmentId) {
-        throw new BadRequestException('Cannot forward lead because no next active department is configured.');
-      }
-
-      const nextDepartmentInitialStatus = await this.resolveInitialStatusForDepartment(targetDepartmentId);
-
       const {
         assigned_to: _ignoredAssignedTo,
         current_department_id: _ignoredCurrentDepartmentId,
-        type: _ignoredType, // preserve existing type — do not overwrite
+        type: _ignoredType,
         ...forwardSafeUpdateFields
       } = (safeUpdateDto as Record<string, unknown>);
 
       updatePayload = {
         ...(forwardSafeUpdateFields as Prisma.leadsUpdateInput),
         partners_leads_assigned_toTopartners: {
-          connect: {
-            id: assigneeId,
-          },
+          connect: { id: assigneeId },
         },
         current_department: {
-          connect: {
-            id: targetDepartmentId,
-          },
+          connect: { id: targetDepartmentId },
         },
         status: nextDepartmentInitialStatus || 'new',
       };
@@ -1095,6 +1112,112 @@ export class LeadsService {
       }
     } catch (error) {
       console.error(`Timeline logging failed for lead update ${id}:`, error);
+    }
+
+    return updatedLead;
+  }
+
+  async sendBackToDocuments(id: string, assigneeId: string, user?: any) {
+    const existingLead = await this.prisma.leads.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        assigned_to: true,
+        current_department_id: true,
+      },
+    });
+
+    if (!existingLead) {
+      throw new NotFoundException(`Lead with ID ${id} not found.`);
+    }
+
+    // Find the Documents department dynamically by code
+    const documentsDept = await this.prisma.department.findFirst({
+      where: { code: { equals: 'DOCUMENTS', mode: 'insensitive' as any }, is_active: true },
+      select: { id: true, name: true },
+    });
+
+    if (!documentsDept) {
+      throw new BadRequestException('Documents department is not configured or inactive.');
+    }
+
+    if (!assigneeId || !assigneeId.trim()) {
+      throw new BadRequestException('An assignee from the Documents department is required.');
+    }
+
+    const assignee = await this.prisma.partners.findUnique({
+      where: { id: assigneeId },
+      include: { role: true },
+    });
+
+    if (!assignee) {
+      throw new NotFoundException(`Assignee with ID ${assigneeId} not found.`);
+    }
+
+    if ((assignee.role?.name || '').toLowerCase() === 'agent') {
+      throw new BadRequestException('Selected assignee must be an internal team member.');
+    }
+
+    const initialStatus = await this.resolveInitialStatusForDepartment(documentsDept.id);
+
+    const updatedLead = await this.prisma.leads.update({
+      where: { id },
+      data: {
+        current_department: {
+          connect: { id: documentsDept.id },
+        },
+        partners_leads_assigned_toTopartners: {
+          connect: { id: assigneeId },
+        },
+        status: initialStatus || 'new',
+      },
+      select: {
+        id: true,
+        name: true,
+        status: true,
+        assigned_to: true,
+        current_department_id: true,
+      },
+    });
+
+    // Log timeline events
+    try {
+      const { partnerId: actorId, source, actorName } = await this.resolveTimelineActorDetails(user);
+
+      // Department change: Compliance → Documents
+      if (existingLead.current_department_id !== updatedLead.current_department_id) {
+        const oldDept = await this.prisma.department.findUnique({
+          where: { id: existingLead.current_department_id ?? undefined },
+          select: { name: true },
+        });
+        await this.timelineService.logDepartmentChange(
+          id,
+          actorId,
+          oldDept?.name || 'Unknown',
+          documentsDept.name,
+          source,
+          actorName,
+        );
+      }
+
+      // Assignment change
+      if (existingLead.assigned_to !== updatedLead.assigned_to) {
+        const newOwner = await this.prisma.partners.findUnique({
+          where: { id: updatedLead.assigned_to ?? undefined },
+          select: { name: true },
+        });
+        await this.timelineService.logAssignmentChange(
+          id,
+          actorId,
+          newOwner?.name || 'Unassigned',
+          source,
+          actorName,
+        );
+      }
+    } catch (error) {
+      console.error(`Timeline logging failed for sendBackToDocuments ${id}:`, error);
     }
 
     return updatedLead;

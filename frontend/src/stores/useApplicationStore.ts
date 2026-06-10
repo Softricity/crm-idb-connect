@@ -1,6 +1,7 @@
 // stores/applicationStore.ts
 import { create } from "zustand";
 import api from "@/lib/api";
+import { toast } from "sonner";
 
 // ----------------- Types -----------------
 
@@ -291,14 +292,19 @@ export const useApplicationStore = create<ApplicationState>((set, get) => ({
   patchSection: async (leadId: string, section: string, body: any) => {
     set({ loading: true });
     try {
-      const data = await api.ApplicationsAPI.patchSection(leadId, section, body);
+      const data: any = await api.ApplicationsAPI.patchSection(leadId, section, body);
+      // Check if conversion happened (silent auto-conversion on section save)
+      if (data?._converted) {
+        toast.success("Lead converted to Application. You can now fill the remaining sections.");
+      }
+      const { _converted, ...cleanData } = data || {};
       set((state) => ({
         applications: state.applications.map((app) =>
-          app.lead_id === leadId ? { ...app, ...(data as Application) } : app
+          app.lead_id === leadId ? { ...app, ...(cleanData as Application) } : app
         ),
         currentApplication:
           state.currentApplication?.lead_id === leadId
-            ? { ...state.currentApplication, ...(data as Application) }
+            ? { ...state.currentApplication, ...(cleanData as Application) }
             : state.currentApplication,
       }));
     } catch (error) {

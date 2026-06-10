@@ -42,7 +42,17 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setHasAttemptedLogin(true);
-    await login(email, password);
+    try {
+      await login(email, password);
+    } catch (error: any) {
+      const message =
+        error?.body?.message ||
+        error?.body?.error ||
+        error?.message ||
+        "Invalid email or password. Please try again.";
+      setError(message);
+      setHasAttemptedLogin(false);
+    }
   };
 
   return (

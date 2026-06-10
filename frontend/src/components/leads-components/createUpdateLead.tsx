@@ -108,13 +108,16 @@ export default function LeadFormSheet({ lead, isOpen, onOpenChange }: LeadFormSh
           utm_campaign: isRestrictedToOwnLeads(user?.permissions || []) ? partnerDetails?.agency_name : "walkin",
           branch_id: user?.branch_id || null,
         };
-        console.log("Creating lead with data:", leadData);
         await addLead(leadData);
         toast.success("Lead created successfully!");
       }
       onOpenChange(false);
-    } catch {
-      toast.error(`Failed to ${isEditMode ? "update" : "create"} lead.`);
+    } catch (error: any) {
+      const serverMessage =
+        error?.body?.message ||
+        error?.body?.error;
+      const message = serverMessage || `Failed to ${isEditMode ? "update" : "create"} lead.`;
+      toast.error(message);
     } finally {
       setLoading(false);
     }

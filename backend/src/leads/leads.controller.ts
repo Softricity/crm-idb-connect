@@ -148,4 +148,13 @@ export class LeadsController {
   ) {
     return this.leadsService.assignTeamMember(leadId, teamMemberId, user);
   }
+
+  @Patch(':id/send-back-to-documents')
+  async sendBackToDocuments(
+    @Param('id') id: string,
+    @Body('assigneeId') assigneeId: string,
+    @GetUser() user: any,
+  ) {
+    return this.leadsService.sendBackToDocuments(id, assigneeId, user);
+  }
 }
