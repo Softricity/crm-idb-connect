@@ -72,7 +72,7 @@ export default function Header() {
     <div className="w-full">
       <div className="container mx-auto">
         <div className="h-30 flex items-center justify-between px-10">
-            <img src="/logo.gif" className="h-18" alt="IDB Global Logo" />
+            <img src="/idb_logo.gif" className="h-18" alt="IDB Global Logo" />
             <div className="flex justify-end items-center space-x-6">
                 <div className="flex items-center border-[1.25px] border-gray-400 bg-white px-3 py-1 rounded-xl focus:ring-1 focus:ring-gray-400 focus:outline-none">
                     <Search className="w-5 h-5 stroke-[1.25px] mr-2" />
