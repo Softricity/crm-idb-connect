@@ -111,7 +111,6 @@ export default function StudentJourneyTimeline({
             setUpdating(false);
         }
     };
-
     if (loading) {
         return <div className="p-6 bg-white rounded-lg shadow text-sm text-gray-400">Loading journey…</div>;
     }
